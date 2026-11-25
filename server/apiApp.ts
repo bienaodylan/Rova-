@@ -528,7 +528,9 @@ export function createApiApp(): express.Express {
       }
 
       const googleServerKey = getGoogleMapsServerKey();
-      if (googleServerKey) {
+      // With a user position, ask Geoapify first: unlike plain geocoding, its proximity bias
+      // helps surface nearby named places before broad address matches.
+      if (googleServerKey && !hasProximity) {
         try {
           const gParams = new URLSearchParams({ address: rawQ, key: googleServerKey });
           if (regionBias) gParams.set('region', regionBias);
@@ -585,8 +587,9 @@ export function createApiApp(): express.Express {
           const geoParams = new URLSearchParams({
             text: rawQ,
             apiKey: geoapifyKey,
-            limit: '6',
+            limit: '10',
             format: 'json',
+            lang: (typeof req.headers['accept-language'] === 'string' && req.headers['accept-language'].toLowerCase().includes('fr')) ? 'fr' : 'en',
           });
           if (hasProximity) geoParams.set('bias', `proximity:${proximityLng},${proximityLat}`);
           if (countryCodes) geoParams.set('filter', `countrycode:${countryCodes.split(',').join(',')}`);
@@ -611,19 +614,17 @@ export function createApiApp(): express.Express {
                 const lat = Number(coords?.[1]);
                 const lng = Number(coords?.[0]);
                 if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
-                const displayName = String(props.formatted || props.address_line2 || props.name || rawQ);
-                const shortName = [
-                  props.name || props.address_line1,
-                  props.suburb || props.district || props.city,
-                  props.state,
-                ].filter(Boolean).map(String).slice(0, 3).join(', ') || displayName;
+                const placeName = String(props.name || props.address_line1 || '').trim();
+                const areaName = String(props.suburb || props.neighbourhood || props.district || props.city || '').trim();
+                const displayName = String(props.formatted || [placeName, areaName, props.state].filter(Boolean).join(', ') || rawQ);
+                const shortName = [placeName, areaName, props.state].filter(Boolean).map(String).slice(0, 3).join(', ') || displayName;
                 return {
                   displayName,
                   shortName,
                   landmark: String(props.name || props.suburb || '') || undefined,
                   lat,
                   lng,
-                  type: String(props.result_type || 'place'),
+                  type: String(props.result_type || (Array.isArray(props.categories) ? props.categories[0] : '') || 'place'),
                 };
               })
               .filter((item): item is NonNullable<typeof item> => item !== null);
