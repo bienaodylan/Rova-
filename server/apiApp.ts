@@ -947,6 +947,49 @@ export function createApiApp(): express.Express {
         }
       }
 
+      const geoapifyKey = getGeoapifyApiKey();
+      if (geoapifyKey) {
+        try {
+          const waypoints = points.map((p) => `${p.lat},${p.lng}`).join('|');
+          const geoParams = new URLSearchParams({
+            waypoints,
+            mode: 'drive',
+            apiKey: geoapifyKey,
+          });
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 6000);
+          const geoRes = await fetch(`https://api.geoapify.com/v1/routing?${geoParams.toString()}`, {
+            headers: { Accept: 'application/json' },
+            signal: controller.signal,
+          });
+          clearTimeout(timeout);
+          if (geoRes.ok) {
+            const geoData = (await geoRes.json()) as {
+              features?: Array<{
+                properties?: { distance?: number; time?: number };
+                geometry?: { coordinates?: [number, number][] };
+              }>;
+            };
+            const feature = geoData.features?.[0];
+            const coords = feature?.geometry?.coordinates;
+            if (feature && Array.isArray(coords) && coords.length >= 2) {
+              const latLngPath = coords.map(([lng, lat]): [number, number] => [lat, lng]);
+              const result = {
+                provider: 'geoapify',
+                distanceKm: Number(((feature.properties?.distance || 0) / 1000).toFixed(2)),
+                durationMin: Math.max(3, Math.round((feature.properties?.time || 0) / 60)),
+                coordinates: latLngPath,
+                geometry: latLngPath,
+              };
+              routeComputeCache.set(cacheKey, result, 10 * 60_000);
+              return res.json(result);
+            }
+          }
+        } catch {
+          // Fall through to free OSRM routing.
+        }
+      }
+
       const coordsStr = points.map((p) => `${p.lng},${p.lat}`).join(';');
       try {
         const controller = new AbortController();
