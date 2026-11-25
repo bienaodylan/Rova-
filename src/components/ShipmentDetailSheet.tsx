@@ -15,7 +15,6 @@ import { db } from '../lib/firebase';
 import { DeliveryRecord, DeliveryStatus, DeliveryStopRecord } from '../types/rova';
 import {
   DELIVERY_STATUS_ORDER,
-  formatMoney,
   getPaymentMethodLabelEn,
   getStatusLabel,
   getVehicleLabel,
@@ -36,7 +35,7 @@ export function ShipmentDetailContent({
   delivery,
   onOpenPublicTracking,
 }: ShipmentDetailContentProps) {
-  const { lang, t } = useLanguage();
+  const { lang, t, formatLocalMoney } = useLanguage();
   const { busy, cancelDelivery, repeatDelivery, openSupportSheet, showToast } = useRovaApp();
 
   const [stops, setStops] = useState<DeliveryStopRecord[]>([]);
@@ -164,7 +163,7 @@ export function ShipmentDetailContent({
         </div>
         <div className="text-right">
           <p className="font-mono text-lg font-bold text-neutral-950 tabular-nums">
-            {formatMoney(delivery.quotedPrice, delivery.currency)}
+            {formatLocalMoney(delivery.quotedPrice, delivery.currency)}
           </p>
           <p className="text-xs text-neutral-500 mt-0.5">
             {getPaymentMethodLabelEn(delivery.paymentMethod)}
