@@ -19,6 +19,7 @@ import { LanguageSelector, useLanguage } from '../context/LanguageContext';
 import { useRovaApp } from '../context/RovaAppContext';
 import { BottomSheet } from '../components/BottomSheet';
 import { RovaMap } from '../components/RovaMap';
+import { AddressMapIllustration } from '../components/RovaIllustrations';
 import { PAYMENT_METHODS_EN } from '../lib/logistics';
 import { PaymentMethod, SavedRecipient } from '../types/rova';
 
@@ -227,6 +228,9 @@ export function RovaAccountView({ onOpenWorkspace }: RovaAccountViewProps) {
         <div className="rounded-3xl bg-white border border-neutral-200/80 divide-y divide-neutral-100 overflow-hidden">
           {recipients.length === 0 ? (
             <div className="p-6 text-center space-y-2.5">
+              <div className="flex justify-center">
+                <AddressMapIllustration className="w-28 h-20" />
+              </div>
               <p className="text-sm font-medium text-neutral-900">
                 {t('Aucune adresse enregistrée', 'No saved addresses yet')}
               </p>
@@ -317,8 +321,9 @@ export function RovaAccountView({ onOpenWorkspace }: RovaAccountViewProps) {
                   </div>
                 </div>
                 {active ? (
-                  <span className="inline-flex items-center gap-1 text-xs font-semibold text-neutral-950 shrink-0">
-                    <Check className="w-4 h-4" />
+                  <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-neutral-950 shrink-0">
+                    <span className="w-1.5 h-1.5 rounded-full bg-red-600" aria-hidden="true" />
+                    <Check className="w-4 h-4 text-red-600" />
                     Default
                   </span>
                 ) : (
@@ -359,7 +364,7 @@ export function RovaAccountView({ onOpenWorkspace }: RovaAccountViewProps) {
               type="checkbox"
               checked={notificationsEnabled}
               onChange={(e) => setNotificationsEnabled(e.target.checked)}
-              className="w-4 h-4 accent-neutral-950"
+              className="w-4 h-4 accent-red-600"
             />
           </label>
         </div>

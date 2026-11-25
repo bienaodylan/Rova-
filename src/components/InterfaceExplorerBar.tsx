@@ -40,7 +40,7 @@ export function FloatingBottomNav({
     <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 w-auto max-w-[calc(100vw-1rem)] pointer-events-none pb-[env(safe-area-inset-bottom,0px)]">
       <nav
         aria-label={t('Navigation principale', 'Primary navigation')}
-        className="pointer-events-auto relative flex items-center gap-1.5 sm:gap-2 p-1.5 rounded-full bg-white/50 backdrop-blur-2xl backdrop-saturate-150 border border-white/85 ring-1 ring-black/[0.08] shadow-[0_14px_40px_rgba(0,0,0,0.13),inset_0_1px_1px_rgba(255,255,255,0.92)]"
+        className="pointer-events-auto relative flex items-center gap-1.5 sm:gap-2 p-1.5 rounded-full bg-transparent backdrop-blur-md border border-white/60 ring-1 ring-black/[0.08] shadow-[0_12px_36px_rgba(0,0,0,0.08),inset_0_1px_1px_rgba(255,255,255,0.65)]"
       >
         {items.map((item) => {
           const Icon = item.icon;
@@ -54,13 +54,13 @@ export function FloatingBottomNav({
               aria-current={isActive ? 'page' : undefined}
               className="group relative flex flex-col items-center justify-center min-w-[74px] sm:min-w-[92px] h-[52px] px-3 sm:px-5 rounded-full cursor-pointer select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/30 transition-transform duration-150 active:scale-95"
             >
-              {/* Frosted glass rounded pill behind every icon */}
+              {/* Transparent glass rounded pill behind every icon */}
               <span
                 aria-hidden="true"
                 className={`absolute inset-0 rounded-full transition-all duration-200 ${
                   isActive
                     ? 'opacity-0'
-                    : 'bg-white/30 backdrop-blur-md border border-white/55 shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] group-hover:bg-white/55 group-hover:border-white/85'
+                    : 'bg-transparent backdrop-blur-sm border border-white/40 group-hover:border-white/75'
                 }`}
               />
 
@@ -75,11 +75,11 @@ export function FloatingBottomNav({
                     mass: 0.75,
                   }}
                   aria-hidden="true"
-                  className="absolute inset-0 rounded-full bg-gradient-to-b from-white/45 via-white/15 to-neutral-950/[0.06] backdrop-blur-xl border border-white/95 ring-1 ring-black/[0.12] shadow-[inset_0_1.5px_2px_rgba(255,255,255,0.95),inset_0_-1px_2px_rgba(0,0,0,0.06),0_6px_18px_rgba(0,0,0,0.10)]"
+                  className="absolute inset-0 rounded-full bg-transparent backdrop-blur-lg border border-white/85 ring-1 ring-black/[0.10] shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.8),0_4px_14px_rgba(0,0,0,0.08)]"
                 />
               )}
 
-              {/* Icon + Crisp Label */}
+              {/* Icon + Crisp Label + Red Active Indicator Dot */}
               <span className="relative z-10 flex flex-col items-center justify-center gap-0.5">
                 <span className="relative">
                   <motion.span
@@ -95,19 +95,29 @@ export function FloatingBottomNav({
                     />
                   </motion.span>
                   {item.badge && item.badge > 0 ? (
-                    <span className="absolute -top-1.5 -right-2.5 min-w-[16px] h-[16px] px-1 rounded-full bg-neutral-950 text-white font-mono text-[9px] font-semibold flex items-center justify-center tabular-nums">
+                    <span className="absolute -top-1.5 -right-2.5 min-w-[16px] h-[16px] px-1 rounded-full bg-red-600 text-white font-mono text-[9px] font-bold flex items-center justify-center tabular-nums shadow-[0_2px_8px_rgba(220,38,38,0.45)]">
                       {item.badge > 9 ? '9+' : item.badge}
                     </span>
                   ) : null}
                 </span>
-                <span
-                  className={`text-[10px] leading-none tracking-tight whitespace-nowrap transition-colors duration-200 ${
-                    isActive
-                      ? 'font-semibold text-neutral-950'
-                      : 'font-medium text-neutral-600 group-hover:text-neutral-900'
-                  }`}
-                >
-                  {item.label}
+                <span className="inline-flex items-center gap-1">
+                  {isActive && (
+                    <motion.span
+                      layoutId="rova-active-red-dot"
+                      transition={{ type: 'spring', stiffness: 460, damping: 32 }}
+                      className="w-1.5 h-1.5 rounded-full bg-red-600 shrink-0"
+                      aria-hidden="true"
+                    />
+                  )}
+                  <span
+                    className={`text-[10px] leading-none tracking-tight whitespace-nowrap transition-colors duration-200 ${
+                      isActive
+                        ? 'font-semibold text-neutral-950'
+                        : 'font-medium text-neutral-600 group-hover:text-neutral-900'
+                    }`}
+                  >
+                    {item.label}
+                  </span>
                 </span>
               </span>
             </button>

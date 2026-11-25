@@ -16,6 +16,12 @@ import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { useRovaApp } from '../context/RovaAppContext';
 import { VehicleIllustration } from '../components/VehicleIllustration';
+import {
+  HeroDeliveryScene,
+  MultiStopRouteIllustration,
+  ScheduleVehicleIllustration,
+  TrackingParcelIllustration,
+} from '../components/RovaIllustrations';
 import { BottomSheet } from '../components/BottomSheet';
 import { PrimaryTab } from '../components/InterfaceExplorerBar';
 import {
@@ -42,7 +48,6 @@ export function RovaHomeView({ onNavigateTab }: RovaHomeViewProps) {
     openShipmentDetail,
     openTrackSheet,
     openSupportSheet,
-    setDraft,
     markAllNotificationsRead,
     requestSignIn,
   } = useRovaApp();
@@ -61,10 +66,10 @@ export function RovaHomeView({ onNavigateTab }: RovaHomeViewProps) {
 
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-7 pb-8 space-y-6">
-      {/* Minimal App Header */}
+      {/* Minimal App Header — White / Black / Red Signature */}
       <header className="flex items-center justify-between gap-4">
-        <span className="font-display text-lg font-extrabold tracking-[0.22em] text-neutral-950 select-none">
-          ROVA
+        <span className="font-display text-lg font-extrabold tracking-[0.22em] text-neutral-950 select-none inline-flex items-baseline">
+          ROVA<span className="text-red-600 tracking-normal">.</span>
         </span>
 
         <div className="flex items-center gap-2">
@@ -88,7 +93,7 @@ export function RovaHomeView({ onNavigateTab }: RovaHomeViewProps) {
               >
                 <Bell className="w-4 h-4" />
                 {unreadNotifCount > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px] px-1 rounded-full bg-neutral-950 text-white font-mono text-[9px] font-bold flex items-center justify-center">
+                  <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px] px-1 rounded-full bg-red-600 text-white font-mono text-[9px] font-bold flex items-center justify-center shadow-[0_2px_6px_rgba(220,38,38,0.4)]">
                     {unreadNotifCount}
                   </span>
                 )}
@@ -116,7 +121,6 @@ export function RovaHomeView({ onNavigateTab }: RovaHomeViewProps) {
 
       {/* Main Responsive Operational Grid */}
       <div className="grid grid-cols-1 gap-6 items-start">
-        {/* Left / Primary Operational Column */}
         <div className="w-full space-y-6">
           {/* Greeting */}
           <section className="space-y-1 pt-1">
@@ -133,71 +137,98 @@ export function RovaHomeView({ onNavigateTab }: RovaHomeViewProps) {
             </p>
           </section>
 
-          {/* Prioritized Main Actions */}
+          {/* Prioritized Main Actions with Custom Editorial Illustrations */}
           <section aria-label={t('Actions principales', 'Main actions')} className="space-y-3">
-            {/* Dominant Primary Action */}
+            {/* Dominant Primary Action — Black / White / Red Illustrated Hero Card */}
             <button
               type="button"
               onClick={() => openComposer('single')}
-              className="group relative w-full overflow-hidden text-left rounded-3xl bg-neutral-950 text-white p-5 sm:p-6 shadow-sm hover:bg-neutral-900 active:scale-[0.99] transition-all cursor-pointer flex items-center justify-between gap-4"
+              className="group relative w-full overflow-hidden text-left rounded-3xl bg-neutral-950 text-white p-5 sm:p-7 shadow-sm hover:bg-neutral-900 active:scale-[0.99] transition-all cursor-pointer flex items-center justify-between gap-4"
             >
-              <div className="relative z-10 space-y-1.5 min-w-0">
-                <p className="text-xs text-neutral-400 font-medium">
-                  {t('Expédition immédiate ou planifiée', 'Instant or scheduled dispatch')}
+              <div className="relative z-10 space-y-1.5 min-w-0 max-w-lg">
+                <p className="inline-flex items-center gap-2 text-xs text-neutral-300 font-medium">
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-600 shrink-0" aria-hidden="true" />
+                  <span>{t('Expédition immédiate ou planifiée', 'Instant or scheduled dispatch')}</span>
                 </p>
                 <h2 className="font-display text-xl sm:text-2xl font-bold tracking-tight">
                   {t('Nouvelle livraison', 'New delivery')}
                 </h2>
-                <p className="text-xs sm:text-sm text-neutral-300 max-w-md">
+                <p className="text-xs sm:text-sm text-neutral-300 leading-relaxed">
                   {t(
-                    'Sélectionnez la collecte sur la carte, choisissez votre véhicule et confirmez en quelques secondes.',
-                    'Pick pickup on the map, choose your vehicle, and confirm in seconds.'
+                    'Sélectionnez la collecte sur Google Maps, choisissez votre véhicule et confirmez en quelques secondes.',
+                    'Pick pickup on Google Maps, choose your vehicle, and confirm in seconds.'
                   )}
                 </p>
               </div>
-              <div className="relative z-10 w-12 h-12 rounded-full bg-white text-neutral-950 flex items-center justify-center shrink-0 group-hover:translate-x-0.5 transition-transform">
-                <ArrowRight className="w-5 h-5" />
+
+              <div className="relative z-10 flex items-center gap-4 shrink-0">
+                <div
+                  aria-hidden="true"
+                  className="hidden sm:block pointer-events-none transition-transform duration-500 group-hover:translate-x-1"
+                >
+                  <HeroDeliveryScene className="w-52 h-28" />
+                </div>
+                <div className="w-12 h-12 rounded-full bg-white text-neutral-950 flex items-center justify-center shrink-0 group-hover:bg-red-600 group-hover:text-white group-hover:translate-x-0.5 transition-all">
+                  <ArrowRight className="w-5 h-5" />
+                </div>
               </div>
-              <div aria-hidden="true" className="pointer-events-none absolute -right-3 -bottom-5 opacity-35 transition-transform duration-500 group-hover:-translate-x-1 group-hover:scale-105">
-                <VehicleIllustration category="cargo_van" className="h-28 w-40 text-white" />
+
+              {/* Mobile Atmospheric Illustration Backdrop */}
+              <div
+                aria-hidden="true"
+                className="sm:hidden pointer-events-none absolute -right-4 -bottom-4 opacity-45 transition-transform duration-500 group-hover:-translate-x-1"
+              >
+                <HeroDeliveryScene className="w-44 h-24" />
               </div>
             </button>
 
-            {/* Secondary Actions */}
-            <div className="grid grid-cols-2 gap-3">
+            {/* Secondary Actions with Bespoke Corner Illustrations */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <button
                 type="button"
                 onClick={openReservationSheet}
-                className="group text-left rounded-2xl bg-white border border-neutral-200/90 hover:border-neutral-950 p-4 sm:p-5 transition-all active:scale-[0.99] cursor-pointer space-y-2.5"
+                className="group relative overflow-hidden text-left rounded-3xl bg-white border border-neutral-200/90 hover:border-neutral-950 p-5 sm:p-6 transition-all active:scale-[0.99] cursor-pointer min-h-[144px] flex flex-col justify-between"
               >
-                <div className="w-10 h-10 rounded-full bg-neutral-100 group-hover:bg-neutral-950 group-hover:text-white flex items-center justify-center transition-colors">
+                <div className="relative z-10 w-10 h-10 rounded-full bg-neutral-100 group-hover:bg-neutral-950 group-hover:text-white flex items-center justify-center transition-colors">
                   <Calendar className="w-4 h-4" />
                 </div>
-                <div>
+                <div className="relative z-10 max-w-[66%] pt-3">
                   <h3 className="font-display text-sm sm:text-base font-bold text-neutral-950">
                     {t('Planifier un véhicule', 'Schedule a vehicle')}
                   </h3>
-                  <p className="text-xs text-neutral-500 mt-0.5">
+                  <p className="text-xs text-neutral-500 mt-1 leading-relaxed">
                     {t('Créneau horaire ou journée dédiée', 'Time window or full-day charter')}
                   </p>
+                </div>
+                <div
+                  aria-hidden="true"
+                  className="pointer-events-none absolute right-2 bottom-2 opacity-90 transition-transform duration-300 group-hover:-translate-y-1 group-hover:scale-105"
+                >
+                  <ScheduleVehicleIllustration className="w-24 h-20 sm:w-28 sm:h-24" />
                 </div>
               </button>
 
               <button
                 type="button"
                 onClick={() => openComposer('multi')}
-                className="group text-left rounded-2xl bg-white border border-neutral-200/90 hover:border-neutral-950 p-4 sm:p-5 transition-all active:scale-[0.99] cursor-pointer space-y-2.5"
+                className="group relative overflow-hidden text-left rounded-3xl bg-white border border-neutral-200/90 hover:border-neutral-950 p-5 sm:p-6 transition-all active:scale-[0.99] cursor-pointer min-h-[144px] flex flex-col justify-between"
               >
-                <div className="w-10 h-10 rounded-full bg-neutral-100 group-hover:bg-neutral-950 group-hover:text-white flex items-center justify-center transition-colors">
+                <div className="relative z-10 w-10 h-10 rounded-full bg-neutral-100 group-hover:bg-neutral-950 group-hover:text-white flex items-center justify-center transition-colors">
                   <Route className="w-4 h-4" />
                 </div>
-                <div>
+                <div className="relative z-10 max-w-[66%] pt-3">
                   <h3 className="font-display text-sm sm:text-base font-bold text-neutral-950">
                     {t('Tournée multi-arrêts', 'Multi-stop delivery')}
                   </h3>
-                  <p className="text-xs text-neutral-500 mt-0.5">
+                  <p className="text-xs text-neutral-500 mt-1 leading-relaxed">
                     {t('Plusieurs clients, trajet optimisé', 'Multiple stops, optimized route')}
                   </p>
+                </div>
+                <div
+                  aria-hidden="true"
+                  className="pointer-events-none absolute right-2 bottom-2 opacity-90 transition-transform duration-300 group-hover:-translate-y-1 group-hover:scale-105"
+                >
+                  <MultiStopRouteIllustration className="w-24 h-20 sm:w-28 sm:h-24" />
                 </div>
               </button>
             </div>
@@ -206,9 +237,17 @@ export function RovaHomeView({ onNavigateTab }: RovaHomeViewProps) {
           {/* Active Shipments Section */}
           <section className="space-y-3">
             <div className="flex items-center justify-between">
-              <h2 className="font-display text-base font-bold text-neutral-950">
-                {t('Expéditions en cours', 'Active shipments')}
-              </h2>
+              <div className="flex items-center gap-2">
+                <h2 className="font-display text-base font-bold text-neutral-950">
+                  {t('Expéditions en cours', 'Active shipments')}
+                </h2>
+                {activeDeliveries.length > 0 && (
+                  <span className="inline-flex items-center gap-1 font-mono text-xs font-semibold text-red-600 tabular-nums">
+                    <span className="w-1.5 h-1.5 rounded-full bg-red-600" aria-hidden="true" />
+                    {activeDeliveries.length}
+                  </span>
+                )}
+              </div>
               {activeDeliveries.length > 0 && (
                 <button
                   type="button"
@@ -222,34 +261,39 @@ export function RovaHomeView({ onNavigateTab }: RovaHomeViewProps) {
             </div>
 
             {loadingData ? (
-              <div className="rounded-2xl bg-white border border-neutral-200/80 p-5 space-y-3 animate-pulse">
+              <div className="rounded-3xl bg-white border border-neutral-200/80 p-5 space-y-3 animate-pulse">
                 <div className="h-4 w-32 bg-neutral-200 rounded" />
                 <div className="h-3 w-64 bg-neutral-100 rounded" />
                 <div className="h-3 w-48 bg-neutral-100 rounded" />
               </div>
             ) : activeDeliveries.length === 0 ? (
-              <div className="rounded-2xl bg-white border border-neutral-200/80 p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="space-y-1">
-                  <p className="text-sm font-semibold text-neutral-950">
-                    {t('Aucune livraison en cours', 'No active shipments right now')}
-                  </p>
-                  <p className="text-xs text-neutral-500">
-                    {t(
-                      'Vos prochaines courses et leur suivi GPS en direct apparaîtront ici.',
-                      'Your upcoming deliveries and live GPS tracking will appear here.'
-                    )}
-                  </p>
+              <div className="rounded-3xl bg-white border border-neutral-200/80 p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-5">
+                <div className="flex items-center gap-4">
+                  <div className="shrink-0">
+                    <TrackingParcelIllustration className="w-24 h-20 sm:w-28 sm:h-22" />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm font-bold text-neutral-950">
+                      {t('Aucune livraison en cours', 'No active shipments right now')}
+                    </p>
+                    <p className="text-xs text-neutral-500 max-w-sm leading-relaxed">
+                      {t(
+                        'Vos prochaines courses et leur suivi Google Maps en direct apparaîtront ici.',
+                        'Your upcoming deliveries and live Google Maps tracking will appear here.'
+                      )}
+                    </p>
+                  </div>
                 </div>
                 <button
                   type="button"
                   onClick={() => openComposer('single')}
-                  className="px-4 py-2.5 rounded-full bg-neutral-100 hover:bg-neutral-950 hover:text-white text-xs font-semibold text-neutral-900 transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+                  className="px-4 py-2.5 rounded-full bg-neutral-950 text-white hover:bg-neutral-800 text-xs font-semibold transition-colors whitespace-nowrap shrink-0 cursor-pointer"
                 >
                   {t('Créer votre première livraison', 'Create your first delivery')}
                 </button>
               </div>
             ) : (
-              <div className="rounded-2xl bg-white border border-neutral-200/80 divide-y divide-neutral-100 overflow-hidden">
+              <div className="rounded-3xl bg-white border border-neutral-200/80 divide-y divide-neutral-100 overflow-hidden">
                 {activeDeliveries.slice(0, 3).map((del) => (
                   <div
                     key={del.id}
@@ -269,8 +313,11 @@ export function RovaHomeView({ onNavigateTab }: RovaHomeViewProps) {
                         <div className="flex items-center gap-2 text-xs text-neutral-500 flex-wrap">
                           <span className="font-mono font-semibold text-neutral-950">{del.reference}</span>
                           <span aria-hidden="true">·</span>
-                          <span className={`font-medium ${STATUS_META[del.status]?.text || 'text-neutral-700'}`}>
-                            {getStatusLabel(del.status, lang)}
+                          <span className="inline-flex items-center gap-1.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-red-600 shrink-0" aria-hidden="true" />
+                            <span className={`font-medium ${STATUS_META[del.status]?.text || 'text-neutral-700'}`}>
+                              {getStatusLabel(del.status, lang)}
+                            </span>
                           </span>
                           {del.driverName && (
                             <>
@@ -316,7 +363,7 @@ export function RovaHomeView({ onNavigateTab }: RovaHomeViewProps) {
                   <ChevronRight className="w-3.5 h-3.5" />
                 </button>
               </div>
-              <div className="rounded-2xl bg-white border border-neutral-200/80 divide-y divide-neutral-100 overflow-hidden">
+              <div className="rounded-3xl bg-white border border-neutral-200/80 divide-y divide-neutral-100 overflow-hidden">
                 {upcomingReservations.slice(0, 2).map((res) => (
                   <div key={res.id} className="p-4 flex items-center justify-between gap-3">
                     <div className="min-w-0">
@@ -370,18 +417,22 @@ export function RovaHomeView({ onNavigateTab }: RovaHomeViewProps) {
                     key={s.label}
                     type="button"
                     onClick={s.onClick}
-                    className="flex items-center gap-2.5 px-3.5 py-3 rounded-2xl bg-white border border-neutral-200/80 hover:border-neutral-950 text-xs font-medium text-neutral-800 transition-colors cursor-pointer"
+                    className="group flex items-center justify-between gap-2 px-3.5 py-3.5 rounded-2xl bg-white border border-neutral-200/80 hover:border-neutral-950 text-xs font-medium text-neutral-800 transition-colors cursor-pointer"
                   >
-                    <Icon className="w-4 h-4 text-neutral-500 shrink-0" />
-                    <span className="truncate">{s.label}</span>
+                    <span className="flex items-center gap-2.5 min-w-0">
+                      <Icon className="w-4 h-4 text-neutral-500 group-hover:text-neutral-950 transition-colors shrink-0" />
+                      <span className="truncate">{s.label}</span>
+                    </span>
+                    <span
+                      className="w-1.5 h-1.5 rounded-full bg-neutral-200 group-hover:bg-red-600 transition-colors shrink-0"
+                      aria-hidden="true"
+                    />
                   </button>
                 );
               })}
             </div>
           </section>
         </div>
-
-
       </div>
 
       {/* Notifications Bottom Sheet */}
@@ -416,7 +467,10 @@ export function RovaHomeView({ onNavigateTab }: RovaHomeViewProps) {
                 }}
                 className={`py-3.5 space-y-0.5 ${n.deliveryId ? 'cursor-pointer hover:bg-neutral-50 -mx-2 px-2 rounded-xl' : ''}`}
               >
-                <p className="text-sm font-semibold text-neutral-950">{n.title}</p>
+                <p className="text-sm font-semibold text-neutral-950 flex items-center gap-2">
+                  {!n.read && <span className="w-1.5 h-1.5 rounded-full bg-red-600 shrink-0" aria-hidden="true" />}
+                  <span>{n.title}</span>
+                </p>
                 <p className="text-xs text-neutral-600">{n.message}</p>
               </div>
             ))}

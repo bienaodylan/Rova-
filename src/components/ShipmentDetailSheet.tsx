@@ -195,7 +195,8 @@ export function ShipmentDetailContent({
           </div>
         </div>
         {delivery.driverName && (
-          <span className="text-xs font-medium text-emerald-700 shrink-0">
+          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-neutral-950 shrink-0">
+            <span className="w-2 h-2 rounded-full bg-red-600" aria-hidden="true" />
             {t('GPS actif', 'Live GPS')}
           </span>
         )}
@@ -216,7 +217,7 @@ export function ShipmentDetailContent({
                 <div key={step.key} className="flex items-center gap-3 text-sm">
                   <CheckCircle2
                     className={`w-4 h-4 shrink-0 ${
-                      done ? 'text-neutral-950' : 'text-neutral-300'
+                      isCurrent ? 'text-red-600' : done ? 'text-neutral-950' : 'text-neutral-300'
                     }`}
                   />
                   <span

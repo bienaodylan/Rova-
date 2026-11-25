@@ -451,7 +451,10 @@ export function DeliveryComposerSheet() {
                     : 'text-neutral-400'
                 }`}
               >
-                <span className="font-mono text-[11px]">{s.id}</span>
+                <span className="inline-flex items-center gap-1 font-mono text-[11px]">
+                  {active && <span className="w-1.5 h-1.5 rounded-full bg-red-500" aria-hidden="true" />}
+                  {s.id}
+                </span>
                 <span>{s.label}</span>
               </button>
             );

@@ -3,6 +3,7 @@ import { Calendar, ChevronRight, MapPin, Plus, Search, XCircle } from 'lucide-re
 import { useLanguage } from '../context/LanguageContext';
 import { ShipmentFilter, useRovaApp } from '../context/RovaAppContext';
 import { VehicleIllustration } from '../components/VehicleIllustration';
+import { TrackingParcelIllustration } from '../components/RovaIllustrations';
 import { ShipmentDetailContent } from '../components/ShipmentDetailSheet';
 import {
   getStatusLabel,
@@ -146,6 +147,7 @@ export function RovaShipmentsView({ onOpenPublicTracking }: RovaShipmentsViewPro
                     : 'bg-white border border-neutral-200 text-neutral-700 hover:border-neutral-400'
                 }`}
               >
+                {active && <span className="w-1.5 h-1.5 rounded-full bg-red-600 shrink-0" aria-hidden="true" />}
                 <span>{f.label}</span>
                 {f.count > 0 && (
                   <span
@@ -185,6 +187,9 @@ export function RovaShipmentsView({ onOpenPublicTracking }: RovaShipmentsViewPro
             </div>
           ) : filteredDeliveries.length === 0 && filteredReservations.length === 0 ? (
             <div className="rounded-3xl bg-white border border-neutral-200/80 p-8 text-center space-y-3">
+              <div className="flex justify-center">
+                <TrackingParcelIllustration className="w-32 h-24" />
+              </div>
               <p className="font-display text-base font-bold text-neutral-950">
                 {shipmentFilter === 'upcoming'
                   ? t('Aucune réservation à venir', 'No upcoming reservations')
@@ -355,15 +360,17 @@ export function RovaShipmentsView({ onOpenPublicTracking }: RovaShipmentsViewPro
                 onOpenPublicTracking={onOpenPublicTracking}
               />
             ) : (
-              <div className="py-20 text-center space-y-2">
-                <MapPin className="w-6 h-6 mx-auto text-neutral-300" />
-                <p className="text-sm font-semibold text-neutral-800">
+              <div className="py-16 text-center space-y-3">
+                <div className="flex justify-center">
+                  <TrackingParcelIllustration className="w-36 h-28" />
+                </div>
+                <p className="text-sm font-semibold text-neutral-900">
                   {t('Aperçu de l’expédition', 'Shipment inspector')}
                 </p>
-                <p className="text-xs text-neutral-500">
+                <p className="text-xs text-neutral-500 max-w-xs mx-auto leading-relaxed">
                   {t(
-                    'Sélectionnez une livraison à gauche pour afficher sa carte et sa chronologie.',
-                    'Select a delivery on the left to inspect its live map and timeline.'
+                    'Sélectionnez une livraison à gauche pour afficher sa carte Google Maps et sa chronologie.',
+                    'Select a delivery on the left to inspect its live Google Map and timeline.'
                   )}
                 </p>
               </div>

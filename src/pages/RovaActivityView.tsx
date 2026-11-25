@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { Calendar, ChevronRight, CreditCard, Package, RefreshCw } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { ActivityFilter, useRovaApp } from '../context/RovaAppContext';
+import { ActivityLedgerIllustration } from '../components/RovaIllustrations';
 import {
   getPaymentMethodLabelEn,
   getStatusLabel,
@@ -135,7 +136,10 @@ export function RovaActivityView() {
       {/* Clean Numeric Summary Strip */}
       <div className="grid grid-cols-3 gap-3">
         <div className="rounded-2xl bg-white border border-neutral-200/80 p-4">
-          <p className="text-xs text-neutral-500">{t('Livrées', 'Delivered')}</p>
+          <p className="text-xs text-neutral-500 flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-red-600 shrink-0" aria-hidden="true" />
+            <span>{t('Livrées', 'Delivered')}</span>
+          </p>
           <p className="font-mono text-xl font-bold text-neutral-950 mt-1 tabular-nums">
             {summary.completedCount}
           </p>
@@ -156,25 +160,32 @@ export function RovaActivityView() {
 
       {/* Filters */}
       <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
-        {filters.map((f) => (
-          <button
-            key={f.id}
-            type="button"
-            onClick={() => setActivityFilter(f.id)}
-            className={`px-3.5 py-2 rounded-full text-xs font-medium whitespace-nowrap shrink-0 transition-colors cursor-pointer ${
-              activityFilter === f.id
-                ? 'bg-neutral-950 text-white'
-                : 'bg-white border border-neutral-200 text-neutral-700 hover:border-neutral-400'
-            }`}
-          >
-            {f.label}
-          </button>
-        ))}
+        {filters.map((f) => {
+          const isActive = activityFilter === f.id;
+          return (
+            <button
+              key={f.id}
+              type="button"
+              onClick={() => setActivityFilter(f.id)}
+              className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-medium whitespace-nowrap shrink-0 transition-colors cursor-pointer ${
+                isActive
+                  ? 'bg-neutral-950 text-white'
+                  : 'bg-white border border-neutral-200 text-neutral-700 hover:border-neutral-400'
+              }`}
+            >
+              {isActive && <span className="w-1.5 h-1.5 rounded-full bg-red-600 shrink-0" aria-hidden="true" />}
+              <span>{f.label}</span>
+            </button>
+          );
+        })}
       </div>
 
       {/* Activity Ledger */}
       {timelineItems.length === 0 ? (
         <div className="rounded-3xl bg-white border border-neutral-200/80 p-10 text-center space-y-3">
+          <div className="flex justify-center">
+            <ActivityLedgerIllustration className="w-32 h-24" />
+          </div>
           <p className="font-display text-base font-bold text-neutral-950">
             {t('Aucune activité enregistrée', 'No activity recorded yet')}
           </p>
