@@ -1074,7 +1074,7 @@ export function OperationsCenter({
                   {
                     label: t('Volume brut', 'Gross Volume'),
                     value: formatLocalMoney(kpis.grossRevenue, 'GHS'),
-                    sub: `15%: ${formatMoney(kpis.platformCommission, 'GHS')}`,
+                    sub: `15%: ${formatLocalMoney(kpis.platformCommission, 'GHS')}`,
                   },
                 ].map((kpi) => (
                   <div key={kpi.label} className="rounded-2xl border border-neutral-200 p-4 bg-white space-y-1">
@@ -1215,7 +1215,7 @@ export function OperationsCenter({
                           </div>
                           <div className="text-left sm:text-right">
                             <p className="font-mono text-sm font-bold tabular-nums">
-                              {formatMoney(del.quotedPrice, del.currency)}
+                              {formatLocalMoney(del.quotedPrice, del.currency)}
                             </p>
                             <p className="text-[11px] text-neutral-500">
                               {getPaymentMethodLabelEn(del.paymentMethod)} · {del.paymentStatus}
@@ -1283,7 +1283,7 @@ export function OperationsCenter({
                             </p>
                           </div>
                           <span className="font-mono text-sm font-bold">
-                            {formatMoney(res.quotedPrice, res.currency)}
+                            {formatLocalMoney(res.quotedPrice, res.currency)}
                           </span>
                         </div>
                         <div className="flex flex-wrap gap-2 pt-2 border-t border-neutral-100">
@@ -1936,9 +1936,9 @@ export function OperationsCenter({
                             <p className="text-neutral-500">{r.zoneName}</p>
                           </td>
                           <td className="p-3.5 tabular-nums">
-                            {formatMoney(r.baseFee, r.currency)} + {formatMoney(r.perKmRate, r.currency)}/km
+                            {formatLocalMoney(r.baseFee, r.currency)} + {formatLocalMoney(r.perKmRate, r.currency)}/km
                           </td>
-                          <td className="p-3.5 tabular-nums">{formatMoney(r.fullDayRate, r.currency)}</td>
+                          <td className="p-3.5 tabular-nums">{formatLocalMoney(r.fullDayRate, r.currency)}</td>
                           <td className="p-3.5 text-right font-sans">
                             <button
                               type="button"
@@ -1988,19 +1988,19 @@ export function OperationsCenter({
                     <div className="rounded-3xl border border-neutral-200 bg-white p-5">
                       <p className="text-xs text-neutral-500">{t('Volume brut', 'Gross Volume')}</p>
                       <p className="font-mono text-2xl font-bold tabular-nums mt-1">
-                        {formatMoney(kpis.grossRevenue, 'GHS')}
+                        {formatLocalMoney(kpis.grossRevenue, 'GHS')}
                       </p>
                     </div>
                     <div className="rounded-3xl border border-neutral-200 bg-white p-5">
                       <p className="text-xs text-neutral-500">{t('Commission ROVA (15%)', 'Platform Fee (15%)')}</p>
                       <p className="font-mono text-2xl font-bold tabular-nums mt-1">
-                        {formatMoney(kpis.platformCommission, 'GHS')}
+                        {formatLocalMoney(kpis.platformCommission, 'GHS')}
                       </p>
                     </div>
                     <div className="rounded-3xl border border-neutral-200 bg-white p-5">
                       <p className="text-xs text-neutral-500">{t('Reversements livreurs (85%)', 'Driver Payouts (85%)')}</p>
                       <p className="font-mono text-2xl font-bold tabular-nums mt-1">
-                        {formatMoney(kpis.driverPayouts, 'GHS')}
+                        {formatLocalMoney(kpis.driverPayouts, 'GHS')}
                       </p>
                     </div>
                   </div>
@@ -2034,7 +2034,7 @@ export function OperationsCenter({
                                 <td className="p-3.5 font-medium">{getPaymentMethodLabelEn(d.paymentMethod)}</td>
                                 <td className="p-3.5 font-mono uppercase text-[11px]">{d.paymentStatus}</td>
                                 <td className="p-3.5 text-right font-mono tabular-nums">
-                                  {formatMoney(d.quotedPrice, d.currency)}
+                                  {formatLocalMoney(d.quotedPrice, d.currency)}
                                 </td>
                               </tr>
                             ))}
