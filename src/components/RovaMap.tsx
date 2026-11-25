@@ -135,13 +135,22 @@ export function RovaMap({
 
     L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-    // Real OpenStreetMap / CARTO Positron monochrome tile layer
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-      attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
-      subdomains: 'abcd',
-      maxZoom: 19,
-      className: 'rova-map-tiles',
-    }).addTo(map);
+    // Geoapify is optional: use it when a restricted public browser key is configured,
+    // otherwise keep the existing keyless CARTO basemap.
+    const geoapifyKey = import.meta.env.VITE_GEOAPIFY_API_KEY as string | undefined;
+    L.tileLayer(
+      geoapifyKey
+        ? `https://maps.geoapify.com/v1/tile/osm-bright-grey/{z}/{x}/{y}.png?apiKey=${encodeURIComponent(geoapifyKey)}`
+        : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+      {
+        attribution: geoapifyKey
+          ? 'Powered by <a href="https://www.geoapify.com/">Geoapify</a> | &copy; OpenStreetMap contributors'
+          : '&copy; OpenStreetMap contributors &copy; CARTO',
+        subdomains: geoapifyKey ? undefined : 'abcd',
+        maxZoom: 19,
+        className: 'rova-map-tiles',
+      }
+    ).addTo(map);
 
     markersLayerRef.current = L.layerGroup().addTo(map);
     mapRef.current = map;
