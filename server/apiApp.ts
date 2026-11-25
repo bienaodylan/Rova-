@@ -159,6 +159,11 @@ function getGoogleMapsPublicBrowserKey(): string {
   return getValidEnvKey(process.env.VITE_GOOGLE_MAPS_API_KEY);
 }
 
+function getGeoapifyApiKey(): string {
+  // Keep the Geoapify key on the server; never include it in client runtime config.
+  return getValidEnvKey(process.env.GEOAPIFY_API_KEY || process.env.VITE_GEOAPIFY_API_KEY);
+}
+
 function createBoundedTtlCache<T>(maxEntries = 500) {
   const store = new Map<string, { value: T; expiresAt: number }>();
   return {
@@ -431,6 +436,7 @@ export function createApiApp(): express.Express {
       supabaseServerConfigured: isSupabaseServerConfigured(),
       mapsBrowserConfigured: Boolean(getGoogleMapsPublicBrowserKey()),
       mapsServerConfigured: Boolean(getGoogleMapsServerKey()),
+      mapsGeoapifyConfigured: Boolean(getGeoapifyApiKey()),
       runtime: process.env.VERCEL ? 'vercel' : 'node',
     });
   });
@@ -569,6 +575,53 @@ export function createApiApp(): express.Express {
         }
       }
 
+      const geoapifyKey = getGeoapifyApiKey();
+      if (geoapifyKey) {
+        try {
+          const geoParams = new URLSearchParams({
+            text: rawQ,
+            apiKey: geoapifyKey,
+            limit: '6',
+            format: 'json',
+          });
+          if (countryCodes) geoParams.set('filter', `countrycode:${countryCodes.split(',').join(',')}`);
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 5000);
+          const geoRes = await fetch(`https://api.geoapify.com/v1/geocode/search?${geoParams.toString()}`, {
+            headers: { Accept: 'application/json' },
+            signal: controller.signal,
+          });
+          clearTimeout(timeout);
+          if (geoRes.ok) {
+            const geoData = (await geoRes.json()) as {
+              results?: Array<{
+                formatted?: string; address_line1?: string; address_line2?: string;
+                name?: string; street?: string; suburb?: string; city?: string;
+                lat?: number; lon?: number; result_type?: string;
+              }>;
+            };
+            const results = (geoData.results || []).slice(0, 6).map((item) => {
+              const displayName = item.formatted || [item.address_line1, item.address_line2].filter(Boolean).join(', ');
+              const shortName = [item.name || item.street, item.suburb, item.city].filter(Boolean).slice(0, 3).join(', ') || displayName;
+              return {
+                displayName,
+                shortName,
+                landmark: item.name || item.suburb || undefined,
+                lat: Number(item.lat || 0),
+                lng: Number(item.lon || 0),
+                type: item.result_type || 'place',
+              };
+            }).filter((item) => Number.isFinite(item.lat) && Number.isFinite(item.lng));
+            if (results.length) {
+              geocodeSearchCache.set(cacheKey, results, 15 * 60_000);
+              return res.json({ results, provider: 'geoapify' });
+            }
+          }
+        } catch {
+          // Fall through to the free Nominatim provider.
+        }
+      }
+
       const params = new URLSearchParams({
         q: rawQ,
         format: 'jsonv2',
@@ -688,6 +741,51 @@ export function createApiApp(): express.Express {
           }
         } catch {
           // Fall through to Nominatim
+        }
+      }
+
+      const geoapifyKey = getGeoapifyApiKey();
+      if (geoapifyKey) {
+        try {
+          const geoParams = new URLSearchParams({
+            lat: String(lat),
+            lon: String(lng),
+            apiKey: geoapifyKey,
+            format: 'json',
+          });
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 5000);
+          const geoRes = await fetch(`https://api.geoapify.com/v1/geocode/reverse?${geoParams.toString()}`, {
+            headers: { Accept: 'application/json' },
+            signal: controller.signal,
+          });
+          clearTimeout(timeout);
+          if (geoRes.ok) {
+            const geoData = (await geoRes.json()) as {
+              results?: Array<{
+                formatted?: string; address_line1?: string; address_line2?: string;
+                name?: string; street?: string; suburb?: string; city?: string;
+                country?: string; country_code?: string;
+              }>;
+            };
+            const first = geoData.results?.[0];
+            if (first) {
+              const shortName = [first.name || first.street || first.address_line1, first.suburb, first.city]
+                .filter(Boolean).join(', ') || first.formatted || `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+              const payload = {
+                displayName: first.formatted || [first.address_line1, first.address_line2].filter(Boolean).join(', ') || shortName,
+                shortName,
+                landmark: first.name || first.suburb || undefined,
+                country: first.country || undefined,
+                countryCode: first.country_code?.toUpperCase(),
+                provider: 'geoapify',
+              };
+              reverseGeocodeCache.set(cacheKey, payload, 15 * 60_000);
+              return res.json({ ...payload, lat, lng });
+            }
+          }
+        } catch {
+          // Fall through to the free Nominatim provider.
         }
       }
 
@@ -828,6 +926,49 @@ export function createApiApp(): express.Express {
           }
         } catch {
           // Fall through to OSRM
+        }
+      }
+
+      const geoapifyKey = getGeoapifyApiKey();
+      if (geoapifyKey) {
+        try {
+          const waypoints = points.map((p) => `${p.lat},${p.lng}`).join('|');
+          const geoParams = new URLSearchParams({
+            waypoints,
+            mode: 'drive',
+            apiKey: geoapifyKey,
+          });
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 6000);
+          const geoRes = await fetch(`https://api.geoapify.com/v1/routing?${geoParams.toString()}`, {
+            headers: { Accept: 'application/json' },
+            signal: controller.signal,
+          });
+          clearTimeout(timeout);
+          if (geoRes.ok) {
+            const geoData = (await geoRes.json()) as {
+              features?: Array<{
+                properties?: { distance?: number; time?: number };
+                geometry?: { coordinates?: [number, number][] };
+              }>;
+            };
+            const feature = geoData.features?.[0];
+            const coords = feature?.geometry?.coordinates;
+            if (feature && Array.isArray(coords) && coords.length >= 2) {
+              const latLngPath = coords.map(([lng, lat]): [number, number] => [lat, lng]);
+              const result = {
+                provider: 'geoapify',
+                distanceKm: Number(((feature.properties?.distance || 0) / 1000).toFixed(2)),
+                durationMin: Math.max(3, Math.round((feature.properties?.time || 0) / 60)),
+                coordinates: latLngPath,
+                geometry: latLngPath,
+              };
+              routeComputeCache.set(cacheKey, result, 10 * 60_000);
+              return res.json(result);
+            }
+          }
+        } catch {
+          // Fall through to free OSRM routing.
         }
       }
 
