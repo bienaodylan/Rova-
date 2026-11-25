@@ -67,6 +67,7 @@ import {
   VEHICLE_CATALOG,
 } from '../lib/logistics';
 import { MapMarkerItem, RovaMap } from '../components/RovaMap';
+import { RovaWordmark } from '../components/RovaSplashScreen';
 
 type MerchantSection =
   | 'overview'
@@ -599,7 +600,7 @@ export function MerchantWorkspace({
         reference,
         ...(business?.id ? { businessId: business.id } : {}),
         merchantUid: uid,
-        merchantName: (business?.name || profile?.displayName || 'Marchand ROVA').slice(0, 160),
+        merchantName: (business?.name || profile?.displayName || 'Marchand Rovia').slice(0, 160),
         driverUid: matched ? matched.uid : '',
         ...(matched ? { driverName: matched.firstName.slice(0, 120) } : {}),
         vehicleCategory,
@@ -725,7 +726,7 @@ export function MerchantWorkspace({
       await addDoc(collection(db, 'reservations'), {
         ...(business?.id ? { businessId: business.id } : {}),
         merchantUid: uid,
-        merchantName: (business?.name || profile?.displayName || 'Marchand ROVA').slice(0, 160),
+        merchantName: (business?.name || profile?.displayName || 'Marchand Rovia').slice(0, 160),
         vehicleCategory: resForm.vehicleCategory,
         driverUid: '',
         reservationDate: resForm.reservationDate,
@@ -901,7 +902,7 @@ export function MerchantWorkspace({
       <aside className="hidden lg:flex lg:flex-col lg:w-64 border-r border-neutral-200 bg-white shrink-0">
         <div className="h-16 px-6 flex items-center justify-between border-b border-neutral-200">
           <div>
-            <span className="font-display text-base font-extrabold tracking-[0.2em]">ROVA</span>
+            <RovaWordmark size="md" />
             <p className="text-[11px] text-neutral-500">{t('Espace Marchand', 'Merchant Workspace')}</p>
           </div>
         </div>
@@ -1787,7 +1788,7 @@ export function MerchantWorkspace({
                 className="lg:col-span-5 rounded-3xl border border-neutral-200 bg-white p-6 space-y-4 h-fit"
               >
                 <h2 className="font-display text-base font-bold">
-                  {t('Réserver un véhicule ROVA', 'Reserve a ROVA Vehicle')}
+                  {t('Réserver un véhicule Rovia', 'Reserve a Rovia Vehicle')}
                 </h2>
                 <select
                   value={resForm.vehicleCategory}
