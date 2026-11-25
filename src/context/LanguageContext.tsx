@@ -2,7 +2,7 @@ import React, { createContext, useContext, useEffect, useMemo, useState } from '
 import { Globe, MapPin, X } from 'lucide-react';
 
 export type AppLanguage = 'fr' | 'en';
-export type AppCurrency = 'GHS' | 'GBP' | 'XOF' | 'EUR' | 'USD' | 'NGN' | 'CAD' | 'ZAR' | 'KES';
+export type AppCurrency = 'GHS' | 'GBP' | 'XOF' | 'EUR' | 'USD' | 'NGN' | 'CAD' | 'ZAR' | 'KES' | 'CHF' | 'AUD' | 'JPY' | 'CNY' | 'AED' | 'INR' | 'MAD' | 'TZS' | 'UGX';
 
 interface LanguageContextValue {
   lang: AppLanguage;
@@ -27,12 +27,20 @@ const COUNTRY_SETTINGS: Record<string, { lang: AppLanguage; currency: AppCurrenc
   NE: { lang: 'fr', currency: 'XOF', name: 'Niger' },
   FR: { lang: 'fr', currency: 'EUR', name: 'France' },
   BE: { lang: 'fr', currency: 'EUR', name: 'Belgium' },
-  CH: { lang: 'fr', currency: 'EUR', name: 'Switzerland' },
+  CH: { lang: 'fr', currency: 'CHF', name: 'Switzerland' },
   US: { lang: 'en', currency: 'USD', name: 'United States' },
   CA: { lang: 'en', currency: 'CAD', name: 'Canada' },
   NG: { lang: 'en', currency: 'NGN', name: 'Nigeria' },
   ZA: { lang: 'en', currency: 'ZAR', name: 'South Africa' },
   KE: { lang: 'en', currency: 'KES', name: 'Kenya' },
+  AU: { lang: 'en', currency: 'AUD', name: 'Australia' },
+  JP: { lang: 'en', currency: 'JPY', name: 'Japan' },
+  CN: { lang: 'en', currency: 'CNY', name: 'China' },
+  AE: { lang: 'en', currency: 'AED', name: 'United Arab Emirates' },
+  IN: { lang: 'en', currency: 'INR', name: 'India' },
+  MA: { lang: 'fr', currency: 'MAD', name: 'Maroc' },
+  TZ: { lang: 'en', currency: 'TZS', name: 'Tanzania' },
+  UG: { lang: 'en', currency: 'UGX', name: 'Uganda' },
 };
 
 interface LocaleSuggestion {
@@ -49,7 +57,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const [currency, setCurrency] = useState<AppCurrency>(() => {
     try {
       const saved = localStorage.getItem('rova-currency');
-      return saved && ['GHS', 'GBP', 'XOF', 'EUR', 'USD', 'NGN', 'CAD', 'ZAR', 'KES'].includes(saved)
+      return saved && ['GHS', 'GBP', 'XOF', 'EUR', 'USD', 'NGN', 'CAD', 'ZAR', 'KES', 'CHF', 'AUD', 'JPY', 'CNY', 'AED', 'INR', 'MAD', 'TZS', 'UGX'].includes(saved)
         ? saved as AppCurrency : 'GHS';
     } catch { return 'GHS'; }
   });
@@ -87,11 +95,14 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     const safeAmount = Number.isFinite(amount) ? amount : 0;
     const converted = sourceCurrency === currency
       ? safeAmount
-      : sourceCurrency === 'GHS' && typeof rates[currency] === 'number'
+      : sourceCurrency === 'GHS' && typeof rates[currency] === 'number' && rates[currency] !== 1
         ? safeAmount * rates[currency]
         : safeAmount;
-    const displayCurrency = sourceCurrency !== currency && sourceCurrency !== 'GHS' && !rates[currency]
-      ? sourceCurrency : currency;
+    const displayCurrency = sourceCurrency === 'GHS' && !rates[currency]
+      ? 'GHS'
+      : sourceCurrency !== currency && sourceCurrency !== 'GHS'
+        ? sourceCurrency
+        : currency;
     const locale = lang === 'fr' ? 'fr-FR' : 'en-GB';
     try {
       return new Intl.NumberFormat(locale, {
