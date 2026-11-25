@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Calendar, Check, Loader2 } from 'lucide-react';
 import { BottomSheet } from './BottomSheet';
 import { LocationSearchField } from './LocationSearchField';
@@ -26,6 +26,10 @@ export function ReservationSheet() {
   }, []);
 
   const [reservationStep, setReservationStep] = useState<1 | 2 | 3>(1);
+
+  useEffect(() => {
+    if (!reservationSheetOpen) setReservationStep(1);
+  }, [reservationSheetOpen]);
   const [vehicleCategory, setVehicleCategory] = useState<VehicleCategory>('cargo_van');
   const [durationType, setDurationType] = useState<'window' | 'hours' | 'full_day'>('hours');
   const [reservationDate, setReservationDate] = useState(tomorrow);
@@ -48,7 +52,7 @@ export function ReservationSheet() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!pickupAddress.trim() || !reservationDate) return;
+    if (!pickupAddress.trim() || !reservationDate || !startTime || !endTime || endTime <= startTime) return;
     await submitReservation({
       vehicleCategory,
       reservationDate,
@@ -86,9 +90,9 @@ export function ReservationSheet() {
           <div className="flex items-center gap-2 shrink-0">
             {reservationStep > 1 && <button type="button" onClick={() => setReservationStep((step) => (step - 1) as 1 | 2 | 3)} className="min-h-[46px] rounded-xl border border-[#E5E5E5] px-4 text-sm font-semibold text-[#171717] hover:border-[#171717]">{t('Retour', 'Back')}</button>}
             {reservationStep < 3 ? (
-              <button type="button" onClick={() => setReservationStep((step) => (step + 1) as 1 | 2 | 3)} className="min-h-[46px] inline-flex items-center gap-2 rounded-xl bg-[#171717] px-6 text-sm font-semibold text-white hover:bg-neutral-800">{t('Continuer', 'Continue')}</button>
+              <button type="button" onClick={() => setReservationStep((step) => (step + 1) as 1 | 2 | 3)} disabled={reservationStep === 2 && (!reservationDate || !startTime || !endTime || endTime <= startTime)} className="min-h-[46px] inline-flex items-center gap-2 rounded-xl bg-[#171717] px-6 text-sm font-semibold text-white hover:bg-neutral-800">{t('Continuer', 'Continue')}</button>
             ) : (
-              <button type="submit" form="rova-reservation-form" disabled={busy || !pickupAddress.trim()} className="min-h-[46px] inline-flex items-center gap-2 rounded-xl bg-[#E52B32] px-6 text-sm font-semibold text-white hover:bg-[#CC2229] disabled:opacity-40 transition-all active:scale-[0.98] cursor-pointer">
+              <button type="submit" form="rova-reservation-form" disabled={busy || !pickupAddress.trim() || !reservationDate || !startTime || !endTime || endTime <= startTime} className="min-h-[46px] inline-flex items-center gap-2 rounded-xl bg-[#E52B32] px-6 text-sm font-semibold text-white hover:bg-[#CC2229] disabled:opacity-40 transition-all active:scale-[0.98] cursor-pointer">
                 {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
                 <span>{t('Confirmer la réservation', 'Confirm reservation')}</span>
               </button>
