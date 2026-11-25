@@ -54,7 +54,6 @@ import {
   VehicleCategory,
 } from '../types/rova';
 import {
-  formatMoney,
   generateOtp,
   generateReference,
   generateTrackingToken,
@@ -103,7 +102,7 @@ export function MerchantWorkspace({
   onRequestSignIn,
 }: MerchantWorkspaceProps) {
   const { firebaseUser, profile, updateProfileFields, logout } = useAuth();
-  const { lang, t } = useLanguage();
+  const { lang, t, formatLocalMoney } = useLanguage();
   const uid = firebaseUser?.uid || '';
 
   const [section, setSection] = useState<MerchantSection>('overview');
@@ -1070,7 +1069,7 @@ export function MerchantWorkspace({
                     value: deliveries.filter((d) => !['delivered', 'failed', 'cancelled'].includes(d.status)).length,
                   },
                   { label: t('Réservations', 'Reservations'), value: reservations.length },
-                  { label: t('Dépenses totales', 'Total Spend'), value: formatMoney(totalSpend, 'GHS') },
+                  { label: t('Dépenses totales', 'Total Spend'), value: formatLocalMoney(totalSpend, 'GHS') },
                 ].map((k) => (
                   <div key={k.label} className="rounded-3xl border border-neutral-200 bg-white p-5 space-y-1">
                     <p className="text-xs text-neutral-500">{k.label}</p>
