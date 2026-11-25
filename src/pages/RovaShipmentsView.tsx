@@ -9,6 +9,7 @@ import {
   Navigation,
   Package,
   Plus,
+  QrCode,
   Search,
   XCircle,
 } from 'lucide-react';
@@ -18,6 +19,7 @@ import { useLanguage } from '../context/LanguageContext';
 import { ShipmentFilter, useRovaApp } from '../context/RovaAppContext';
 import { VehicleIllustration } from '../components/VehicleIllustration';
 import { ShipmentDetailContent } from '../components/ShipmentDetailSheet';
+import { QrScannerSheet } from '../components/QrScannerSheet';
 import { MapMarkerItem, RovaMap } from '../components/RovaMap';
 import { useHideOnScroll } from '../hooks/useHideOnScroll';
 import {
@@ -51,6 +53,7 @@ export function RovaShipmentsView({ onOpenPublicTracking }: RovaShipmentsViewPro
   } = useRovaApp();
 
   const [search, setSearch] = useState('');
+  const [qrScannerOpen, setQrScannerOpen] = useState(false);
   const [viewMode, setViewMode] = useState<ShipmentsViewMode>('list');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedStops, setSelectedStops] = useState<DeliveryStopRecord[]>([]);
@@ -316,6 +319,9 @@ export function RovaShipmentsView({ onOpenPublicTracking }: RovaShipmentsViewPro
         </div>
 
         <div className="flex items-center gap-2">
+          <button type="button" onClick={() => setQrScannerOpen(true)} aria-label={t('Scanner un colis', 'Scan a package')} title={t('Scanner un colis', 'Scan a package')} className="min-h-[40px] min-w-[40px] inline-flex items-center justify-center rounded-xl border border-[#E5E5E5] bg-white text-[#171717] hover:border-[#E52B32] hover:text-[#E52B32] transition-colors cursor-pointer">
+            <QrCode className="w-4 h-4" />
+          </button>
           {/* Segmented Liste / Carte Switcher */}
           <div
             role="group"
@@ -772,6 +778,11 @@ export function RovaShipmentsView({ onOpenPublicTracking }: RovaShipmentsViewPro
           </div>
         </div>
       )}
+      <QrScannerSheet
+        open={qrScannerOpen}
+        onClose={() => setQrScannerOpen(false)}
+        onDetected={(token) => onOpenPublicTracking(token)}
+      />
     </div>
   );
 }
