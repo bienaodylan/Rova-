@@ -474,6 +474,9 @@ export function createApiApp(): express.Express {
       const rawQ = typeof req.query.q === 'string' ? req.query.q.trim() : '';
       const countryCodes = typeof req.query.countrycodes === 'string' ? req.query.countrycodes.replace(/[^a-z,]/gi, '') : '';
       const regionBias = typeof req.query.region === 'string' ? req.query.region.replace(/[^a-z]/gi, '').slice(0, 2).toLowerCase() : '';
+      const proximityLat = Number(req.query.lat);
+      const proximityLng = Number(req.query.lng);
+      const hasProximity = Number.isFinite(proximityLat) && Number.isFinite(proximityLng) && Math.abs(proximityLat) <= 90 && Math.abs(proximityLng) <= 180;
       if (!rawQ || rawQ.length < 2 || rawQ.length > 200) {
         return res.json({ results: [] });
       }
@@ -517,7 +520,8 @@ export function createApiApp(): express.Express {
         });
       }
 
-      const cacheKey = `${rawQ.toLowerCase()}|${countryCodes.toLowerCase()}|${regionBias}`;
+      const proximityKey = hasProximity ? `${proximityLat.toFixed(2)},${proximityLng.toFixed(2)}` : '';
+      const cacheKey = `${rawQ.toLowerCase()}|${countryCodes.toLowerCase()}|${regionBias}|${proximityKey}`;
       const cachedResults = geocodeSearchCache.get(cacheKey);
       if (cachedResults) {
         return res.json({ results: cachedResults, cached: true });
@@ -584,6 +588,7 @@ export function createApiApp(): express.Express {
             limit: '6',
             format: 'json',
           });
+          if (hasProximity) geoParams.set('bias', `proximity:${proximityLng},${proximityLat}`);
           if (countryCodes) geoParams.set('filter', `countrycode:${countryCodes.split(',').join(',')}`);
           const controller = new AbortController();
           const timeout = setTimeout(() => controller.abort(), 5000);
