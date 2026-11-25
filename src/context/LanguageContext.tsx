@@ -74,18 +74,20 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     try { localStorage.setItem('rova-currency', currency); } catch { /* storage may be unavailable */ }
   }, [currency]);
 
-  // GHS is the platform's current pricing base. Convert display-only amounts using a live,
-  // no-key exchange-rate feed; order and quote records retain their original settlement currency.
+  // Rates are fetched with the visitor's selected currency as the base. This lets us convert
+  // any stored quote currency to the visitor's currency without changing the amount in Firestore.
   useEffect(() => {
-    if (currency === 'GHS') return;
     let cancelled = false;
-    fetch('https://open.er-api.com/v6/latest/GHS')
+    setRates({ [currency]: 1 });
+    fetch(`https://open.er-api.com/v6/latest/${currency}`)
       .then((response) => {
         if (!response.ok) throw new Error('Exchange-rate service unavailable');
         return response.json();
       })
       .then((data: { result?: string; rates?: Record<string, number> }) => {
-        if (!cancelled && data.result === 'success' && data.rates) setRates({ GHS: 1, ...data.rates });
+        if (!cancelled && data.result === 'success' && data.rates) {
+          setRates({ [currency]: 1, ...data.rates });
+        }
       })
       .catch(() => { /* Keep source-currency display if live rates are unavailable. */ });
     return () => { cancelled = true; };
@@ -93,16 +95,15 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
 
   const formatLocalMoney = (amount: number, sourceCurrency = 'GHS') => {
     const safeAmount = Number.isFinite(amount) ? amount : 0;
+    const sourceRate = rates[sourceCurrency];
     const converted = sourceCurrency === currency
       ? safeAmount
-      : sourceCurrency === 'GHS' && typeof rates[currency] === 'number' && rates[currency] !== 1
-        ? safeAmount * rates[currency]
+      : typeof sourceRate === 'number' && sourceRate > 0
+        ? safeAmount / sourceRate
         : safeAmount;
-    const displayCurrency = sourceCurrency === 'GHS' && !rates[currency]
-      ? 'GHS'
-      : sourceCurrency !== currency && sourceCurrency !== 'GHS'
-        ? sourceCurrency
-        : currency;
+    const displayCurrency = sourceCurrency !== currency && typeof sourceRate !== 'number'
+      ? sourceCurrency
+      : currency;
     const locale = lang === 'fr' ? 'fr-FR' : 'en-GB';
     try {
       return new Intl.NumberFormat(locale, {
