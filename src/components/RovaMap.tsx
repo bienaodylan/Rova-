@@ -838,6 +838,32 @@ function LeafletRovaMap({
     markersLayerRef.current = L.layerGroup().addTo(map);
     mapRef.current = map;
 
+    // Mobile browsers and installed home-screen apps often mount maps while a
+    // sheet/tab is still animating or hidden. Recalculate Leaflet's viewport
+    // whenever its container becomes visible or changes dimensions.
+    const invalidateMapSize = () => {
+      window.requestAnimationFrame(() => {
+        if (mapRef.current === map) map.invalidateSize({ pan: false, animate: false });
+      });
+    };
+    map.whenReady(invalidateMapSize);
+    const resizeObserver =
+      typeof ResizeObserver !== 'undefined'
+        ? new ResizeObserver(invalidateMapSize)
+        : null;
+    if (containerRef.current && resizeObserver) {
+      resizeObserver.observe(containerRef.current);
+      if (containerRef.current.parentElement) {
+        resizeObserver.observe(containerRef.current.parentElement);
+      }
+    }
+    window.addEventListener('resize', invalidateMapSize, { passive: true });
+    window.addEventListener('orientationchange', invalidateMapSize, { passive: true });
+    document.addEventListener('visibilitychange', invalidateMapSize);
+    const resizeTimers = [120, 360, 800].map((delay) =>
+      window.setTimeout(invalidateMapSize, delay)
+    );
+
     const handleMapClick = (e: L.LeafletMouseEvent) => {
       if (!interactivePick) return;
       void reverseGeocodePoint(e.latlng.lat, e.latlng.lng);
@@ -846,6 +872,11 @@ function LeafletRovaMap({
 
     return () => {
       map.off('click', handleMapClick);
+      resizeObserver?.disconnect();
+      window.removeEventListener('resize', invalidateMapSize);
+      window.removeEventListener('orientationchange', invalidateMapSize);
+      document.removeEventListener('visibilitychange', invalidateMapSize);
+      resizeTimers.forEach((timer) => window.clearTimeout(timer));
       map.remove();
       mapRef.current = null;
       markersLayerRef.current = null;
