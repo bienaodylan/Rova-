@@ -436,6 +436,7 @@ export function createApiApp(): express.Express {
       supabaseServerConfigured: isSupabaseServerConfigured(),
       mapsBrowserConfigured: Boolean(getGoogleMapsPublicBrowserKey()),
       mapsServerConfigured: Boolean(getGoogleMapsServerKey()),
+      mapsGeoapifyConfigured: Boolean(getGeoapifyServerKey()),
       runtime: process.env.VERCEL ? 'vercel' : 'node',
     });
   });
@@ -446,8 +447,8 @@ export function createApiApp(): express.Express {
       supabaseUrl: getSupabasePublicUrl(),
       supabaseAnonKey: getSupabasePublicAnonKey(),
       googleMapsBrowserKey: getGoogleMapsPublicBrowserKey(),
-      serverGeocodingEnabled: Boolean(getGoogleMapsServerKey()),
-      serverRoutesEnabled: Boolean(getGoogleMapsServerKey()),
+      serverGeocodingEnabled: Boolean(getGoogleMapsServerKey() || getGeoapifyServerKey()),
+      serverRoutesEnabled: true, // Google Routes when configured; OSRM fallback otherwise.
     });
   });
 
@@ -455,8 +456,8 @@ export function createApiApp(): express.Express {
     res.setHeader('Cache-Control', 'no-store, max-age=0');
     res.json({
       browserApiKey: getGoogleMapsPublicBrowserKey(),
-      serverGeocodingEnabled: Boolean(getGoogleMapsServerKey()),
-      serverRoutesEnabled: Boolean(getGoogleMapsServerKey()),
+      serverGeocodingEnabled: Boolean(getGoogleMapsServerKey() || getGeoapifyServerKey()),
+      serverRoutesEnabled: true, // Google Routes when configured; OSRM fallback otherwise.
     });
   });
 
