@@ -53,7 +53,6 @@ import {
   VehicleRecord,
 } from '../types/rova';
 import {
-  formatMoney,
   getPaymentMethodLabelEn,
   getStatusLabel,
   getVehicleLabel,
@@ -119,7 +118,7 @@ export function OperationsCenter({
   onRequestSignIn,
 }: OperationsCenterProps) {
   const { firebaseUser, profile, isAdmin, logout } = useAuth();
-  const { lang, t } = useLanguage();
+  const { lang, t, formatLocalMoney } = useLanguage();
   const uid = firebaseUser?.uid || '';
   const actorEmail = firebaseUser?.email || profile?.email || 'ops@rova.africa';
   const canQueryLive = Boolean(uid && isAdmin);
@@ -1074,7 +1073,7 @@ export function OperationsCenter({
                   { label: t('Incidents ouverts', 'Open Incidents'), value: kpis.openIncidentsCount, sub: `${kpis.failedCount} ${t('échecs', 'failed')}` },
                   {
                     label: t('Volume brut', 'Gross Volume'),
-                    value: formatMoney(kpis.grossRevenue, 'GHS'),
+                    value: formatLocalMoney(kpis.grossRevenue, 'GHS'),
                     sub: `15%: ${formatMoney(kpis.platformCommission, 'GHS')}`,
                   },
                 ].map((kpi) => (
