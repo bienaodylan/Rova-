@@ -32,18 +32,34 @@ export function LocationSearchField({ value, center, placeholder, onSelect }: Lo
     if (!pickerOpen) return;
     const body = document.body;
     const root = document.documentElement;
-    const previousBodyOverflow = body.style.overflow;
+    const scrollY = window.scrollY;
+    const previousBodyStyles = {
+      overflow: body.style.overflow,
+      position: body.style.position,
+      top: body.style.top,
+      left: body.style.left,
+      right: body.style.right,
+    };
     const previousRootOverflow = root.style.overflow;
     const previousOverscroll = root.style.overscrollBehavior;
     body.style.overflow = 'hidden';
+    body.style.position = 'fixed';
+    body.style.top = `-${scrollY}px`;
+    body.style.left = '0';
+    body.style.right = '0';
     root.style.overflow = 'hidden';
     root.style.overscrollBehavior = 'none';
     body.classList.add('rova-map-picker-open');
     return () => {
-      body.style.overflow = previousBodyOverflow;
+      body.style.overflow = previousBodyStyles.overflow;
+      body.style.position = previousBodyStyles.position;
+      body.style.top = previousBodyStyles.top;
+      body.style.left = previousBodyStyles.left;
+      body.style.right = previousBodyStyles.right;
       root.style.overflow = previousRootOverflow;
       root.style.overscrollBehavior = previousOverscroll;
       body.classList.remove('rova-map-picker-open');
+      window.scrollTo(0, scrollY);
     };
   }, [pickerOpen]);
 
