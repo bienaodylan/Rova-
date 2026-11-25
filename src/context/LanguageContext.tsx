@@ -125,18 +125,17 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
         const place = await response.json() as { countryCode?: string; country?: string };
         const code = (place.countryCode || '').toUpperCase();
         const settings = COUNTRY_SETTINGS[code];
+        try { localStorage.setItem('rova-locale-prompted', '1'); } catch { /* ignore */ }
         if (settings && (settings.lang !== lang || settings.currency !== currency)) {
           setSuggestion({ countryCode: code, countryName: settings.name || place.country || code, ...settings });
         }
       } catch {
-        // Location lookup is optional; the user can still choose language manually.
+        // Keep the action available so the visitor can retry after a temporary lookup failure.
       } finally {
         setDetecting(false);
-        try { localStorage.setItem('rova-locale-prompted', '1'); } catch { /* ignore */ }
       }
     }, () => {
       setDetecting(false);
-      try { localStorage.setItem('rova-locale-prompted', '1'); } catch { /* ignore */ }
     }, { enableHighAccuracy: false, timeout: 10000, maximumAge: 600000 });
   };
 
