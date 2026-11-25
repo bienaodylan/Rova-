@@ -19,7 +19,6 @@ import { VehicleIllustration } from '../components/VehicleIllustration';
 import { BottomSheet } from '../components/BottomSheet';
 import { PrimaryTab } from '../components/InterfaceExplorerBar';
 import {
-  formatMoney,
   getStatusLabel,
   getVehicleLabel,
   STATUS_META,
@@ -31,12 +30,11 @@ interface RovaHomeViewProps {
 
 export function RovaHomeView({ onNavigateTab }: RovaHomeViewProps) {
   const { firebaseUser, profile } = useAuth();
-  const { lang, t } = useLanguage();
+  const { lang, t, formatLocalMoney } = useLanguage();
   const {
     loadingData,
     activeDeliveries,
     upcomingReservations,
-    onlineDrivers,
     notifications,
     unreadNotifCount,
     openComposer,
@@ -330,7 +328,7 @@ export function RovaHomeView({ onNavigateTab }: RovaHomeViewProps) {
                       </p>
                     </div>
                     <span className="font-mono text-xs font-semibold text-neutral-950 tabular-nums shrink-0">
-                      {formatMoney(res.quotedPrice, res.currency)}
+                      {formatLocalMoney(res.quotedPrice, res.currency)}
                     </span>
                   </div>
                 ))}
