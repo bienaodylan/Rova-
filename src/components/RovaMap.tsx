@@ -777,6 +777,8 @@ function LeafletRovaMap({
   followDriver = false,
   heightClass = 'h-[360px]',
   className = '',
+  centerMarker = false,
+  onMapCenterChanged,
 }: RovaMapProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
