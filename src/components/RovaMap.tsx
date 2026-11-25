@@ -44,6 +44,8 @@ interface RovaMapProps {
   followDriver?: boolean;
   heightClass?: string;
   className?: string;
+  centerMarker?: boolean;
+  onMapCenterChanged?: (lat: number, lng: number) => void;
 }
 
 const COORD_OR_DIGITAL_RE = /^(-?\d+(?:\.\d+)?\s*,\s*-?\d+(?:\.\d+)?|[A-Z]{2}-\d{3,4}-\d{4})$/i;
@@ -298,6 +300,8 @@ function GoogleRovaMap({
   followDriver = false,
   heightClass = 'h-[360px]',
   className = '',
+  centerMarker = false,
+  onMapCenterChanged,
 }: RovaMapProps) {
   const { t, region } = useLanguage();
   const loadingStatus = useApiLoadingStatus();
@@ -570,6 +574,8 @@ function GoogleRovaMap({
         onLocationSelected={onLocationSelected}
         onMarkerClick={onMarkerClick}
         followDriver={followDriver}
+        centerMarker={centerMarker}
+        onMapCenterChanged={onMapCenterChanged}
         heightClass={heightClass}
         className={className}
       />
@@ -681,6 +687,10 @@ function GoogleRovaMap({
           clickableIcons={false}
           internalUsageAttributionIds={['gmp_mcp_codeassist_v1_aistudio']}
           onClick={handleMapClick}
+          onCenterChanged={(event) => {
+            const point = event.detail.center;
+            if (point) onMapCenterChanged?.(point.lat, point.lng);
+          }}
           style={{ width: '100%', height: '100%', minHeight: 220 }}
         >
           <GoogleMapCameraAndRoute
@@ -702,6 +712,7 @@ function GoogleRovaMap({
         </GoogleMap>
       </div>
 
+      {centerMarker && <div className="pointer-events-none absolute left-1/2 top-1/2 z-[30] -translate-x-1/2 -translate-y-full flex flex-col items-center"><div className="flex h-11 w-11 items-center justify-center rounded-full border-[3px] border-white bg-neutral-950 text-white shadow-[0_4px_16px_rgba(0,0,0,0.35)]"><MapPin className="h-5 w-5 fill-red-600 text-red-600" /></div><div className="h-3 w-0.5 bg-neutral-950" /></div>}
       {interactivePick && (
         <div className="absolute bottom-7 left-3 z-[15] rounded-full bg-white/95 border border-neutral-200 px-3 py-1 text-[11px] text-neutral-600 pointer-events-none shadow-xs">
           {t(
@@ -879,9 +890,12 @@ function LeafletRovaMap({
       void reverseGeocodePoint(e.latlng.lat, e.latlng.lng);
     };
     map.on('click', handleMapClick);
+    const reportCenter = () => { const p = map.getCenter(); onMapCenterChanged?.(p.lat, p.lng); };
+    map.on('moveend', reportCenter);
 
     return () => {
       map.off('click', handleMapClick);
+      map.off('moveend', reportCenter);
       resizeObserver?.disconnect();
       window.removeEventListener('resize', invalidateMapSize);
       window.removeEventListener('orientationchange', invalidateMapSize);
@@ -1127,6 +1141,7 @@ function LeafletRovaMap({
       )}
 
       <div ref={containerRef} className={`w-full ${heightClass}`} />
+      {centerMarker && <div className="pointer-events-none absolute left-1/2 top-1/2 z-[450] -translate-x-1/2 -translate-y-full flex flex-col items-center"><div className="flex h-11 w-11 items-center justify-center rounded-full border-[3px] border-white bg-neutral-950 text-white shadow-[0_4px_16px_rgba(0,0,0,0.35)]"><MapPin className="h-5 w-5 fill-red-600 text-red-600" /></div><div className="h-3 w-0.5 bg-neutral-950" /></div>}
 
       {interactivePick && (
         <div className="absolute bottom-3 left-3 z-[400] rounded-full bg-white/95 border border-neutral-200 px-3 py-1 text-[11px] text-neutral-600 pointer-events-none shadow-xs">
