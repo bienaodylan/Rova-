@@ -5,7 +5,6 @@ import { ShipmentFilter, useRovaApp } from '../context/RovaAppContext';
 import { VehicleIllustration } from '../components/VehicleIllustration';
 import { ShipmentDetailContent } from '../components/ShipmentDetailSheet';
 import {
-  formatMoney,
   getStatusLabel,
   getVehicleLabel,
   STATUS_META,
