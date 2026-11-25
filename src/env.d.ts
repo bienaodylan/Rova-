@@ -16,3 +16,5 @@ interface ImportMeta {
     dispose: (callback: () => void) => void;
   };
 }
+
+declare module '*.css';

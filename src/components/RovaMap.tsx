@@ -854,7 +854,6 @@ function LeafletRovaMap({
       doubleClickZoom: true,
       bounceAtZoomLimits: false,
       zoomSnap: 0.5,
-      tap: false,
     });
 
     L.control.zoom({ position: 'bottomright' }).addTo(map);

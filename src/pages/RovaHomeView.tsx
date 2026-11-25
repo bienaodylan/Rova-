@@ -25,6 +25,7 @@ import {
   UrbanHorizonIllustration,
 } from '../components/RovaIllustrations';
 import { useHideOnScroll } from '../hooks/useHideOnScroll';
+import { RovaWordmark } from '../components/RovaSplashScreen';
 import { BottomSheet } from '../components/BottomSheet';
 import { PrimaryTab } from '../components/InterfaceExplorerBar';
 import {
@@ -80,9 +81,7 @@ export function RovaHomeView({ onNavigateTab }: RovaHomeViewProps) {
             : 'bg-transparent border-b border-transparent'
         }`}
       >
-        <span className="font-display text-lg font-extrabold tracking-[0.22em] text-neutral-950 select-none inline-flex items-baseline">
-          ROVA<span className="text-red-600 tracking-normal">.</span>
-        </span>
+        <RovaWordmark size="md" />
 
         <div className="flex items-center gap-2">
           <button

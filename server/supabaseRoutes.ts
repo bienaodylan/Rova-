@@ -799,7 +799,7 @@ export function createSupabaseRouter(): express.Router {
 
       const { data: existing } = await admin
         .from('deliveries')
-        .select('merchant_uid, driver_uid')
+        .select('merchant_uid, driver_uid, reference, driver_name, estimated_duration_min')
         .eq('id', deliveryId)
         .maybeSingle();
 
@@ -820,7 +820,38 @@ export function createSupabaseRouter(): express.Router {
         .eq('id', deliveryId);
 
       if (error) return res.status(500).json({ error: 'Unable to update delivery status.' });
-      await admin.from('public_tracking').update({ status: nextStatus }).eq('delivery_id', deliveryId);
+      await admin
+        .from('public_tracking')
+        .update({
+          status: nextStatus,
+          show_live_driver: ['driver_assigned', 'driver_approaching_pickup', 'package_collected', 'in_transit', 'arrived'].includes(nextStatus),
+        })
+        .eq('delivery_id', deliveryId);
+
+      // Notify sender automatically on every driver/admin progression
+      if (existing.merchant_uid && nextStatus !== 'cancelled') {
+        const statusTitles: Record<string, string> = {
+          driver_assigned: 'Livreur assigné',
+          driver_approaching_pickup: 'Livreur en route vers la collecte',
+          package_collected: 'Marchandise récupérée',
+          in_transit: 'Livraison en cours',
+          arrived: 'Livreur arrivé à destination',
+          delivered: 'Livraison terminée',
+        };
+        const etaMin = Math.max(2, Number(existing.estimated_duration_min || 15));
+        const driverLabel = existing.driver_name || 'Votre livreur ROVA';
+        await admin.from('notifications').insert({
+          user_id: existing.merchant_uid,
+          title: `${statusTitles[nextStatus] || 'Mise à jour livraison'} · ${existing.reference}`,
+          message:
+            nextStatus === 'delivered'
+              ? `${driverLabel} a remis la marchandise. Appuyez pour voir le récapitulatif.`
+              : `${driverLabel} progresse (arrivée estimée ~${etaMin} min). Appuyez pour ouvrir le suivi en direct.`,
+          event_type: nextStatus,
+          delivery_id: deliveryId,
+          read: false,
+        });
+      }
 
       return res.json({ ok: true });
     } catch (err) {

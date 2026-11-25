@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { BottomSheet } from './BottomSheet';
 import { LocationSearchField } from './LocationSearchField';
+import type { MapMarkerItem } from './RovaMap';
 import { VehicleIllustration } from './VehicleIllustration';
 import {
   CheckoutSummaryIllustration,

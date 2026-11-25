@@ -1,13 +1,15 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { collection, onSnapshot, orderBy, query, where } from 'firebase/firestore';
 import {
+  BellRing,
   CheckCircle2,
   Copy,
-  ExternalLink,
+  Eye,
   HelpCircle,
   Loader2,
   MapPin,
   RefreshCw,
+  Share2,
   ShieldCheck,
   XCircle,
 } from 'lucide-react';
@@ -161,7 +163,49 @@ export function ShipmentDetailContent({
     if (navigator.clipboard) {
       navigator.clipboard.writeText(url).catch(() => {});
     }
-    showToast(t('Lien de suivi destinataire copié.', 'Recipient tracking link copied.'), 'success');
+    showToast(t('Lien de suivi copié.', 'Tracking link copied.'), 'success');
+  };
+
+  const notifyRecipient = async (stop: DeliveryStopRecord) => {
+    const url = `${window.location.origin}${window.location.pathname}?track=${encodeURIComponent(stop.trackingToken)}`;
+    const etaMin = Math.max(1, Math.round(delivery.estimatedDurationMin || 15));
+    const etaClock = new Date(Date.now() + etaMin * 60_000).toLocaleTimeString(
+      lang === 'fr' ? 'fr-FR' : 'en-US',
+      { hour: '2-digit', minute: '2-digit' }
+    );
+    const statusLabel = getStatusLabel(delivery.status, lang);
+    const message =
+      lang === 'fr'
+        ? `Bonjour ${stop.recipientName}, votre colis ROVA (${delivery.reference}) est « ${statusLabel} ». Arrivée estimée vers ${etaClock} (~${etaMin} min). Suivez l'évolution en direct : ${url}`
+        : `Hello ${stop.recipientName}, your ROVA parcel (${delivery.reference}) is "${statusLabel}". Estimated arrival around ${etaClock} (~${etaMin} min). Follow live progress: ${url}`;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `ROVA · ${delivery.reference}`,
+          text: message,
+          url,
+        });
+        showToast(
+          t(`Notification partagée avec ${stop.recipientName}.`, `Update shared with ${stop.recipientName}.`),
+          'success'
+        );
+        return;
+      } catch {
+        // Fallback to clipboard if user cancels native share
+      }
+    }
+
+    if (navigator.clipboard) {
+      await navigator.clipboard.writeText(message).catch(() => {});
+    }
+    showToast(
+      t(
+        `Message de notification avec heure d’arrivée (${etaClock}) copié pour ${stop.recipientName}.`,
+        `Notification message with arrival time (${etaClock}) copied for ${stop.recipientName}.`
+      ),
+      'success'
+    );
   };
 
   return (
@@ -321,19 +365,27 @@ export function ShipmentDetailContent({
                 <div className="flex flex-wrap items-center gap-2 pl-9">
                   <button
                     type="button"
+                    onClick={() => void notifyRecipient(stop)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-neutral-950 hover:bg-red-600 text-xs font-semibold text-white transition-colors cursor-pointer"
+                  >
+                    <BellRing className="w-3 h-3" />
+                    {t('Notifier le destinataire', 'Notify recipient')}
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => copyTrackingUrl(stop.trackingToken)}
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-neutral-200 hover:border-neutral-950 text-xs font-medium text-neutral-800 transition-colors cursor-pointer"
                   >
                     <Copy className="w-3 h-3" />
-                    {t('Copier le lien client', 'Copy recipient link')}
+                    {t('Copier le lien', 'Copy link')}
                   </button>
                   <button
                     type="button"
                     onClick={() => onOpenPublicTracking(stop.trackingToken)}
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-neutral-100 hover:bg-neutral-200 text-xs font-medium text-neutral-900 transition-colors cursor-pointer"
                   >
-                    <ExternalLink className="w-3 h-3" />
-                    {t('Vue destinataire', 'Recipient view')}
+                    <Eye className="w-3 h-3" />
+                    {t('Aperçu destinataire', 'Recipient preview')}
                   </button>
                 </div>
               </div>
