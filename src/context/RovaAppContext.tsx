@@ -363,22 +363,14 @@ export function RovaAppProvider({
 
     unsubs.push(
       onSnapshot(
-        query(collection(db, 'savedRecipients'), where('ownerId', '==', uid), orderBy('createdAt', 'desc')),
-        (snap) => {
-          setRecipients(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<SavedRecipient, 'id'>) })));
-        },
-        (err) => handleFirestoreError(err, OperationType.LIST, 'savedRecipients')
-      )
-    );
-
-    unsubs.push(
-      onSnapshot(
-        query(collection(db, 'driverDispatch'), where('isOnline', '==', true)),
+        query(
+          collection(db, 'driverDispatch'),
+          where('approvalStatus', '==', 'approved'),
+          where('isOnline', '==', true)
+        ),
         (snap) => {
           setOnlineDrivers(
-            snap.docs
-              .map((d) => ({ id: d.id, ...(d.data() as Omit<DriverDispatchRecord, 'id'>) }))
-              .filter((d) => d.approvalStatus === 'approved')
+            snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<DriverDispatchRecord, 'id'>) }))
           );
         },
         (err) => handleFirestoreError(err, OperationType.LIST, 'driverDispatch')
@@ -407,6 +399,28 @@ export function RovaAppProvider({
 
     return () => unsubs.forEach((u) => u());
   }, [uid]);
+
+  // Subcollection listener for saved recipients under businesses/{businessId}/recipients
+  useEffect(() => {
+    if (!uid || !business?.id) {
+      setRecipients([]);
+      return;
+    }
+
+    const unsub = onSnapshot(
+      query(
+        collection(db, 'businesses', business.id, 'recipients'),
+        where('ownerId', '==', uid),
+        orderBy('createdAt', 'desc')
+      ),
+      (snap) => {
+        setRecipients(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<SavedRecipient, 'id'>) })));
+      },
+      (err) => handleFirestoreError(err, OperationType.LIST, `businesses/${business.id}/recipients`)
+    );
+
+    return () => unsub();
+  }, [uid, business?.id]);
 
   const activeDeliveries = useMemo(
     () =>
@@ -624,8 +638,10 @@ export function RovaAppProvider({
           updatedAt: serverTimestamp(),
         };
 
+        // Commit parent delivery first so stops Master Gate `exists(/deliveries/{id})` succeeds
+        await setDoc(deliveryRef, deliveryPayload);
+
         const batch = writeBatch(db);
-        batch.set(deliveryRef, deliveryPayload);
 
         for (const p of preparedStops) {
           const cleanName = p.data.recipientName.trim().slice(0, 120) || t('Destinataire', 'Recipient');
@@ -738,7 +754,11 @@ export function RovaAppProvider({
     async (delivery: DeliveryRecord) => {
       try {
         const stopsSnap = await getDocs(
-          query(collection(db, 'deliveries', delivery.id, 'stops'), orderBy('sequence', 'asc'))
+          query(
+            collection(db, 'deliveries', delivery.id, 'stops'),
+            where('merchantUid', '==', delivery.merchantUid),
+            orderBy('sequence', 'asc')
+          )
         );
         const loadedStops: DraftStop[] = stopsSnap.docs.map((d) => {
           const s = d.data() as DeliveryStopRecord;
@@ -900,8 +920,24 @@ export function RovaAppProvider({
       if (!requireAuth()) return false;
       setBusy(true);
       try {
-        const data = {
-          ownerId: uid,
+        // Ensure parent business document exists so businesses/{businessId}/recipients Master Gate passes
+        let bizId = business?.id;
+        if (!bizId) {
+          bizId = uid;
+          await setDoc(doc(db, 'businesses', bizId), {
+            ownerId: uid,
+            name: (profile?.displayName || 'Entreprise ROVA').slice(0, 160),
+            city: 'Abidjan',
+            country: 'Côte d’Ivoire',
+            currency: 'GHS',
+            verificationStatus: 'pending',
+            walletBalance: 0,
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+          });
+        }
+
+        const mutableFields = {
           name: input.name.trim().slice(0, 120),
           phone: input.phone.trim().slice(0, 40),
           address: input.address.trim().slice(0, 300),
@@ -909,43 +945,47 @@ export function RovaAppProvider({
           ...(input.instructions?.trim() ? { instructions: input.instructions.trim().slice(0, 300) } : {}),
           lat: input.lat,
           lng: input.lng,
-          createdAt: serverTimestamp(),
         };
+
         if (input.id) {
-          await setDoc(doc(db, 'savedRecipients', input.id), data);
+          await updateDoc(doc(db, 'businesses', bizId, 'recipients', input.id), mutableFields);
         } else {
-          await addDoc(collection(db, 'savedRecipients'), data);
+          await addDoc(collection(db, 'businesses', bizId, 'recipients'), {
+            ownerId: uid,
+            ...mutableFields,
+            createdAt: serverTimestamp(),
+          });
         }
         showToast(t('Adresse enregistrée.', 'Address saved.'), 'success');
         return true;
       } catch (err) {
         showToast(t('Impossible d’enregistrer l’adresse.', 'Could not save address.'), 'error');
-        handleFirestoreError(err, OperationType.WRITE, 'savedRecipients');
+        handleFirestoreError(err, OperationType.WRITE, `businesses/${business?.id || uid}/recipients`);
         return false;
       } finally {
         setBusy(false);
       }
     },
-    [requireAuth, uid, showToast, t]
+    [requireAuth, business?.id, profile?.displayName, uid, showToast, t]
   );
 
   const deleteRecipient = useCallback(
     async (id: string): Promise<boolean> => {
-      if (!requireAuth()) return false;
+      if (!requireAuth() || !business?.id) return false;
       setBusy(true);
       try {
-        await deleteDoc(doc(db, 'savedRecipients', id));
+        await deleteDoc(doc(db, 'businesses', business.id, 'recipients', id));
         showToast(t('Adresse supprimée.', 'Address removed.'), 'info');
         return true;
       } catch (err) {
         showToast(t('Suppression impossible.', 'Could not remove address.'), 'error');
-        handleFirestoreError(err, OperationType.DELETE, `savedRecipients/${id}`);
+        handleFirestoreError(err, OperationType.DELETE, `businesses/${business.id}/recipients/${id}`);
         return false;
       } finally {
         setBusy(false);
       }
     },
-    [requireAuth, showToast, t]
+    [requireAuth, business?.id, showToast, t]
   );
 
   const saveBusinessProfile = useCallback(
@@ -968,27 +1008,36 @@ export function RovaAppProvider({
             ...(input.phone ? { phone: input.phone.trim().slice(0, 40) } : {}),
           });
         }
-        const businessRef = business?.id ? doc(db, 'businesses', business.id) : doc(db, 'businesses', uid);
-        await setDoc(
-          businessRef,
-          {
-            ownerId: uid,
+        if (business?.id) {
+          await updateDoc(doc(db, 'businesses', business.id), {
             name: input.name.trim().slice(0, 160) || profile?.displayName || 'Entreprise ROVA',
             city: input.city.trim().slice(0, 100) || 'Abidjan',
             country: input.country.trim().slice(0, 80) || 'Côte d’Ivoire',
-            currency: business?.currency || 'GHS',
-            verificationStatus: business?.verificationStatus || 'pending',
-            walletBalance: business?.walletBalance ?? 0,
             ...(input.defaultPickupAddress?.trim()
               ? { defaultPickupAddress: input.defaultPickupAddress.trim().slice(0, 300) }
               : {}),
             ...(typeof input.defaultPickupLat === 'number' ? { defaultPickupLat: input.defaultPickupLat } : {}),
             ...(typeof input.defaultPickupLng === 'number' ? { defaultPickupLng: input.defaultPickupLng } : {}),
-            createdAt: business?.createdAt || serverTimestamp(),
             updatedAt: serverTimestamp(),
-          },
-          { merge: false }
-        );
+          });
+        } else {
+          await setDoc(doc(db, 'businesses', uid), {
+            ownerId: uid,
+            name: input.name.trim().slice(0, 160) || profile?.displayName || 'Entreprise ROVA',
+            city: input.city.trim().slice(0, 100) || 'Abidjan',
+            country: input.country.trim().slice(0, 80) || 'Côte d’Ivoire',
+            currency: 'GHS',
+            verificationStatus: 'pending',
+            walletBalance: 0,
+            ...(input.defaultPickupAddress?.trim()
+              ? { defaultPickupAddress: input.defaultPickupAddress.trim().slice(0, 300) }
+              : {}),
+            ...(typeof input.defaultPickupLat === 'number' ? { defaultPickupLat: input.defaultPickupLat } : {}),
+            ...(typeof input.defaultPickupLng === 'number' ? { defaultPickupLng: input.defaultPickupLng } : {}),
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+          });
+        }
         showToast(t('Profil mis à jour.', 'Profile updated.'), 'success');
         return true;
       } catch (err) {

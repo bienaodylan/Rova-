@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { collection, onSnapshot, orderBy, query } from 'firebase/firestore';
+import { collection, onSnapshot, orderBy, query, where } from 'firebase/firestore';
 import {
   CheckCircle2,
   Copy,
@@ -46,7 +46,11 @@ export function ShipmentDetailContent({
   useEffect(() => {
     setLoadingStops(true);
     const unsub = onSnapshot(
-      query(collection(db, 'deliveries', delivery.id, 'stops'), orderBy('sequence', 'asc')),
+      query(
+        collection(db, 'deliveries', delivery.id, 'stops'),
+        where('merchantUid', '==', delivery.merchantUid),
+        orderBy('sequence', 'asc')
+      ),
       (snap) => {
         setStops(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<DeliveryStopRecord, 'id'>) })));
         setLoadingStops(false);
@@ -56,7 +60,7 @@ export function ShipmentDetailContent({
       }
     );
     return () => unsub();
-  }, [delivery.id]);
+  }, [delivery.id, delivery.merchantUid]);
 
   // Fetch road polyline once stops load
   useEffect(() => {
