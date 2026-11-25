@@ -173,7 +173,7 @@ export function RovaAccountView({
       {
         id: 'legal' as const,
         label: t('Informations légales', 'Legal information'),
-        hint: t('CGU, confidentialité, espaces ROVA', 'Terms, privacy, ROVA spaces'),
+        hint: t('CGU, confidentialité, espaces Rovia', 'Terms, privacy, Rovia spaces'),
         icon: FileText,
       },
     ],
@@ -229,8 +229,8 @@ export function RovaAccountView({
           </h1>
           <p className="text-sm text-[#777777] mt-1">
             {t(
-              'Gérez votre identité, vos adresses, vos paiements et les paramètres de votre espace ROVA.',
-              'Manage your identity, addresses, payments, and ROVA workspace preferences.'
+              'Gérez votre identité, vos adresses, vos paiements et les paramètres de votre espace Rovia.',
+              'Manage your identity, addresses, payments, and Rovia workspace preferences.'
             )}
           </p>
         </div>
