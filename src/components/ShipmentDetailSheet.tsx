@@ -12,6 +12,7 @@ import {
   XCircle,
 } from 'lucide-react';
 import { db } from '../lib/firebase';
+import { isSupabaseConfigured, supabaseApiFetch } from '../lib/supabase';
 import { DeliveryRecord, DeliveryStatus, DeliveryStopRecord } from '../types/rova';
 import {
   DELIVERY_STATUS_ORDER,
@@ -44,6 +45,25 @@ export function ShipmentDetailContent({
 
   useEffect(() => {
     setLoadingStops(true);
+    if (isSupabaseConfigured()) {
+      let cancelled = false;
+      void supabaseApiFetch<{ stops: DeliveryStopRecord[] }>(
+        `/api/v1/deliveries/${encodeURIComponent(delivery.id)}/stops`
+      )
+        .then((res) => {
+          if (!cancelled) setStops(res.stops || []);
+        })
+        .catch(() => {
+          if (!cancelled) setStops([]);
+        })
+        .finally(() => {
+          if (!cancelled) setLoadingStops(false);
+        });
+      return () => {
+        cancelled = true;
+      };
+    }
+
     const unsub = onSnapshot(
       query(
         collection(db, 'deliveries', delivery.id, 'stops'),

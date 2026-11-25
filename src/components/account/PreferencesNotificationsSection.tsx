@@ -65,7 +65,12 @@ interface PrefsProps {
 
 export function PreferencesSection({ prefs, onUpdatePrefs }: PrefsProps) {
   const { t, region, currency, setCurrency, refreshAutoRegion } = useLanguage();
-  const { googleMapsAvailable, serverGeocodingEnabled, serverRoutesEnabled } = useMapsRuntime();
+  const {
+    googleMapsAvailable,
+    failureCode,
+    serverGeocodingEnabled,
+    serverRoutesEnabled,
+  } = useMapsRuntime();
   const { showToast } = useRovaApp();
 
   const handleRefreshRegion = async () => {
@@ -178,6 +183,26 @@ export function PreferencesSection({ prefs, onUpdatePrefs }: PrefsProps) {
                 ? t(
                     'Google Maps Platform actif pour les cartes et la recherche d’adresses.',
                     'Google Maps Platform active for maps and address search.'
+                  )
+                : failureCode === 'referer_not_allowed'
+                ? t(
+                    'Bascule sur OpenStreetMap : ce domaine n’est pas encore autorisé dans les restrictions HTTP de votre clé Google Maps.',
+                    'Using OpenStreetMap fallback: this domain is not yet allowed in your Google Maps key HTTP referrer restrictions.'
+                  )
+                : failureCode === 'api_not_activated'
+                ? t(
+                    'Bascule sur OpenStreetMap : activez Maps JavaScript API dans Google Cloud Console.',
+                    'Using OpenStreetMap fallback: enable Maps JavaScript API in Google Cloud Console.'
+                  )
+                : failureCode === 'billing_not_enabled'
+                ? t(
+                    'Bascule sur OpenStreetMap : la facturation Google Cloud doit être activée pour cette clé.',
+                    'Using OpenStreetMap fallback: Google Cloud billing must be enabled for this key.'
+                  )
+                : failureCode === 'invalid_key'
+                ? t(
+                    'Bascule sur OpenStreetMap : la clé Google Maps configurée est invalide.',
+                    'Using OpenStreetMap fallback: the configured Google Maps key is invalid.'
                   )
                 : t(
                     'Cartographie OpenStreetMap / CARTO active (bascule automatique sans interruption).',

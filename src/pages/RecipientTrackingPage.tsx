@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { ArrowLeft, CheckCircle2, Clock, MapPin, Search, ShieldCheck, Truck } from 'lucide-react';
 import { db } from '../lib/firebase';
+import { isSupabaseConfigured } from '../lib/supabase';
 import { PublicTrackingRecord } from '../types/rova';
 import { getStatusLabel, getVehicleLabel, STATUS_META } from '../lib/logistics';
 import { MapMarkerItem, RovaMap } from '../components/RovaMap';
@@ -45,6 +46,49 @@ export function RecipientTrackingPage({
 
     setLoading(true);
     setNotFound(false);
+
+    if (isSupabaseConfigured()) {
+      let cancelled = false;
+      const loadTracking = async () => {
+        try {
+          const res = await fetch(`/api/v1/tracking/${encodeURIComponent(cleanToken)}`, {
+            headers: { Accept: 'application/json' },
+            cache: 'no-store',
+          });
+          if (!res.ok) {
+            if (!cancelled) {
+              setRecord(null);
+              setNotFound(true);
+            }
+            return;
+          }
+          const data = (await res.json()) as { tracking?: PublicTrackingRecord };
+          if (!cancelled) {
+            if (data.tracking) {
+              setRecord(data.tracking);
+              setNotFound(false);
+            } else {
+              setRecord(null);
+              setNotFound(true);
+            }
+          }
+        } catch {
+          if (!cancelled) {
+            setRecord(null);
+            setNotFound(true);
+          }
+        } finally {
+          if (!cancelled) setLoading(false);
+        }
+      };
+
+      void loadTracking();
+      const poll = window.setInterval(() => void loadTracking(), 15_000);
+      return () => {
+        cancelled = true;
+        window.clearInterval(poll);
+      };
+    }
 
     const unsub = onSnapshot(
       doc(db, 'publicTracking', cleanToken),

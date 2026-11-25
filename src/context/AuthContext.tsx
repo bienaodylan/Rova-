@@ -22,32 +22,145 @@ import {
   handleFirestoreError,
   OperationType,
 } from '../lib/firebase';
+import {
+  getSupabaseClient,
+  isSupabaseConfigured,
+  supabaseApiFetch,
+} from '../lib/supabase';
 import { RovaUser, UserRole } from '../types/rova';
 
+export interface RovaAuthUser {
+  uid: string;
+  email: string | null;
+  displayName: string | null;
+  photoURL: string | null;
+  emailVerified: boolean;
+  providerData: Array<{ providerId: string; email?: string | null }>;
+}
+
 interface AuthContextValue {
-  firebaseUser: FirebaseUser | null;
+  firebaseUser: RovaAuthUser | null;
   profile: RovaUser | null;
   loading: boolean;
   authError: string | null;
   clearAuthError: () => void;
   isAdmin: boolean;
+  authBackend: 'supabase' | 'firebase';
   signInWithGoogle: () => Promise<void>;
   signInWithApple: () => Promise<void>;
   logout: () => Promise<void>;
   completeOnboarding: (role: UserRole, displayName: string, phone: string) => Promise<void>;
-  updateProfileFields: (fields: Partial<Pick<RovaUser, 'displayName' | 'phone' | 'businessId' | 'role'>>) => Promise<void>;
+  updateProfileFields: (
+    fields: Partial<Pick<RovaUser, 'displayName' | 'phone' | 'businessId' | 'role'>>
+  ) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+function mapFirebaseUser(u: FirebaseUser | null): RovaAuthUser | null {
+  if (!u) return null;
+  return {
+    uid: u.uid,
+    email: u.email,
+    displayName: u.displayName,
+    photoURL: u.photoURL,
+    emailVerified: u.emailVerified,
+    providerData: (u.providerData || []).map((p) => ({
+      providerId: p.providerId,
+      email: p.email,
+    })),
+  };
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
+  const useSupabase = isSupabaseConfigured();
+  const [firebaseUser, setFirebaseUser] = useState<RovaAuthUser | null>(null);
   const [profile, setProfile] = useState<RovaUser | null>(null);
   const [isAdminDoc, setIsAdminDoc] = useState(false);
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (useSupabase) {
+      const supabase = getSupabaseClient();
+      if (!supabase) {
+        setLoading(false);
+        return;
+      }
+
+      let active = true;
+
+      const syncSupabaseUser = async () => {
+        const { data } = await supabase.auth.getSession();
+        const sbUser = data.session?.user || null;
+        if (!active) return;
+
+        if (!sbUser) {
+          setFirebaseUser(null);
+          setProfile(null);
+          setIsAdminDoc(false);
+          setLoading(false);
+          return;
+        }
+
+        const provider = String(sbUser.app_metadata?.provider || 'google');
+        setFirebaseUser({
+          uid: sbUser.id,
+          email: sbUser.email || null,
+          displayName:
+            (sbUser.user_metadata?.full_name as string | undefined) ||
+            (sbUser.user_metadata?.name as string | undefined) ||
+            null,
+          photoURL:
+            (sbUser.user_metadata?.avatar_url as string | undefined) ||
+            (sbUser.user_metadata?.picture as string | undefined) ||
+            null,
+          emailVerified: Boolean(sbUser.email_confirmed_at),
+          providerData: [{ providerId: provider === 'apple' ? 'apple.com' : 'google.com', email: sbUser.email }],
+        });
+
+        try {
+          const res = await supabaseApiFetch<{ profile: RovaUser | null; isAdmin: boolean }>('/api/v1/me');
+          if (!active) return;
+          setProfile(res.profile);
+          setIsAdminDoc(Boolean(res.isAdmin));
+        } catch {
+          // Fallback to direct RLS-protected user read if serverless API is warming up
+          const { data: row } = await supabase
+            .from('users')
+            .select('*')
+            .eq('uid', sbUser.id)
+            .maybeSingle();
+          if (!active) return;
+          if (row) {
+            setProfile({
+              uid: row.uid,
+              email: row.email,
+              displayName: row.display_name,
+              phone: row.phone || undefined,
+              role: row.role,
+              businessId: row.business_id || undefined,
+            });
+          } else {
+            setProfile(null);
+          }
+        } finally {
+          if (active) setLoading(false);
+        }
+      };
+
+      void syncSupabaseUser();
+      const { data: sub } = supabase.auth.onAuthStateChange(() => {
+        void syncSupabaseUser();
+      });
+
+      return () => {
+        active = false;
+        sub.subscription.unsubscribe();
+      };
+    }
+
+    // Default Firebase Auth + Firestore profile listener
     let unsubProfile: (() => void) | null = null;
 
     const unsubAuth = onAuthStateChanged(auth, async (fbUser) => {
@@ -56,7 +169,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         unsubProfile = null;
       }
 
-      setFirebaseUser(fbUser);
+      setFirebaseUser(mapFirebaseUser(fbUser));
       setAuthError(null);
 
       if (!fbUser) {
@@ -66,7 +179,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      // Check trusted admins/{uid} doc if not bootstrap email
       try {
         const adminSnap = await getDoc(doc(db, 'admins', fbUser.uid));
         setIsAdminDoc(adminSnap.exists());
@@ -96,7 +208,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       unsubAuth();
       if (unsubProfile) unsubProfile();
     };
-  }, []);
+  }, [useSupabase]);
 
   const isBootstrapAdmin = Boolean(
     firebaseUser?.email === BOOTSTRAP_ADMIN_EMAIL && firebaseUser?.emailVerified
@@ -113,7 +225,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const clearAuthError = () => setAuthError(null);
 
   const formatAuthError = (err: unknown, providerName: 'Google' | 'Apple'): string => {
-    const code = typeof err === 'object' && err !== null && 'code' in err ? String((err as { code?: string }).code) : '';
+    const code =
+      typeof err === 'object' && err !== null && 'code' in err
+        ? String((err as { code?: string }).code)
+        : '';
     if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') {
       return `Connexion ${providerName} annulée.`;
     }
@@ -122,8 +237,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     if (code === 'auth/operation-not-allowed' || code === 'auth/configuration-not-found') {
       return providerName === 'Apple'
-        ? 'La connexion Apple doit être activée dans la console Firebase (Authentication → Sign-in method → Apple).'
-        : 'La connexion Google n’est pas activée dans la console Firebase.';
+        ? 'La connexion Apple doit être activée dans votre fournisseur d’authentification.'
+        : 'La connexion Google n’est pas activée dans votre fournisseur d’authentification.';
     }
     if (code === 'auth/account-exists-with-different-credential') {
       return 'Un compte existe déjà avec cette adresse e-mail via un autre mode de connexion.';
@@ -133,6 +248,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signInWithGoogle = async () => {
     setAuthError(null);
+    if (useSupabase) {
+      const supabase = getSupabaseClient();
+      if (!supabase) return;
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: window.location.origin },
+      });
+      if (error) {
+        setAuthError(formatAuthError(error, 'Google'));
+        throw error;
+      }
+      return;
+    }
+
     try {
       await signInWithPopup(auth, googleProvider);
     } catch (err) {
@@ -143,6 +272,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signInWithApple = async () => {
     setAuthError(null);
+    if (useSupabase) {
+      const supabase = getSupabaseClient();
+      if (!supabase) return;
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'apple',
+        options: { redirectTo: window.location.origin },
+      });
+      if (error) {
+        setAuthError(formatAuthError(error, 'Apple'));
+        throw error;
+      }
+      return;
+    }
+
     try {
       await signInWithPopup(auth, appleProvider);
     } catch (err) {
@@ -152,6 +295,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = async () => {
+    if (useSupabase) {
+      const supabase = getSupabaseClient();
+      if (supabase) await supabase.auth.signOut();
+      setFirebaseUser(null);
+      setProfile(null);
+      return;
+    }
     await signOut(auth);
     setProfile(null);
   };
@@ -162,6 +312,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const cleanPhone = phone.trim().slice(0, 40);
     const assignedRole: UserRole =
       isBootstrapAdmin && role === 'super_admin' ? 'super_admin' : role;
+
+    if (useSupabase) {
+      const res = await supabaseApiFetch<{ profile: RovaUser }>('/api/v1/me', {
+        method: 'PUT',
+        body: JSON.stringify({
+          displayName: cleanName,
+          phone: cleanPhone,
+          role: assignedRole,
+        }),
+      });
+      setProfile(res.profile);
+      return;
+    }
+
     const path = `users/${firebaseUser.uid}`;
     try {
       await setDoc(doc(db, 'users', firebaseUser.uid), {
@@ -182,6 +346,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     fields: Partial<Pick<RovaUser, 'displayName' | 'phone' | 'businessId' | 'role'>>
   ) => {
     if (!firebaseUser) return;
+
+    if (useSupabase) {
+      const res = await supabaseApiFetch<{ profile: RovaUser }>('/api/v1/me', {
+        method: 'PUT',
+        body: JSON.stringify({
+          displayName: fields.displayName ?? profile?.displayName ?? firebaseUser.displayName ?? 'ROVA User',
+          phone: fields.phone ?? profile?.phone,
+          businessId: fields.businessId ?? profile?.businessId,
+          role: fields.role ?? profile?.role ?? 'merchant',
+        }),
+      });
+      setProfile(res.profile);
+      return;
+    }
+
     const path = `users/${firebaseUser.uid}`;
     try {
       const payload: Record<string, unknown> = { updatedAt: serverTimestamp() };
@@ -204,6 +383,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         authError,
         clearAuthError,
         isAdmin,
+        authBackend: useSupabase ? 'supabase' : 'firebase',
         signInWithGoogle,
         signInWithApple,
         logout,

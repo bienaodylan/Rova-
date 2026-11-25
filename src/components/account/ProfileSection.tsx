@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { doc, onSnapshot, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { Check, Loader2, MapPin, ShieldCheck, Smartphone } from 'lucide-react';
 import { db } from '../../lib/firebase';
+import { isSupabaseConfigured } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { useRovaApp } from '../../context/RovaAppContext';
@@ -76,7 +77,7 @@ export function ProfileSection({ onOpenWorkspace }: ProfileSectionProps) {
   ]);
 
   useEffect(() => {
-    if (!firebaseUser || roleKind !== 'driver') {
+    if (!firebaseUser || roleKind !== 'driver' || isSupabaseConfigured()) {
       setDriverDoc(null);
       return;
     }

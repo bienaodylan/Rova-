@@ -12,6 +12,7 @@ import {
   XCircle,
 } from 'lucide-react';
 import { db } from '../lib/firebase';
+import { isSupabaseConfigured, supabaseApiFetch } from '../lib/supabase';
 import { useLanguage } from '../context/LanguageContext';
 import { ShipmentFilter, useRovaApp } from '../context/RovaAppContext';
 import { VehicleIllustration } from '../components/VehicleIllustration';
@@ -122,6 +123,22 @@ export function RovaShipmentsView({ onOpenPublicTracking }: RovaShipmentsViewPro
       setSelectedStops([]);
       setSelectedRouteCoords([]);
       return;
+    }
+
+    if (isSupabaseConfigured()) {
+      let cancelled = false;
+      void supabaseApiFetch<{ stops: DeliveryStopRecord[] }>(
+        `/api/v1/deliveries/${encodeURIComponent(activeSelection.id)}/stops`
+      )
+        .then((res) => {
+          if (!cancelled) setSelectedStops(res.stops || []);
+        })
+        .catch(() => {
+          if (!cancelled) setSelectedStops([]);
+        });
+      return () => {
+        cancelled = true;
+      };
     }
 
     const unsub = onSnapshot(

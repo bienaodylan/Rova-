@@ -1,0 +1,1059 @@
+import express from 'express';
+import crypto from 'crypto';
+import {
+  getSupabaseAdmin,
+  requireSupabaseAuth,
+  SupabaseAuthRequest,
+} from './supabaseAdmin.ts';
+
+// ============================================================================
+// VALIDATION & FIELD MAPPING HELPERS (snake_case DB <-> camelCase App)
+// ============================================================================
+const ALLOWED_ROLES = new Set([
+  'merchant',
+  'business_owner',
+  'business_employee',
+  'independent_driver',
+  'rova_driver',
+  'fleet_partner',
+  'fleet_manager',
+  'recipient',
+  'dispatcher',
+  'operations_manager',
+  'admin',
+  'super_admin',
+]);
+
+const ALLOWED_VEHICLES = new Set([
+  'motorcycle',
+  'cargo_motorcycle',
+  'tricycle',
+  'cargo_van',
+  'commercial_van',
+  'truck',
+]);
+
+const ALLOWED_DELIVERY_STATUSES = new Set([
+  'pending',
+  'scheduled',
+  'driver_assigned',
+  'driver_approaching_pickup',
+  'at_pickup',
+  'package_collected',
+  'in_transit',
+  'approaching_recipient',
+  'arrived',
+  'delivered',
+  'failed',
+  'rescheduled',
+  'cancelled',
+]);
+
+const ALLOWED_RESERVATION_STATUSES = new Set([
+  'pending_approval',
+  'confirmed',
+  'in_progress',
+  'completed',
+  'cancelled',
+]);
+
+const ALLOWED_INCIDENT_CATEGORIES = new Set([
+  'failed_delivery',
+  'damage',
+  'delay',
+  'dispute',
+  'refund',
+  'driver_report',
+]);
+
+const TOKEN_RE = /^[A-Za-z0-9_-]{8,128}$/;
+
+function cleanStr(val: unknown, maxLen: number): string {
+  if (typeof val !== 'string') return '';
+  return val.trim().slice(0, maxLen);
+}
+
+function cleanNum(val: unknown, fallback = 0): number {
+  const n = Number(val);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function validLatLng(lat: unknown, lng: unknown): { lat: number; lng: number } | null {
+  const la = Number(lat);
+  const ln = Number(lng);
+  if (!Number.isFinite(la) || !Number.isFinite(ln) || la < -90 || la > 90 || ln < -180 || ln > 180) {
+    return null;
+  }
+  return { lat: la, lng: ln };
+}
+
+function mapUserRow(row: Record<string, unknown>) {
+  return {
+    uid: String(row.uid || ''),
+    email: String(row.email || ''),
+    displayName: String(row.display_name || ''),
+    phone: row.phone ? String(row.phone) : undefined,
+    role: String(row.role || 'merchant'),
+    businessId: row.business_id ? String(row.business_id) : undefined,
+    country: row.country ? String(row.country) : undefined,
+    primaryAddress: row.primary_address ? String(row.primary_address) : undefined,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+function mapBusinessRow(row: Record<string, unknown>) {
+  return {
+    id: String(row.id || ''),
+    ownerId: String(row.owner_id || ''),
+    name: String(row.name || ''),
+    industry: row.industry ? String(row.industry) : undefined,
+    city: String(row.city || 'Abidjan'),
+    country: String(row.country || 'Côte d’Ivoire'),
+    currency: String(row.currency || 'XOF'),
+    verificationStatus: String(row.verification_status || 'pending'),
+    walletBalance: Number(row.wallet_balance || 0),
+    defaultPickupAddress: row.default_pickup_address ? String(row.default_pickup_address) : undefined,
+    defaultPickupLandmark: row.default_pickup_landmark ? String(row.default_pickup_landmark) : undefined,
+    defaultPickupDigitalAddress: row.default_pickup_digital_address ? String(row.default_pickup_digital_address) : undefined,
+    defaultPickupLat: typeof row.default_pickup_lat === 'number' ? row.default_pickup_lat : undefined,
+    defaultPickupLng: typeof row.default_pickup_lng === 'number' ? row.default_pickup_lng : undefined,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+function mapDeliveryRow(row: Record<string, unknown>) {
+  return {
+    id: String(row.id || ''),
+    reference: String(row.reference || ''),
+    businessId: row.business_id ? String(row.business_id) : undefined,
+    merchantUid: String(row.merchant_uid || ''),
+    merchantName: String(row.merchant_name || ''),
+    driverUid: String(row.driver_uid || ''),
+    driverName: row.driver_name ? String(row.driver_name) : undefined,
+    vehicleCategory: String(row.vehicle_category || 'motorcycle'),
+    timingType: String(row.timing_type || 'instant'),
+    scheduledFor: row.scheduled_for ? String(row.scheduled_for) : undefined,
+    pickupAddress: String(row.pickup_address || ''),
+    pickupLandmark: row.pickup_landmark ? String(row.pickup_landmark) : undefined,
+    pickupDigitalAddress: row.pickup_digital_address ? String(row.pickup_digital_address) : undefined,
+    pickupInstructions: row.pickup_instructions ? String(row.pickup_instructions) : undefined,
+    pickupLat: Number(row.pickup_lat || 0),
+    pickupLng: Number(row.pickup_lng || 0),
+    packageType: String(row.package_type || ''),
+    packageSize: String(row.package_size || 'small'),
+    weightKg: Number(row.weight_kg || 1),
+    quantity: Number(row.quantity || 1),
+    fragile: Boolean(row.fragile),
+    specialHandling: row.special_handling ? String(row.special_handling) : undefined,
+    proofRequired: String(row.proof_required || 'otp'),
+    status: String(row.status || 'pending'),
+    isMultiStop: Boolean(row.is_multi_stop),
+    stopCount: Number(row.stop_count || 1),
+    completedStopCount: Number(row.completed_stop_count || 0),
+    primaryDestinationLabel: row.primary_destination_label ? String(row.primary_destination_label) : undefined,
+    stopIds: Array.isArray(row.stop_ids) ? row.stop_ids : [],
+    totalDistanceKm: Number(row.total_distance_km || 0),
+    estimatedDurationMin: Number(row.estimated_duration_min || 0),
+    quotedPrice: Number(row.quoted_price || 0),
+    currency: String(row.currency || 'XOF'),
+    paymentMethod: String(row.payment_method || 'mobile_money'),
+    paymentStatus: String(row.payment_status || 'authorized'),
+    driverLat: typeof row.driver_lat === 'number' ? row.driver_lat : undefined,
+    driverLng: typeof row.driver_lng === 'number' ? row.driver_lng : undefined,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+function mapStopRow(row: Record<string, unknown>) {
+  return {
+    id: String(row.id || ''),
+    deliveryId: String(row.delivery_id || ''),
+    merchantUid: String(row.merchant_uid || ''),
+    driverUid: String(row.driver_uid || ''),
+    sequence: Number(row.sequence || 1),
+    recipientName: String(row.recipient_name || ''),
+    recipientPhone: String(row.recipient_phone || ''),
+    address: String(row.address || ''),
+    landmark: row.landmark ? String(row.landmark) : undefined,
+    digitalAddress: row.digital_address ? String(row.digital_address) : undefined,
+    instructions: row.instructions ? String(row.instructions) : undefined,
+    lat: Number(row.lat || 0),
+    lng: Number(row.lng || 0),
+    packageRef: row.package_ref ? String(row.package_ref) : undefined,
+    status: String(row.status || 'pending'),
+    otpCode: String(row.otp_code || ''),
+    proofType: row.proof_type ? String(row.proof_type) : undefined,
+    proofValue: row.proof_value ? String(row.proof_value) : undefined,
+    proofNotes: row.proof_notes ? String(row.proof_notes) : undefined,
+    trackingToken: String(row.tracking_token || ''),
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+function mapTrackingRow(row: Record<string, unknown>) {
+  return {
+    trackingToken: String(row.tracking_token || ''),
+    deliveryId: String(row.delivery_id || ''),
+    stopId: String(row.stop_id || ''),
+    merchantUid: String(row.merchant_uid || ''),
+    driverUid: String(row.driver_uid || ''),
+    reference: String(row.reference || ''),
+    recipientFirstName: String(row.recipient_first_name || ''),
+    destinationLabel: String(row.destination_label || ''),
+    destinationLat: Number(row.destination_lat || 0),
+    destinationLng: Number(row.destination_lng || 0),
+    status: String(row.status || 'pending'),
+    driverFirstName: row.driver_first_name ? String(row.driver_first_name) : undefined,
+    vehicleCategory: String(row.vehicle_category || 'motorcycle'),
+    driverLat: typeof row.driver_lat === 'number' ? row.driver_lat : undefined,
+    driverLng: typeof row.driver_lng === 'number' ? row.driver_lng : undefined,
+    etaMinutes: typeof row.eta_minutes === 'number' ? row.eta_minutes : undefined,
+    showLiveDriver: Boolean(row.show_live_driver),
+    otpHint: row.otp_hint ? String(row.otp_hint) : undefined,
+    updatedAt: row.updated_at,
+  };
+}
+
+function mapRecipientRow(row: Record<string, unknown>) {
+  return {
+    id: String(row.id || ''),
+    ownerId: String(row.owner_id || ''),
+    name: String(row.name || ''),
+    phone: String(row.phone || ''),
+    address: String(row.address || ''),
+    landmark: row.landmark ? String(row.landmark) : undefined,
+    digitalAddress: row.digital_address ? String(row.digital_address) : undefined,
+    instructions: row.instructions ? String(row.instructions) : undefined,
+    lat: Number(row.lat || 0),
+    lng: Number(row.lng || 0),
+    createdAt: row.created_at,
+  };
+}
+
+function mapReservationRow(row: Record<string, unknown>) {
+  return {
+    id: String(row.id || ''),
+    businessId: row.business_id ? String(row.business_id) : undefined,
+    merchantUid: String(row.merchant_uid || ''),
+    merchantName: String(row.merchant_name || ''),
+    vehicleId: row.vehicle_id ? String(row.vehicle_id) : undefined,
+    vehicleCategory: String(row.vehicle_category || 'motorcycle'),
+    driverUid: String(row.driver_uid || ''),
+    reservationDate: String(row.reservation_date || ''),
+    startTime: String(row.start_time || ''),
+    endTime: String(row.end_time || ''),
+    durationType: String(row.duration_type || 'window'),
+    pickupAddress: String(row.pickup_address || ''),
+    pickupLat: Number(row.pickup_lat || 0),
+    pickupLng: Number(row.pickup_lng || 0),
+    destinationsSummary: row.destinations_summary ? String(row.destinations_summary) : undefined,
+    cargoRequirements: row.cargo_requirements ? String(row.cargo_requirements) : undefined,
+    quotedPrice: Number(row.quoted_price || 0),
+    currency: String(row.currency || 'XOF'),
+    status: String(row.status || 'pending_approval'),
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+function mapNotificationRow(row: Record<string, unknown>) {
+  return {
+    id: String(row.id || ''),
+    userId: String(row.user_id || ''),
+    title: String(row.title || ''),
+    message: String(row.message || ''),
+    eventType: String(row.event_type || ''),
+    deliveryId: row.delivery_id ? String(row.delivery_id) : undefined,
+    read: Boolean(row.read),
+    createdAt: row.created_at,
+  };
+}
+
+function mapDriverDispatchRow(row: Record<string, unknown>) {
+  return {
+    id: String(row.uid || ''),
+    uid: String(row.uid || ''),
+    firstName: String(row.first_name || ''),
+    partnerType: String(row.partner_type || 'independent'),
+    vehicleCategory: String(row.vehicle_category || 'motorcycle'),
+    serviceArea: String(row.service_area || ''),
+    approvalStatus: String(row.approval_status || 'approved'),
+    isOnline: Boolean(row.is_online),
+    currentLat: Number(row.current_lat || 0),
+    currentLng: Number(row.current_lng || 0),
+    rating: Number(row.rating || 5),
+    completedDeliveries: Number(row.completed_deliveries || 0),
+    acceptanceRate: Number(row.acceptance_rate || 100),
+    activeDeliveryCount: Number(row.active_delivery_count || 0),
+    updatedAt: row.updated_at,
+  };
+}
+
+function mapPricingRuleRow(row: Record<string, unknown>) {
+  return {
+    id: String(row.id || ''),
+    zoneName: String(row.zone_name || ''),
+    city: String(row.city || ''),
+    country: String(row.country || ''),
+    currency: String(row.currency || 'XOF'),
+    vehicleCategory: String(row.vehicle_category || 'motorcycle'),
+    baseFee: Number(row.base_fee || 18),
+    perKmRate: Number(row.per_km_rate || 4.5),
+    minimumFare: Number(row.minimum_fare || 20),
+    waitingFeePerMin: Number(row.waiting_fee_per_min || 0.5),
+    scheduledFee: Number(row.scheduled_fee || 5),
+    cargoSurcharge: Number(row.cargo_surcharge || 12),
+    multiStopFee: Number(row.multi_stop_fee || 6),
+    priorityMultiplier: Number(row.priority_multiplier || 1.25),
+    peakMultiplier: Number(row.peak_multiplier || 1.15),
+    fullDayRate: Number(row.full_day_rate || 320),
+    active: Boolean(row.active),
+    updatedAt: row.updated_at,
+  };
+}
+
+function generateSecureOtp(): string {
+  return String(crypto.randomInt(1000, 10000));
+}
+
+function generateSecureToken(): string {
+  return `rtk_${crypto.randomBytes(12).toString('hex')}`;
+}
+
+export function createSupabaseRouter(): express.Router {
+  const router = express.Router();
+
+  // ==========================================================================
+  // PUBLIC ROUTES (Strict validation, zero PII leak)
+  // ==========================================================================
+
+  // Isolated public tracking by unguessable tracking token
+  router.get('/tracking/:token', async (req, res) => {
+    try {
+      const token = cleanStr(req.params.token, 128);
+      if (!TOKEN_RE.test(token)) {
+        return res.status(400).json({ error: 'Invalid tracking token format.' });
+      }
+      const admin = getSupabaseAdmin();
+      if (!admin) return res.status(503).json({ error: 'Supabase not configured.' });
+
+      const { data, error } = await admin
+        .from('public_tracking')
+        .select('*')
+        .eq('tracking_token', token)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Supabase tracking query error:', error);
+        return res.status(500).json({ error: 'Unable to fetch tracking record.' });
+      }
+      if (!data) {
+        return res.status(404).json({ error: 'Tracking token not found.' });
+      }
+      return res.json({ tracking: mapTrackingRow(data) });
+    } catch (err) {
+      console.error('Tracking endpoint error:', err);
+      return res.status(500).json({ error: 'Unable to load tracking status.' });
+    }
+  });
+
+  // Public waitlist / contact submission
+  router.post('/waitlist', async (req, res) => {
+    try {
+      const admin = getSupabaseAdmin();
+      if (!admin) return res.status(503).json({ error: 'Supabase not configured.' });
+
+      const name = cleanStr(req.body?.name, 120) || 'ROVA Contact';
+      const email = cleanStr(req.body?.email, 200);
+      const message = cleanStr(req.body?.message, 1000);
+      const company = cleanStr(req.body?.company, 160);
+      const city = cleanStr(req.body?.city, 100);
+      const rawPlatform = cleanStr(req.body?.platform, 30);
+      const platform = ['ios', 'android', 'partner', 'driver', 'contact'].includes(rawPlatform)
+        ? rawPlatform
+        : 'contact';
+
+      if (!email || !email.includes('@')) {
+        return res.status(400).json({ error: 'Valid email is required.' });
+      }
+
+      const { error } = await admin.from('waitlist').insert({
+        name,
+        email,
+        company: company || null,
+        city: city || null,
+        platform,
+        message: message || null,
+      });
+
+      if (error) {
+        console.error('Waitlist insert error:', error);
+        return res.status(500).json({ error: 'Unable to submit request right now.' });
+      }
+      return res.status(201).json({ ok: true });
+    } catch (err) {
+      console.error('Waitlist route error:', err);
+      return res.status(500).json({ error: 'Unable to submit request right now.' });
+    }
+  });
+
+  // ==========================================================================
+  // AUTHENTICATED ROUTES (Verified via Supabase Bearer JWT)
+  // ==========================================================================
+
+  // User profile read & upsert
+  router.get('/me', requireSupabaseAuth, async (req: SupabaseAuthRequest, res) => {
+    try {
+      const admin = getSupabaseAdmin()!;
+      const uid = req.supabaseUser!.id;
+      const { data, error } = await admin
+        .from('users')
+        .select('*')
+        .eq('uid', uid)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Fetch user profile error:', error);
+        return res.status(500).json({ error: 'Unable to load profile.' });
+      }
+      return res.json({
+        profile: data ? mapUserRow(data) : null,
+        isAdmin: Boolean(req.isRovaAdmin),
+      });
+    } catch (err) {
+      console.error('GET /me error:', err);
+      return res.status(500).json({ error: 'Unable to load profile.' });
+    }
+  });
+
+  router.put('/me', requireSupabaseAuth, async (req: SupabaseAuthRequest, res) => {
+    try {
+      const admin = getSupabaseAdmin()!;
+      const user = req.supabaseUser!;
+      const displayName =
+        cleanStr(req.body?.displayName, 120) ||
+        cleanStr(user.user_metadata?.full_name, 120) ||
+        'ROVA User';
+      const phone = cleanStr(req.body?.phone, 40);
+      const country = cleanStr(req.body?.country, 80);
+      const primaryAddress = cleanStr(req.body?.primaryAddress, 300);
+      const businessId = cleanStr(req.body?.businessId, 128);
+      const requestedRole = cleanStr(req.body?.role, 40);
+
+      // Only admins may self-assign privileged admin roles
+      const safeRole =
+        requestedRole && ALLOWED_ROLES.has(requestedRole)
+          ? ['admin', 'super_admin', 'operations_manager', 'dispatcher'].includes(requestedRole) &&
+            !req.isRovaAdmin
+            ? 'merchant'
+            : requestedRole
+          : 'merchant';
+
+      const upsertPayload: Record<string, unknown> = {
+        uid: user.id,
+        email: user.email || '',
+        display_name: displayName,
+        role: safeRole,
+      };
+      if (req.body?.phone !== undefined) upsertPayload.phone = phone || null;
+      if (req.body?.country !== undefined) upsertPayload.country = country || null;
+      if (req.body?.primaryAddress !== undefined) upsertPayload.primary_address = primaryAddress || null;
+      if (req.body?.businessId !== undefined) upsertPayload.business_id = businessId || null;
+
+      const { data, error } = await admin
+        .from('users')
+        .upsert(upsertPayload, { onConflict: 'uid' })
+        .select('*')
+        .single();
+
+      if (error) {
+        console.error('Upsert user profile error:', error);
+        return res.status(500).json({ error: 'Unable to save profile.' });
+      }
+      return res.json({ profile: mapUserRow(data) });
+    } catch (err) {
+      console.error('PUT /me error:', err);
+      return res.status(500).json({ error: 'Unable to save profile.' });
+    }
+  });
+
+  // Bootstrap snapshot (single fast Vercel round-trip for workspace state)
+  router.get('/workspace', requireSupabaseAuth, async (req: SupabaseAuthRequest, res) => {
+    try {
+      const admin = getSupabaseAdmin()!;
+      const uid = req.supabaseUser!.id;
+
+      const [bizRes, delRes, resvRes, recRes, drvRes, priceRes, notifRes] = await Promise.all([
+        admin.from('businesses').select('*').eq('owner_id', uid).limit(1),
+        admin.from('deliveries').select('*').eq('merchant_uid', uid).order('created_at', { ascending: false }).limit(100),
+        admin.from('reservations').select('*').eq('merchant_uid', uid).order('created_at', { ascending: false }).limit(60),
+        admin.from('saved_recipients').select('*').eq('owner_id', uid).order('created_at', { ascending: false }).limit(100),
+        admin.from('driver_dispatch').select('*').eq('approval_status', 'approved').eq('is_online', true).limit(100),
+        admin.from('pricing_rules').select('*').eq('active', true).limit(50),
+        admin.from('notifications').select('*').eq('user_id', uid).order('created_at', { ascending: false }).limit(50),
+      ]);
+
+      return res.json({
+        business: bizRes.data?.[0] ? mapBusinessRow(bizRes.data[0]) : null,
+        deliveries: (delRes.data || []).map(mapDeliveryRow),
+        reservations: (resvRes.data || []).map(mapReservationRow),
+        recipients: (recRes.data || []).map(mapRecipientRow),
+        onlineDrivers: (drvRes.data || []).map(mapDriverDispatchRow),
+        pricingRules: (priceRes.data || []).map(mapPricingRuleRow),
+        notifications: (notifRes.data || []).map(mapNotificationRow),
+      });
+    } catch (err) {
+      console.error('GET /workspace error:', err);
+      return res.status(500).json({ error: 'Unable to load workspace data.' });
+    }
+  });
+
+  // Business profile upsert
+  router.put('/business', requireSupabaseAuth, async (req: SupabaseAuthRequest, res) => {
+    try {
+      const admin = getSupabaseAdmin()!;
+      const uid = req.supabaseUser!.id;
+      const name = cleanStr(req.body?.name, 160) || 'Entreprise ROVA';
+      const city = cleanStr(req.body?.city, 100) || 'Abidjan';
+      const country = cleanStr(req.body?.country, 80) || 'Côte d’Ivoire';
+      const currency = cleanStr(req.body?.currency, 8) || 'XOF';
+      const defaultPickupAddress = cleanStr(req.body?.defaultPickupAddress, 300);
+
+      // Ensure user record exists first for FK constraint
+      await admin.from('users').upsert(
+        {
+          uid,
+          email: req.supabaseUser!.email || '',
+          display_name: cleanStr(req.body?.displayName, 120) || name,
+          ...(req.body?.phone ? { phone: cleanStr(req.body.phone, 40) } : {}),
+        },
+        { onConflict: 'uid' }
+      );
+
+      const payload: Record<string, unknown> = {
+        id: uid,
+        owner_id: uid,
+        name,
+        city,
+        country,
+        currency,
+      };
+      if (defaultPickupAddress) payload.default_pickup_address = defaultPickupAddress;
+      if (typeof req.body?.defaultPickupLat === 'number' && Number.isFinite(req.body.defaultPickupLat)) {
+        payload.default_pickup_lat = req.body.defaultPickupLat;
+      }
+      if (typeof req.body?.defaultPickupLng === 'number' && Number.isFinite(req.body.defaultPickupLng)) {
+        payload.default_pickup_lng = req.body.defaultPickupLng;
+      }
+
+      const { data, error } = await admin
+        .from('businesses')
+        .upsert(payload, { onConflict: 'id' })
+        .select('*')
+        .single();
+
+      if (error) {
+        console.error('Business upsert error:', error);
+        return res.status(500).json({ error: 'Unable to save business profile.' });
+      }
+      return res.json({ business: mapBusinessRow(data) });
+    } catch (err) {
+      console.error('PUT /business error:', err);
+      return res.status(500).json({ error: 'Unable to save business profile.' });
+    }
+  });
+
+  // Deliveries: create delivery + stops + public tracking
+  router.post('/deliveries', requireSupabaseAuth, async (req: SupabaseAuthRequest, res) => {
+    try {
+      const admin = getSupabaseAdmin()!;
+      const uid = req.supabaseUser!.id;
+      const body = req.body || {};
+
+      const pickupCoords = validLatLng(body.pickupLat, body.pickupLng);
+      const pickupAddress = cleanStr(body.pickupAddress, 300);
+      const rawStops = Array.isArray(body.stops) ? body.stops.slice(0, 50) : [];
+      if (!pickupAddress || !pickupCoords || rawStops.length === 0) {
+        return res.status(400).json({ error: 'Pickup location and at least one valid stop are required.' });
+      }
+
+      const vehicleCategory = ALLOWED_VEHICLES.has(String(body.vehicleCategory))
+        ? String(body.vehicleCategory)
+        : 'motorcycle';
+      const timingType = cleanStr(body.timingType, 30) || 'instant';
+      const driverUid = cleanStr(body.driverUid, 128);
+      const driverName = cleanStr(body.driverName, 120);
+      const reference = cleanStr(body.reference, 40) || `RV-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
+      const status = driverUid
+        ? 'driver_assigned'
+        : timingType === 'scheduled'
+        ? 'scheduled'
+        : 'pending';
+
+      type PreparedStop = {
+        id: string;
+        sequence: number;
+        recipientName: string;
+        recipientPhone: string;
+        address: string;
+        landmark: string | null;
+        instructions: string | null;
+        packageRef: string | null;
+        lat: number;
+        lng: number;
+        otpCode: string;
+        trackingToken: string;
+      };
+
+      const deliveryId = crypto.randomUUID();
+      const preparedStops: PreparedStop[] = rawStops
+        .map((s: Record<string, unknown>, idx: number): PreparedStop | null => {
+          const coords = validLatLng(s.lat, s.lng);
+          const addr = cleanStr(s.address, 300);
+          if (!coords || !addr) return null;
+          return {
+            id: crypto.randomUUID(),
+            sequence: idx + 1,
+            recipientName: cleanStr(s.recipientName, 120) || 'Destinataire',
+            recipientPhone: cleanStr(s.recipientPhone, 40) || '+225 00 00 00 00',
+            address: addr,
+            landmark: cleanStr(s.landmark, 200) || null,
+            instructions: cleanStr(s.instructions, 300) || null,
+            packageRef: cleanStr(s.packageRef, 80) || null,
+            lat: coords.lat,
+            lng: coords.lng,
+            otpCode: generateSecureOtp(),
+            trackingToken: generateSecureToken(),
+          };
+        })
+        .filter((s: PreparedStop | null): s is PreparedStop => s !== null);
+
+      if (preparedStops.length === 0) {
+        return res.status(400).json({ error: 'Provide at least one stop with valid address and coordinates.' });
+      }
+
+      const { data: createdDelivery, error: delErr } = await admin
+        .from('deliveries')
+        .insert({
+          id: deliveryId,
+          reference,
+          business_id: cleanStr(body.businessId, 128) || null,
+          merchant_uid: uid,
+          merchant_name: cleanStr(body.merchantName, 160) || 'Marchand ROVA',
+          driver_uid: driverUid,
+          driver_name: driverName || null,
+          vehicle_category: vehicleCategory,
+          timing_type: timingType,
+          scheduled_for: cleanStr(body.scheduledFor, 60) || null,
+          pickup_address: pickupAddress,
+          pickup_landmark: cleanStr(body.pickupLandmark, 200) || null,
+          pickup_instructions: cleanStr(body.pickupInstructions, 300) || null,
+          pickup_lat: pickupCoords.lat,
+          pickup_lng: pickupCoords.lng,
+          primary_destination_label: preparedStops[0].address.slice(0, 240),
+          stop_ids: preparedStops.map((s) => s.id),
+          package_type: cleanStr(body.packageType, 80) || 'Colis commercial',
+          package_size: cleanStr(body.packageSize, 20) || 'small',
+          weight_kg: Math.max(0.5, cleanNum(body.weightKg, 1)),
+          quantity: Math.max(1, Math.floor(cleanNum(body.quantity, 1))),
+          fragile: Boolean(body.fragile),
+          special_handling: cleanStr(body.specialHandling, 240) || null,
+          proof_required: cleanStr(body.proofRequired, 30) || 'otp',
+          status,
+          is_multi_stop: preparedStops.length > 1,
+          stop_count: preparedStops.length,
+          completed_stop_count: 0,
+          total_distance_km: Math.max(0.5, cleanNum(body.totalDistanceKm, 2)),
+          estimated_duration_min: Math.max(8, Math.round(cleanNum(body.estimatedDurationMin, 20))),
+          quoted_price: Math.max(0, cleanNum(body.quotedPrice, 0)),
+          currency: cleanStr(body.currency, 8) || 'XOF',
+          payment_method: cleanStr(body.paymentMethod, 30) || 'mobile_money',
+          payment_status: body.paymentMethod === 'invoice' ? 'invoiced' : 'authorized',
+          driver_lat: typeof body.driverLat === 'number' ? body.driverLat : null,
+          driver_lng: typeof body.driverLng === 'number' ? body.driverLng : null,
+        })
+        .select('*')
+        .single();
+
+      if (delErr || !createdDelivery) {
+        console.error('Delivery insert error:', delErr);
+        return res.status(500).json({ error: 'Unable to create delivery.' });
+      }
+
+      const stopsRows = preparedStops.map((s) => ({
+        id: s.id,
+        delivery_id: deliveryId,
+        merchant_uid: uid,
+        driver_uid: driverUid,
+        sequence: s.sequence,
+        recipient_name: s.recipientName,
+        recipient_phone: s.recipientPhone,
+        address: s.address,
+        landmark: s.landmark,
+        instructions: s.instructions,
+        package_ref: s.packageRef,
+        lat: s.lat,
+        lng: s.lng,
+        status,
+        otp_code: s.otpCode,
+        tracking_token: s.trackingToken,
+      }));
+
+      const { error: stopsErr } = await admin.from('delivery_stops').insert(stopsRows);
+      if (stopsErr) {
+        console.error('Stops insert error:', stopsErr);
+      }
+
+      const trackingRows = preparedStops.map((s) => ({
+        tracking_token: s.trackingToken,
+        delivery_id: deliveryId,
+        stop_id: s.id,
+        merchant_uid: uid,
+        driver_uid: driverUid,
+        reference,
+        recipient_first_name: (s.recipientName.split(' ')[0] || 'Client').slice(0, 80),
+        destination_label: s.address,
+        destination_lat: s.lat,
+        destination_lng: s.lng,
+        status,
+        driver_first_name: driverName ? driverName.slice(0, 80) : null,
+        vehicle_category: vehicleCategory,
+        driver_lat: typeof body.driverLat === 'number' ? body.driverLat : null,
+        driver_lng: typeof body.driverLng === 'number' ? body.driverLng : null,
+        eta_minutes: Math.max(8, Math.round(cleanNum(body.estimatedDurationMin, 20))),
+        show_live_driver: s.sequence === 1 && Boolean(driverUid),
+        otp_hint: `••${s.otpCode.slice(-2)}`,
+      }));
+
+      await admin.from('public_tracking').insert(trackingRows);
+
+      await admin.from('notifications').insert({
+        user_id: uid,
+        title: `Livraison ${reference} confirmée`,
+        message: driverName
+          ? `Assignée à ${driverName}.`
+          : 'Votre demande est en cours d’affectation.',
+        event_type: 'delivery_created',
+        delivery_id: deliveryId,
+        read: false,
+      });
+
+      return res.status(201).json({ delivery: mapDeliveryRow(createdDelivery) });
+    } catch (err) {
+      console.error('POST /deliveries error:', err);
+      return res.status(500).json({ error: 'Unable to create delivery.' });
+    }
+  });
+
+  // Delivery stops (owner, driver, or admin)
+  router.get('/deliveries/:id/stops', requireSupabaseAuth, async (req: SupabaseAuthRequest, res) => {
+    try {
+      const admin = getSupabaseAdmin()!;
+      const uid = req.supabaseUser!.id;
+      const deliveryId = cleanStr(req.params.id, 128);
+
+      const { data: delivery } = await admin
+        .from('deliveries')
+        .select('merchant_uid, driver_uid')
+        .eq('id', deliveryId)
+        .maybeSingle();
+
+      if (!delivery) return res.status(404).json({ error: 'Delivery not found.' });
+      if (
+        delivery.merchant_uid !== uid &&
+        delivery.driver_uid !== uid &&
+        !req.isRovaAdmin
+      ) {
+        return res.status(403).json({ error: 'Forbidden.' });
+      }
+
+      const { data: stops, error } = await admin
+        .from('delivery_stops')
+        .select('*')
+        .eq('delivery_id', deliveryId)
+        .order('sequence', { ascending: true });
+
+      if (error) return res.status(500).json({ error: 'Unable to load stops.' });
+      return res.json({ stops: (stops || []).map(mapStopRow) });
+    } catch (err) {
+      console.error('GET /deliveries/:id/stops error:', err);
+      return res.status(500).json({ error: 'Unable to load stops.' });
+    }
+  });
+
+  // Delivery status update (owner can cancel, driver/admin can transition)
+  router.patch('/deliveries/:id/status', requireSupabaseAuth, async (req: SupabaseAuthRequest, res) => {
+    try {
+      const admin = getSupabaseAdmin()!;
+      const uid = req.supabaseUser!.id;
+      const deliveryId = cleanStr(req.params.id, 128);
+      const nextStatus = cleanStr(req.body?.status, 40);
+
+      if (!ALLOWED_DELIVERY_STATUSES.has(nextStatus)) {
+        return res.status(400).json({ error: 'Invalid delivery status.' });
+      }
+
+      const { data: existing } = await admin
+        .from('deliveries')
+        .select('merchant_uid, driver_uid')
+        .eq('id', deliveryId)
+        .maybeSingle();
+
+      if (!existing) return res.status(404).json({ error: 'Delivery not found.' });
+
+      const isMerchant = existing.merchant_uid === uid;
+      const isDriver = existing.driver_uid === uid;
+      if (!isMerchant && !isDriver && !req.isRovaAdmin) {
+        return res.status(403).json({ error: 'Forbidden.' });
+      }
+      if (isMerchant && !isDriver && !req.isRovaAdmin && nextStatus !== 'cancelled') {
+        return res.status(403).json({ error: 'Merchants may only cancel their own deliveries.' });
+      }
+
+      const { error } = await admin
+        .from('deliveries')
+        .update({ status: nextStatus })
+        .eq('id', deliveryId);
+
+      if (error) return res.status(500).json({ error: 'Unable to update delivery status.' });
+      await admin.from('public_tracking').update({ status: nextStatus }).eq('delivery_id', deliveryId);
+
+      return res.json({ ok: true });
+    } catch (err) {
+      console.error('PATCH /deliveries/:id/status error:', err);
+      return res.status(500).json({ error: 'Unable to update delivery status.' });
+    }
+  });
+
+  // Saved recipients CRUD
+  router.post('/recipients', requireSupabaseAuth, async (req: SupabaseAuthRequest, res) => {
+    try {
+      const admin = getSupabaseAdmin()!;
+      const uid = req.supabaseUser!.id;
+      const coords = validLatLng(req.body?.lat, req.body?.lng);
+      const name = cleanStr(req.body?.name, 120);
+      const phone = cleanStr(req.body?.phone, 40);
+      const address = cleanStr(req.body?.address, 300);
+
+      if (!name || !phone || !address || !coords) {
+        return res.status(400).json({ error: 'Valid recipient name, phone, address and coordinates are required.' });
+      }
+
+      const { data, error } = await admin
+        .from('saved_recipients')
+        .insert({
+          owner_id: uid,
+          business_id: cleanStr(req.body?.businessId, 128) || null,
+          name,
+          phone,
+          address,
+          landmark: cleanStr(req.body?.landmark, 200) || null,
+          instructions: cleanStr(req.body?.instructions, 300) || null,
+          lat: coords.lat,
+          lng: coords.lng,
+        })
+        .select('*')
+        .single();
+
+      if (error) return res.status(500).json({ error: 'Unable to save address.' });
+      return res.status(201).json({ recipient: mapRecipientRow(data) });
+    } catch (err) {
+      console.error('POST /recipients error:', err);
+      return res.status(500).json({ error: 'Unable to save address.' });
+    }
+  });
+
+  router.put('/recipients/:id', requireSupabaseAuth, async (req: SupabaseAuthRequest, res) => {
+    try {
+      const admin = getSupabaseAdmin()!;
+      const uid = req.supabaseUser!.id;
+      const id = cleanStr(req.params.id, 128);
+      const coords = validLatLng(req.body?.lat, req.body?.lng);
+      const name = cleanStr(req.body?.name, 120);
+      const phone = cleanStr(req.body?.phone, 40);
+      const address = cleanStr(req.body?.address, 300);
+
+      if (!name || !phone || !address || !coords) {
+        return res.status(400).json({ error: 'Valid recipient details are required.' });
+      }
+
+      const { data, error } = await admin
+        .from('saved_recipients')
+        .update({
+          name,
+          phone,
+          address,
+          landmark: cleanStr(req.body?.landmark, 200) || null,
+          instructions: cleanStr(req.body?.instructions, 300) || null,
+          lat: coords.lat,
+          lng: coords.lng,
+        })
+        .eq('id', id)
+        .eq('owner_id', uid)
+        .select('*')
+        .maybeSingle();
+
+      if (error || !data) return res.status(404).json({ error: 'Address not found.' });
+      return res.json({ recipient: mapRecipientRow(data) });
+    } catch (err) {
+      console.error('PUT /recipients/:id error:', err);
+      return res.status(500).json({ error: 'Unable to update address.' });
+    }
+  });
+
+  router.delete('/recipients/:id', requireSupabaseAuth, async (req: SupabaseAuthRequest, res) => {
+    try {
+      const admin = getSupabaseAdmin()!;
+      const uid = req.supabaseUser!.id;
+      const id = cleanStr(req.params.id, 128);
+
+      const { error } = await admin
+        .from('saved_recipients')
+        .delete()
+        .eq('id', id)
+        .eq('owner_id', uid);
+
+      if (error) return res.status(500).json({ error: 'Unable to delete address.' });
+      return res.json({ ok: true });
+    } catch (err) {
+      console.error('DELETE /recipients/:id error:', err);
+      return res.status(500).json({ error: 'Unable to delete address.' });
+    }
+  });
+
+  // Reservations
+  router.post('/reservations', requireSupabaseAuth, async (req: SupabaseAuthRequest, res) => {
+    try {
+      const admin = getSupabaseAdmin()!;
+      const uid = req.supabaseUser!.id;
+      const body = req.body || {};
+      const coords = validLatLng(body.pickupLat, body.pickupLng);
+      const pickupAddress = cleanStr(body.pickupAddress, 300);
+
+      if (!pickupAddress || !coords) {
+        return res.status(400).json({ error: 'Valid pickup address and coordinates are required.' });
+      }
+
+      const vehicleCategory = ALLOWED_VEHICLES.has(String(body.vehicleCategory))
+        ? String(body.vehicleCategory)
+        : 'cargo_van';
+
+      const { data, error } = await admin
+        .from('reservations')
+        .insert({
+          business_id: cleanStr(body.businessId, 128) || null,
+          merchant_uid: uid,
+          merchant_name: cleanStr(body.merchantName, 160) || 'Marchand ROVA',
+          vehicle_category: vehicleCategory,
+          driver_uid: '',
+          reservation_date: cleanStr(body.reservationDate, 20),
+          start_time: cleanStr(body.startTime, 12),
+          end_time: cleanStr(body.endTime, 12),
+          duration_type: cleanStr(body.durationType, 20) || 'window',
+          pickup_address: pickupAddress,
+          pickup_lat: coords.lat,
+          pickup_lng: coords.lng,
+          destinations_summary: cleanStr(body.destinationsSummary, 400) || null,
+          cargo_requirements: cleanStr(body.cargoRequirements, 300) || null,
+          quoted_price: Math.max(0, cleanNum(body.quotedPrice, 0)),
+          currency: cleanStr(body.currency, 8) || 'XOF',
+          status: 'pending_approval',
+        })
+        .select('*')
+        .single();
+
+      if (error) return res.status(500).json({ error: 'Unable to create reservation.' });
+      return res.status(201).json({ reservation: mapReservationRow(data) });
+    } catch (err) {
+      console.error('POST /reservations error:', err);
+      return res.status(500).json({ error: 'Unable to create reservation.' });
+    }
+  });
+
+  router.patch('/reservations/:id/status', requireSupabaseAuth, async (req: SupabaseAuthRequest, res) => {
+    try {
+      const admin = getSupabaseAdmin()!;
+      const uid = req.supabaseUser!.id;
+      const id = cleanStr(req.params.id, 128);
+      const status = cleanStr(req.body?.status, 30);
+
+      if (!ALLOWED_RESERVATION_STATUSES.has(status)) {
+        return res.status(400).json({ error: 'Invalid reservation status.' });
+      }
+
+      const { data: existing } = await admin
+        .from('reservations')
+        .select('merchant_uid')
+        .eq('id', id)
+        .maybeSingle();
+
+      if (!existing) return res.status(404).json({ error: 'Reservation not found.' });
+      if (existing.merchant_uid !== uid && !req.isRovaAdmin) {
+        return res.status(403).json({ error: 'Forbidden.' });
+      }
+      if (existing.merchant_uid === uid && !req.isRovaAdmin && status !== 'cancelled') {
+        return res.status(403).json({ error: 'Merchants may only cancel their own reservations.' });
+      }
+
+      const { error } = await admin.from('reservations').update({ status }).eq('id', id);
+      if (error) return res.status(500).json({ error: 'Unable to update reservation.' });
+      return res.json({ ok: true });
+    } catch (err) {
+      console.error('PATCH /reservations/:id/status error:', err);
+      return res.status(500).json({ error: 'Unable to update reservation.' });
+    }
+  });
+
+  // Notifications
+  router.patch('/notifications/read-all', requireSupabaseAuth, async (req: SupabaseAuthRequest, res) => {
+    try {
+      const admin = getSupabaseAdmin()!;
+      const uid = req.supabaseUser!.id;
+      await admin
+        .from('notifications')
+        .update({ read: true })
+        .eq('user_id', uid)
+        .eq('read', false);
+      return res.json({ ok: true });
+    } catch (err) {
+      console.error('PATCH /notifications/read-all error:', err);
+      return res.status(500).json({ error: 'Unable to update notifications.' });
+    }
+  });
+
+  // Incidents / support reports
+  router.post('/incidents', requireSupabaseAuth, async (req: SupabaseAuthRequest, res) => {
+    try {
+      const admin = getSupabaseAdmin()!;
+      const uid = req.supabaseUser!.id;
+      const category = ALLOWED_INCIDENT_CATEGORIES.has(String(req.body?.category))
+        ? String(req.body.category)
+        : 'dispute';
+      const description = cleanStr(req.body?.description, 1000);
+      if (description.length < 5) {
+        return res.status(400).json({ error: 'Please provide a brief description (at least 5 characters).' });
+      }
+
+      const { error } = await admin.from('incidents').insert({
+        delivery_id: cleanStr(req.body?.deliveryId, 128) || null,
+        reported_by_uid: uid,
+        reporter_role: cleanStr(req.body?.reporterRole, 40) || 'merchant',
+        category,
+        description,
+        status: 'open',
+      });
+
+      if (error) return res.status(500).json({ error: 'Unable to submit incident report.' });
+      return res.status(201).json({ ok: true });
+    } catch (err) {
+      console.error('POST /incidents error:', err);
+      return res.status(500).json({ error: 'Unable to submit incident report.' });
+    }
+  });
+
+  return router;
+}

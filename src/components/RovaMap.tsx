@@ -3,6 +3,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import L from 'leaflet';
 import {
   APILoadingStatus,
+  APIProvider,
   AdvancedMarker,
   InfoWindow,
   Map as GoogleMap,
@@ -15,8 +16,8 @@ import {
 import { Crosshair, Loader2, MapPin, Search, X } from 'lucide-react';
 import { GeoPlace } from '../types/rova';
 import { useLanguage } from '../context/LanguageContext';
-import { useMapsRuntime } from '../context/MapsContext';
-import { getValidGeoapifyKey } from '../lib/mapsConfig';
+import { GOOGLE_MAPS_LIBRARIES, useMapsRuntime } from '../context/MapsContext';
+import { getValidGeoapifyKey, markGoogleMapsAuthFailed } from '../lib/mapsConfig';
 
 export interface MapMarkerItem {
   id: string;
@@ -541,6 +542,15 @@ function GoogleRovaMap({
     },
     [interactivePick, reverseGeocodePoint]
   );
+
+  // Propagate Google Maps loading / auth failures to global runtime state so Preferences & other maps stay in sync
+  useEffect(() => {
+    if (loadingStatus === APILoadingStatus.AUTH_FAILURE) {
+      markGoogleMapsAuthFailed('gm_authFailure');
+    } else if (loadingStatus === APILoadingStatus.FAILED) {
+      markGoogleMapsAuthFailed('script_load_failed');
+    }
+  }, [loadingStatus]);
 
   // If Google Maps fails authentication or script loading, gracefully fall back to Leaflet
   if (
@@ -1135,9 +1145,27 @@ function LeafletRovaMap({
 // ============================================================================
 
 export function RovaMap(props: RovaMapProps) {
-  const { googleMapsAvailable } = useMapsRuntime();
-  if (googleMapsAvailable) {
-    return <GoogleRovaMap {...props} />;
+  const { googleMapsAvailable, browserApiKey } = useMapsRuntime();
+  const { lang, region } = useLanguage();
+  const initialLocaleRef = useRef({ lang, regionCode: region.countryCode });
+
+  const handleApiError = useCallback((err: unknown) => {
+    markGoogleMapsAuthFailed(String(err || 'script_load_failed'));
+  }, []);
+
+  if (googleMapsAvailable && browserApiKey) {
+    return (
+      <APIProvider
+        apiKey={browserApiKey}
+        language={initialLocaleRef.current.lang}
+        region={initialLocaleRef.current.regionCode}
+        libraries={GOOGLE_MAPS_LIBRARIES}
+        authReferrerPolicy="origin"
+        onError={handleApiError}
+      >
+        <GoogleRovaMap {...props} />
+      </APIProvider>
+    );
   }
   return <LeafletRovaMap {...props} />;
 }

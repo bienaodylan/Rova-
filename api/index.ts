@@ -1,4 +1,4 @@
-import { createApiApp } from '../server/apiApp';
+import { createApiApp } from '../server/apiApp.ts';
 
 // Vercel Serverless Function entry point for all /api/* routes
 const app = createApiApp();

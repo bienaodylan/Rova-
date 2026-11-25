@@ -15,6 +15,7 @@ import {
   writeBatch,
 } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../lib/firebase';
+import { getSupabaseClient, isSupabaseConfigured, supabaseApiFetch } from '../lib/supabase';
 import { useAuth } from './AuthContext';
 import { useLanguage } from './LanguageContext';
 import {
@@ -245,6 +246,7 @@ export function RovaAppProvider({
   const { firebaseUser, profile, updateProfileFields } = useAuth();
   const { t, currency, region } = useLanguage();
   const uid = firebaseUser?.uid || '';
+  const useSupabase = isSupabaseConfigured();
 
   const [loadingData, setLoadingData] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -305,7 +307,50 @@ export function RovaAppProvider({
   }, []);
   const dismissToast = useCallback(() => setToast(null), []);
 
-  // Firestore real-time subscriptions when authenticated
+  const refreshSupabaseWorkspace = useCallback(async () => {
+    if (!useSupabase || !uid) return;
+    try {
+      const data = await supabaseApiFetch<{
+        business: BusinessRecord | null;
+        deliveries: DeliveryRecord[];
+        reservations: ReservationRecord[];
+        recipients: SavedRecipient[];
+        onlineDrivers: DriverDispatchRecord[];
+        pricingRules: PricingRuleRecord[];
+        notifications: NotificationRecord[];
+      }>('/api/v1/workspace');
+      setBusiness(data.business || null);
+      setDeliveries(data.deliveries || []);
+      setReservations(data.reservations || []);
+      setRecipients(data.recipients || []);
+      setOnlineDrivers(data.onlineDrivers || []);
+      setPricingRules(data.pricingRules || []);
+      setNotifications(data.notifications || []);
+      if (data.business?.defaultPickupAddress) {
+        const b = data.business;
+        setDraft((prev) =>
+          !prev.pickup.address && b.defaultPickupAddress
+            ? {
+                ...prev,
+                pickup: {
+                  ...prev.pickup,
+                  address: b.defaultPickupAddress,
+                  landmark: b.defaultPickupLandmark || '',
+                  lat: b.defaultPickupLat ?? prev.pickup.lat,
+                  lng: b.defaultPickupLng ?? prev.pickup.lng,
+                },
+              }
+            : prev
+        );
+      }
+    } catch (err) {
+      console.error('Supabase workspace sync error:', err);
+    } finally {
+      setLoadingData(false);
+    }
+  }, [useSupabase, uid]);
+
+  // Real-time subscriptions (Supabase Realtime + /api/v1/workspace when configured, Firebase Firestore otherwise)
   useEffect(() => {
     if (!uid) {
       setBusiness(null);
@@ -320,6 +365,32 @@ export function RovaAppProvider({
     }
 
     setLoadingData(true);
+
+    if (useSupabase) {
+      void refreshSupabaseWorkspace();
+      const supabase = getSupabaseClient();
+      if (!supabase) return;
+      const channel = supabase
+        .channel(`rova-workspace-${uid}`)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'deliveries' }, () => {
+          void refreshSupabaseWorkspace();
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'reservations' }, () => {
+          void refreshSupabaseWorkspace();
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'saved_recipients' }, () => {
+          void refreshSupabaseWorkspace();
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, () => {
+          void refreshSupabaseWorkspace();
+        })
+        .subscribe();
+
+      return () => {
+        void supabase.removeChannel(channel);
+      };
+    }
+
     let readyCount = 0;
     const markReady = () => {
       readyCount += 1;
@@ -423,10 +494,11 @@ export function RovaAppProvider({
     );
 
     return () => unsubs.forEach((u) => u());
-  }, [uid]);
+  }, [uid, useSupabase, refreshSupabaseWorkspace]);
 
-  // Subcollection listener for saved recipients under businesses/{businessId}/recipients
+  // Subcollection listener for saved recipients under businesses/{businessId}/recipients (Firebase only)
   useEffect(() => {
+    if (useSupabase) return;
     if (!uid || !business?.id) {
       setRecipients([]);
       return;
@@ -445,7 +517,7 @@ export function RovaAppProvider({
     );
 
     return () => unsub();
-  }, [uid, business?.id]);
+  }, [uid, business?.id, useSupabase]);
 
   const activeDeliveries = useMemo(
     () =>
@@ -603,7 +675,6 @@ export function RovaAppProvider({
 
       setBusy(true);
       try {
-        const deliveryRef = doc(collection(db, 'deliveries'));
         const reference = generateReference('RV');
         const ranked = rankSuitableDrivers(
           onlineDrivers,
@@ -622,6 +693,65 @@ export function RovaAppProvider({
           : draft.timingType === 'scheduled'
           ? 'scheduled'
           : 'pending';
+
+        if (useSupabase) {
+          const rule = getEffectivePricingRule(pricingRules, draft.vehicleCategory);
+          const computedDistance =
+            routeDistanceKm > 0
+              ? routeDistanceKm
+              : Number(
+                  haversineDistanceKm(
+                    draft.pickup.lat,
+                    draft.pickup.lng,
+                    validStops[0].lat,
+                    validStops[0].lng
+                  ).toFixed(2)
+                );
+          const res = await supabaseApiFetch<{ delivery: DeliveryRecord }>('/api/v1/deliveries', {
+            method: 'POST',
+            body: JSON.stringify({
+              reference,
+              businessId: business?.id,
+              merchantName: (business?.name || profile?.displayName || 'Marchand ROVA').slice(0, 160),
+              driverUid: matched ? matched.uid : '',
+              driverName: matched ? matched.firstName.slice(0, 120) : undefined,
+              driverLat: matched?.currentLat,
+              driverLng: matched?.currentLng,
+              vehicleCategory: draft.vehicleCategory,
+              timingType: draft.timingType,
+              scheduledFor: draft.scheduledFor.trim() || undefined,
+              pickupAddress: draft.pickup.address.trim(),
+              pickupLandmark: draft.pickup.landmark.trim() || undefined,
+              pickupInstructions: draft.pickup.instructions.trim() || undefined,
+              pickupLat: draft.pickup.lat,
+              pickupLng: draft.pickup.lng,
+              packageType: draft.packageType.trim() || t('Colis commercial', 'Commercial parcel'),
+              packageSize: draft.packageSize,
+              weightKg: Math.max(0.5, Number(draft.weightKg) || 1),
+              quantity: Math.max(1, Math.floor(Number(draft.quantity) || 1)),
+              fragile: Boolean(draft.fragile),
+              specialHandling: draft.specialHandling.trim() || undefined,
+              proofRequired: draft.proofRequired,
+              totalDistanceKm: Math.max(0.5, computedDistance),
+              estimatedDurationMin: Math.max(8, routeDurationMin || Math.round(computedDistance * 3)),
+              quotedPrice: Math.max(0, Number(quotedTotal) || rule.minimumFare),
+              currency: rule.currency || currency,
+              paymentMethod: draft.paymentMethod,
+              stops: validStops.slice(0, 50),
+            }),
+          });
+          await refreshSupabaseWorkspace();
+          setComposerOpen(false);
+          resetDraft('single');
+          setSelectedDeliveryId(res.delivery.id);
+          showToast(
+            t(`Livraison ${reference} créée avec succès.`, `Delivery ${reference} created successfully.`),
+            'success'
+          );
+          return res.delivery;
+        }
+
+        const deliveryRef = doc(collection(db, 'deliveries'));
 
         const preparedStops = validStops.slice(0, 50).map((s, idx) => {
           const stopRef = doc(collection(db, 'deliveries', deliveryRef.id, 'stops'));
@@ -770,13 +900,13 @@ export function RovaAppProvider({
           t('Impossible de créer la livraison. Vérifiez les champs saisis.', 'Could not create delivery. Please review fields.'),
           'error'
         );
-        handleFirestoreError(err, OperationType.CREATE, 'deliveries');
+        if (!useSupabase) handleFirestoreError(err, OperationType.CREATE, 'deliveries');
         return null;
       } finally {
         setBusy(false);
       }
     },
-    [requireAuth, draft, onlineDrivers, pricingRules, business, profile, uid, t, showToast, resetDraft]
+    [requireAuth, draft, onlineDrivers, pricingRules, business, profile, uid, currency, useSupabase, refreshSupabaseWorkspace, t, showToast, resetDraft]
   );
 
   const cancelDelivery = useCallback(
@@ -784,6 +914,15 @@ export function RovaAppProvider({
       if (!requireAuth()) return false;
       setBusy(true);
       try {
+        if (useSupabase) {
+          await supabaseApiFetch(`/api/v1/deliveries/${encodeURIComponent(deliveryId)}/status`, {
+            method: 'PATCH',
+            body: JSON.stringify({ status: 'cancelled' }),
+          });
+          await refreshSupabaseWorkspace();
+          showToast(t('Livraison annulée.', 'Delivery cancelled.'), 'info');
+          return true;
+        }
         await updateDoc(doc(db, 'deliveries', deliveryId), {
           status: 'cancelled',
           updatedAt: serverTimestamp(),
@@ -792,29 +931,25 @@ export function RovaAppProvider({
         return true;
       } catch (err) {
         showToast(t('Annulation impossible pour ce statut.', 'Cannot cancel delivery at this status.'), 'error');
-        handleFirestoreError(err, OperationType.UPDATE, `deliveries/${deliveryId}`);
+        if (!useSupabase) handleFirestoreError(err, OperationType.UPDATE, `deliveries/${deliveryId}`);
         return false;
       } finally {
         setBusy(false);
       }
     },
-    [requireAuth, showToast, t]
+    [requireAuth, useSupabase, refreshSupabaseWorkspace, showToast, t]
   );
 
   const repeatDelivery = useCallback(
     async (delivery: DeliveryRecord) => {
       try {
-        const stopsSnap = await getDocs(
-          query(
-            collection(db, 'deliveries', delivery.id, 'stops'),
-            where('merchantUid', '==', delivery.merchantUid),
-            orderBy('sequence', 'asc')
-          )
-        );
-        const loadedStops: DraftStop[] = stopsSnap.docs.map((d) => {
-          const s = d.data() as DeliveryStopRecord;
-          return {
-            id: `repeat_${d.id}_${Date.now()}`,
+        let loadedStops: DraftStop[] = [];
+        if (useSupabase) {
+          const res = await supabaseApiFetch<{ stops: DeliveryStopRecord[] }>(
+            `/api/v1/deliveries/${encodeURIComponent(delivery.id)}/stops`
+          );
+          loadedStops = (res.stops || []).map((s) => ({
+            id: `repeat_${s.id}_${Date.now()}`,
             recipientName: s.recipientName,
             recipientPhone: s.recipientPhone,
             address: s.address,
@@ -823,8 +958,30 @@ export function RovaAppProvider({
             packageRef: s.packageRef || '',
             lat: s.lat,
             lng: s.lng,
-          };
-        });
+          }));
+        } else {
+          const stopsSnap = await getDocs(
+            query(
+              collection(db, 'deliveries', delivery.id, 'stops'),
+              where('merchantUid', '==', delivery.merchantUid),
+              orderBy('sequence', 'asc')
+            )
+          );
+          loadedStops = stopsSnap.docs.map((d) => {
+            const s = d.data() as DeliveryStopRecord;
+            return {
+              id: `repeat_${d.id}_${Date.now()}`,
+              recipientName: s.recipientName,
+              recipientPhone: s.recipientPhone,
+              address: s.address,
+              landmark: s.landmark || '',
+              instructions: s.instructions || '',
+              packageRef: s.packageRef || '',
+              lat: s.lat,
+              lng: s.lng,
+            };
+          });
+        }
 
         setDraft({
           step: 5,
@@ -875,7 +1032,7 @@ export function RovaAppProvider({
         showToast(t('Impossible de dupliquer cette livraison.', 'Could not duplicate this delivery.'), 'error');
       }
     },
-    [showToast, t]
+    [useSupabase, showToast, t]
   );
 
   const submitReservation = useCallback(
@@ -896,6 +1053,22 @@ export function RovaAppProvider({
       setBusy(true);
       try {
         const rule = getEffectivePricingRule(pricingRules, payload.vehicleCategory);
+        if (useSupabase) {
+          await supabaseApiFetch('/api/v1/reservations', {
+            method: 'POST',
+            body: JSON.stringify({
+              businessId: business?.id,
+              merchantName: (business?.name || profile?.displayName || 'Marchand ROVA').slice(0, 160),
+              ...payload,
+              quotedPrice: Math.max(0, Number(payload.quotedPrice) || rule.fullDayRate),
+              currency: rule.currency || currency,
+            }),
+          });
+          await refreshSupabaseWorkspace();
+          setReservationSheetOpen(false);
+          showToast(t('Réservation véhicule enregistrée.', 'Vehicle reservation submitted.'), 'success');
+          return true;
+        }
         await addDoc(collection(db, 'reservations'), {
           ...(business?.id ? { businessId: business.id } : {}),
           merchantUid: uid,
@@ -926,13 +1099,13 @@ export function RovaAppProvider({
         return true;
       } catch (err) {
         showToast(t('Impossible de créer la réservation.', 'Could not create reservation.'), 'error');
-        handleFirestoreError(err, OperationType.CREATE, 'reservations');
+        if (!useSupabase) handleFirestoreError(err, OperationType.CREATE, 'reservations');
         return false;
       } finally {
         setBusy(false);
       }
     },
-    [requireAuth, pricingRules, business, profile, uid, showToast, t]
+    [requireAuth, useSupabase, refreshSupabaseWorkspace, pricingRules, business, profile, uid, currency, showToast, t]
   );
 
   const cancelReservation = useCallback(
@@ -940,6 +1113,15 @@ export function RovaAppProvider({
       if (!requireAuth()) return false;
       setBusy(true);
       try {
+        if (useSupabase) {
+          await supabaseApiFetch(`/api/v1/reservations/${encodeURIComponent(reservationId)}/status`, {
+            method: 'PATCH',
+            body: JSON.stringify({ status: 'cancelled' }),
+          });
+          await refreshSupabaseWorkspace();
+          showToast(t('Réservation annulée.', 'Reservation cancelled.'), 'info');
+          return true;
+        }
         await updateDoc(doc(db, 'reservations', reservationId), {
           status: 'cancelled',
           updatedAt: serverTimestamp(),
@@ -948,13 +1130,13 @@ export function RovaAppProvider({
         return true;
       } catch (err) {
         showToast(t('Impossible d’annuler cette réservation.', 'Could not cancel reservation.'), 'error');
-        handleFirestoreError(err, OperationType.UPDATE, `reservations/${reservationId}`);
+        if (!useSupabase) handleFirestoreError(err, OperationType.UPDATE, `reservations/${reservationId}`);
         return false;
       } finally {
         setBusy(false);
       }
     },
-    [requireAuth, showToast, t]
+    [requireAuth, useSupabase, refreshSupabaseWorkspace, showToast, t]
   );
 
   const saveRecipient = useCallback(
@@ -971,6 +1153,23 @@ export function RovaAppProvider({
       if (!requireAuth()) return false;
       setBusy(true);
       try {
+        if (useSupabase) {
+          if (input.id) {
+            await supabaseApiFetch(`/api/v1/recipients/${encodeURIComponent(input.id)}`, {
+              method: 'PUT',
+              body: JSON.stringify(input),
+            });
+          } else {
+            await supabaseApiFetch('/api/v1/recipients', {
+              method: 'POST',
+              body: JSON.stringify({ ...input, businessId: business?.id }),
+            });
+          }
+          await refreshSupabaseWorkspace();
+          showToast(t('Adresse enregistrée.', 'Address saved.'), 'success');
+          return true;
+        }
+
         // Ensure parent business document exists so businesses/{businessId}/recipients Master Gate passes
         let bizId = business?.id;
         if (!bizId) {
@@ -1011,32 +1210,43 @@ export function RovaAppProvider({
         return true;
       } catch (err) {
         showToast(t('Impossible d’enregistrer l’adresse.', 'Could not save address.'), 'error');
-        handleFirestoreError(err, OperationType.WRITE, `businesses/${business?.id || uid}/recipients`);
+        if (!useSupabase) handleFirestoreError(err, OperationType.WRITE, `businesses/${business?.id || uid}/recipients`);
         return false;
       } finally {
         setBusy(false);
       }
     },
-    [requireAuth, business?.id, profile?.displayName, uid, showToast, t, currency]
+    [requireAuth, useSupabase, refreshSupabaseWorkspace, business?.id, profile?.displayName, uid, showToast, t, currency]
   );
 
   const deleteRecipient = useCallback(
     async (id: string): Promise<boolean> => {
-      if (!requireAuth() || !business?.id) return false;
+      if (!requireAuth()) return false;
+      if (!useSupabase && !business?.id) return false;
       setBusy(true);
       try {
-        await deleteDoc(doc(db, 'businesses', business.id, 'recipients', id));
+        if (useSupabase) {
+          await supabaseApiFetch(`/api/v1/recipients/${encodeURIComponent(id)}`, {
+            method: 'DELETE',
+          });
+          await refreshSupabaseWorkspace();
+          showToast(t('Adresse supprimée.', 'Address removed.'), 'info');
+          return true;
+        }
+        await deleteDoc(doc(db, 'businesses', business!.id, 'recipients', id));
         showToast(t('Adresse supprimée.', 'Address removed.'), 'info');
         return true;
       } catch (err) {
         showToast(t('Suppression impossible.', 'Could not remove address.'), 'error');
-        handleFirestoreError(err, OperationType.DELETE, `businesses/${business.id}/recipients/${id}`);
+        if (!useSupabase && business?.id) {
+          handleFirestoreError(err, OperationType.DELETE, `businesses/${business.id}/recipients/${id}`);
+        }
         return false;
       } finally {
         setBusy(false);
       }
     },
-    [requireAuth, business?.id, showToast, t]
+    [requireAuth, useSupabase, refreshSupabaseWorkspace, business?.id, showToast, t]
   );
 
   const saveBusinessProfile = useCallback(
@@ -1058,6 +1268,18 @@ export function RovaAppProvider({
             ...(input.displayName ? { displayName: input.displayName.trim().slice(0, 120) } : {}),
             ...(input.phone ? { phone: input.phone.trim().slice(0, 40) } : {}),
           });
+        }
+        if (useSupabase) {
+          await supabaseApiFetch('/api/v1/business', {
+            method: 'PUT',
+            body: JSON.stringify({
+              ...input,
+              currency,
+            }),
+          });
+          await refreshSupabaseWorkspace();
+          showToast(t('Profil mis à jour.', 'Profile updated.'), 'success');
+          return true;
         }
         if (business?.id) {
           await updateDoc(doc(db, 'businesses', business.id), {
@@ -1093,13 +1315,13 @@ export function RovaAppProvider({
         return true;
       } catch (err) {
         showToast(t('Impossible de mettre à jour le profil.', 'Could not update profile.'), 'error');
-        handleFirestoreError(err, OperationType.WRITE, 'businesses');
+        if (!useSupabase) handleFirestoreError(err, OperationType.WRITE, 'businesses');
         return false;
       } finally {
         setBusy(false);
       }
     },
-    [requireAuth, updateProfileFields, business, uid, profile, showToast, t, currency]
+    [requireAuth, useSupabase, refreshSupabaseWorkspace, updateProfileFields, business, uid, profile, showToast, t, currency]
   );
 
   const submitSupportMessage = useCallback(
@@ -1111,6 +1333,34 @@ export function RovaAppProvider({
       if (!input.description.trim()) return false;
       setBusy(true);
       try {
+        if (useSupabase) {
+          if (uid) {
+            await supabaseApiFetch('/api/v1/incidents', {
+              method: 'POST',
+              body: JSON.stringify({
+                deliveryId: input.deliveryId,
+                reporterRole: profile?.role || 'merchant',
+                category: input.category,
+                description: input.description.trim().slice(0, 1000),
+              }),
+            });
+          } else {
+            await fetch('/api/v1/waitlist', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                name: 'Support ROVA',
+                email: 'support@rova.app',
+                message: input.description.trim().slice(0, 1000),
+                platform: 'contact',
+              }),
+            });
+          }
+          setSupportSheetOpen(false);
+          setSupportContextDeliveryId(undefined);
+          showToast(t('Votre message a bien été transmis au support ROVA.', 'Your message has been sent to ROVA Support.'), 'success');
+          return true;
+        }
         if (uid) {
           await addDoc(collection(db, 'incidents'), {
             ...(input.deliveryId ? { deliveryId: input.deliveryId } : {}),
@@ -1137,13 +1387,13 @@ export function RovaAppProvider({
         return true;
       } catch (err) {
         showToast(t('Envoi impossible. Réessayez dans un instant.', 'Could not send message. Please retry.'), 'error');
-        handleFirestoreError(err, OperationType.CREATE, 'incidents');
+        if (!useSupabase) handleFirestoreError(err, OperationType.CREATE, 'incidents');
         return false;
       } finally {
         setBusy(false);
       }
     },
-    [uid, profile, showToast, t]
+    [uid, useSupabase, profile, showToast, t]
   );
 
   const markAllNotificationsRead = useCallback(async () => {
@@ -1151,6 +1401,11 @@ export function RovaAppProvider({
     const unread = notifications.filter((n) => !n.read);
     if (unread.length === 0) return;
     try {
+      if (useSupabase) {
+        await supabaseApiFetch('/api/v1/notifications/read-all', { method: 'PATCH' });
+        await refreshSupabaseWorkspace();
+        return;
+      }
       const batch = writeBatch(db);
       unread.slice(0, 25).forEach((n) => {
         batch.update(doc(db, 'notifications', n.id), { read: true });
@@ -1159,7 +1414,7 @@ export function RovaAppProvider({
     } catch {
       // Non-blocking
     }
-  }, [uid, notifications]);
+  }, [uid, useSupabase, refreshSupabaseWorkspace, notifications]);
 
   return (
     <RovaAppContext.Provider

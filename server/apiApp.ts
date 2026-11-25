@@ -1,6 +1,12 @@
 import express from 'express';
 import net from 'net';
 import dotenv from 'dotenv';
+import {
+  getSupabasePublicAnonKey,
+  getSupabasePublicUrl,
+  isSupabaseServerConfigured,
+} from './supabaseAdmin.ts';
+import { createSupabaseRouter } from './supabaseRoutes.ts';
 
 dotenv.config();
 
@@ -128,13 +134,19 @@ const IANA_TZ_TO_COUNTRY: Record<string, string> = {
 
 const PLACEHOLDER_KEY_PREFIXES = ['MY_', 'YOUR_', 'REPLACE_', 'INSERT_', 'CHANGE_ME', 'PLACEHOLDER'];
 
+const INVALID_ENV_LITERALS = new Set(['undefined', 'null', 'none', 'false', 'true']);
+
 function getValidEnvKey(raw: string | undefined): string {
   if (!raw) return '';
-  const trimmed = raw.trim();
-  if (trimmed.length < 20 || /\s/.test(trimmed)) return '';
-  const upper = trimmed.toUpperCase();
+  const unquoted = raw
+    .trim()
+    .replace(/^['"]+|['"]+$/g, '')
+    .trim();
+  if (unquoted.length < 20 || INVALID_ENV_LITERALS.has(unquoted.toLowerCase())) return '';
+  if (!/^[A-Za-z0-9_.-]+$/.test(unquoted)) return '';
+  const upper = unquoted.toUpperCase();
   if (PLACEHOLDER_KEY_PREFIXES.some((p) => upper.startsWith(p))) return '';
-  return trimmed;
+  return unquoted;
 }
 
 function getGoogleMapsServerKey(): string {
@@ -408,15 +420,45 @@ export function createApiApp(): express.Express {
   });
 
   // ============================================================================
-  // PUBLIC MAPS RUNTIME CONFIG (NEVER exposes server key)
+  // PUBLIC HEALTH & RUNTIME CONFIG (NEVER exposes server keys)
   // ============================================================================
+  app.get('/api/health', (_req, res) => {
+    res.setHeader('Cache-Control', 'no-store, max-age=0');
+    res.json({
+      status: 'ok',
+      backend: isSupabaseServerConfigured() ? 'supabase' : 'firebase',
+      supabasePublicConfigured: Boolean(getSupabasePublicUrl() && getSupabasePublicAnonKey()),
+      supabaseServerConfigured: isSupabaseServerConfigured(),
+      mapsBrowserConfigured: Boolean(getGoogleMapsPublicBrowserKey()),
+      mapsServerConfigured: Boolean(getGoogleMapsServerKey()),
+      runtime: process.env.VERCEL ? 'vercel' : 'node',
+    });
+  });
+
+  app.get('/api/config/runtime', (_req, res) => {
+    res.setHeader('Cache-Control', 'no-store, max-age=0');
+    res.json({
+      supabaseUrl: getSupabasePublicUrl(),
+      supabaseAnonKey: getSupabasePublicAnonKey(),
+      googleMapsBrowserKey: getGoogleMapsPublicBrowserKey(),
+      serverGeocodingEnabled: Boolean(getGoogleMapsServerKey()),
+      serverRoutesEnabled: Boolean(getGoogleMapsServerKey()),
+    });
+  });
+
   app.get('/api/maps/client-config', (_req, res) => {
+    res.setHeader('Cache-Control', 'no-store, max-age=0');
     res.json({
       browserApiKey: getGoogleMapsPublicBrowserKey(),
       serverGeocodingEnabled: Boolean(getGoogleMapsServerKey()),
       serverRoutesEnabled: Boolean(getGoogleMapsServerKey()),
     });
   });
+
+  // ============================================================================
+  // SUPABASE AUTHENTICATED & PUBLIC BACKEND API (/api/v1/*)
+  // ============================================================================
+  app.use('/api/v1', createSupabaseRouter());
 
   // ============================================================================
   // 1. REAL GEOCODING SEARCH (GPS + GhanaPostGPS + Google Geocoding + Nominatim)

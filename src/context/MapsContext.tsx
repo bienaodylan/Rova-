@@ -1,16 +1,22 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { APIProvider } from '@vis.gl/react-google-maps';
-import { useLanguage } from './LanguageContext';
 import {
+  MapsFailureCode,
   fetchClientMapsConfig,
+  getGoogleMapsFailureCode,
+  getGoogleMapsFailureReason,
   getInitialGoogleMapsBrowserKey,
   hasGoogleMapsAuthFailed,
 } from '../lib/mapsConfig';
+
+export const GOOGLE_MAPS_LIBRARIES = ['marker', 'places'];
 
 interface MapsContextValue {
   browserApiKey: string;
   googleMapsAvailable: boolean;
   authFailed: boolean;
+  failureCode: MapsFailureCode | null;
+  failureReason: string;
+  configResolved: boolean;
   serverGeocodingEnabled: boolean;
   serverRoutesEnabled: boolean;
 }
@@ -19,6 +25,9 @@ const MapsContext = createContext<MapsContextValue>({
   browserApiKey: '',
   googleMapsAvailable: false,
   authFailed: false,
+  failureCode: null,
+  failureReason: '',
+  configResolved: false,
   serverGeocodingEnabled: false,
   serverRoutesEnabled: false,
 });
@@ -27,14 +36,27 @@ export function useMapsRuntime() {
   return useContext(MapsContext);
 }
 
+/**
+ * Provides Google Maps runtime availability without conditionally wrapping/unwrapping
+ * the application tree in <APIProvider>, preventing full-app remounts when runtime config
+ * loads asynchronously or when a domain/key error triggers the OpenStreetMap fallback.
+ */
 export function RovaMapsProvider({ children }: { children: React.ReactNode }) {
-  const { lang, region } = useLanguage();
   const [browserApiKey, setBrowserApiKey] = useState<string>(() =>
     getInitialGoogleMapsBrowserKey()
+  );
+  const [configResolved, setConfigResolved] = useState<boolean>(() =>
+    Boolean(getInitialGoogleMapsBrowserKey())
   );
   const [serverGeocodingEnabled, setServerGeocodingEnabled] = useState(false);
   const [serverRoutesEnabled, setServerRoutesEnabled] = useState(false);
   const [authFailed, setAuthFailed] = useState<boolean>(() => hasGoogleMapsAuthFailed());
+  const [failureCode, setFailureCode] = useState<MapsFailureCode | null>(() =>
+    getGoogleMapsFailureCode()
+  );
+  const [failureReason, setFailureReason] = useState<string>(() =>
+    getGoogleMapsFailureReason()
+  );
 
   useEffect(() => {
     let active = true;
@@ -45,6 +67,7 @@ export function RovaMapsProvider({ children }: { children: React.ReactNode }) {
       }
       setServerGeocodingEnabled(cfg.serverGeocodingEnabled);
       setServerRoutesEnabled(cfg.serverRoutesEnabled);
+      setConfigResolved(true);
     });
     return () => {
       active = false;
@@ -52,7 +75,11 @@ export function RovaMapsProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    const onAuthFail = () => setAuthFailed(true);
+    const onAuthFail = () => {
+      setAuthFailed(true);
+      setFailureCode(getGoogleMapsFailureCode());
+      setFailureReason(getGoogleMapsFailureReason());
+    };
     window.addEventListener('gmp-auth-failure', onAuthFail);
     return () => window.removeEventListener('gmp-auth-failure', onAuthFail);
   }, []);
@@ -64,26 +91,27 @@ export function RovaMapsProvider({ children }: { children: React.ReactNode }) {
       browserApiKey,
       googleMapsAvailable,
       authFailed,
+      failureCode: authFailed
+        ? failureCode
+        : configResolved && !browserApiKey
+        ? 'missing_key'
+        : null,
+      failureReason,
+      configResolved,
       serverGeocodingEnabled,
       serverRoutesEnabled,
     }),
-    [browserApiKey, googleMapsAvailable, authFailed, serverGeocodingEnabled, serverRoutesEnabled]
+    [
+      browserApiKey,
+      googleMapsAvailable,
+      authFailed,
+      failureCode,
+      failureReason,
+      configResolved,
+      serverGeocodingEnabled,
+      serverRoutesEnabled,
+    ]
   );
 
-  if (!googleMapsAvailable) {
-    return <MapsContext.Provider value={value}>{children}</MapsContext.Provider>;
-  }
-
-  return (
-    <MapsContext.Provider value={value}>
-      <APIProvider
-        apiKey={browserApiKey}
-        language={lang}
-        region={region.countryCode}
-        libraries={['marker', 'places']}
-      >
-        {children}
-      </APIProvider>
-    </MapsContext.Provider>
-  );
+  return <MapsContext.Provider value={value}>{children}</MapsContext.Provider>;
 }
