@@ -17,7 +17,11 @@ function sanitizeServerEnv(raw: string | undefined): string {
 }
 
 export function getSupabasePublicUrl(): string {
-  const url = sanitizeServerEnv(process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL);
+  const url = sanitizeServerEnv(
+    process.env.SUPABASE_URL ||
+      process.env.VITE_SUPABASE_URL ||
+      process.env.NEXT_PUBLIC_SUPABASE_URL
+  );
   if (!url) return '';
   try {
     const parsed = new URL(url);
@@ -28,7 +32,11 @@ export function getSupabasePublicUrl(): string {
 }
 
 export function getSupabasePublicAnonKey(): string {
-  const key = sanitizeServerEnv(process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY);
+  const key = sanitizeServerEnv(
+    process.env.SUPABASE_ANON_KEY ||
+      process.env.VITE_SUPABASE_ANON_KEY ||
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  );
   return key.length >= 20 ? key : '';
 }
 
@@ -67,6 +75,10 @@ export async function checkIsSupabaseAdmin(
   admin: SupabaseClient,
   user: User
 ): Promise<boolean> {
+  const appRole = typeof user.app_metadata?.role === 'string' ? user.app_metadata.role : '';
+  if (appRole === 'admin' || appRole === 'super_admin') {
+    return true;
+  }
   if (
     user.email?.toLowerCase() === BOOTSTRAP_ADMIN_EMAIL &&
     Boolean(user.email_confirmed_at)

@@ -7,6 +7,7 @@ import {
   isSupabaseServerConfigured,
 } from './supabaseAdmin.ts';
 import { createSupabaseRouter } from './supabaseRoutes.ts';
+import { createOperationsRouter } from './operationsRoutes.ts';
 
 dotenv.config();
 
@@ -159,9 +160,9 @@ function getGoogleMapsPublicBrowserKey(): string {
   return getValidEnvKey(process.env.VITE_GOOGLE_MAPS_API_KEY);
 }
 
-function getGeoapifyApiKey(): string {
-  // Keep the Geoapify key on the server; never include it in client runtime config.
-  return getValidEnvKey(process.env.GEOAPIFY_API_KEY || process.env.VITE_GEOAPIFY_API_KEY);
+function getGeoapifyServerKey(): string {
+  // Geoapify key stays on the server; it is never embedded in browser bundles.
+  return getValidEnvKey(process.env.GEOAPIFY_API_KEY);
 }
 
 function createBoundedTtlCache<T>(maxEntries = 500) {
@@ -436,7 +437,7 @@ export function createApiApp(): express.Express {
       supabaseServerConfigured: isSupabaseServerConfigured(),
       mapsBrowserConfigured: Boolean(getGoogleMapsPublicBrowserKey()),
       mapsServerConfigured: Boolean(getGoogleMapsServerKey()),
-      mapsGeoapifyConfigured: Boolean(getGeoapifyApiKey()),
+      mapsGeoapifyConfigured: Boolean(getGeoapifyServerKey()),
       runtime: process.env.VERCEL ? 'vercel' : 'node',
     });
   });
@@ -447,8 +448,8 @@ export function createApiApp(): express.Express {
       supabaseUrl: getSupabasePublicUrl(),
       supabaseAnonKey: getSupabasePublicAnonKey(),
       googleMapsBrowserKey: getGoogleMapsPublicBrowserKey(),
-      serverGeocodingEnabled: Boolean(getGoogleMapsServerKey()),
-      serverRoutesEnabled: Boolean(getGoogleMapsServerKey()),
+      serverGeocodingEnabled: Boolean(getGoogleMapsServerKey() || getGeoapifyServerKey()),
+      serverRoutesEnabled: true, // Google Routes when configured; OSRM fallback otherwise.
     });
   });
 
@@ -456,14 +457,15 @@ export function createApiApp(): express.Express {
     res.setHeader('Cache-Control', 'no-store, max-age=0');
     res.json({
       browserApiKey: getGoogleMapsPublicBrowserKey(),
-      serverGeocodingEnabled: Boolean(getGoogleMapsServerKey()),
-      serverRoutesEnabled: Boolean(getGoogleMapsServerKey()),
+      serverGeocodingEnabled: Boolean(getGoogleMapsServerKey() || getGeoapifyServerKey()),
+      serverRoutesEnabled: true, // Google Routes when configured; OSRM fallback otherwise.
     });
   });
 
   // ============================================================================
-  // SUPABASE AUTHENTICATED & PUBLIC BACKEND API (/api/v1/*)
+  // SUPABASE AUTHENTICATED & OPERATIONAL BACKEND API (/api/v1/*)
   // ============================================================================
+  app.use('/api/v1', createOperationsRouter());
   app.use('/api/v1', createSupabaseRouter());
 
   // ============================================================================
@@ -474,6 +476,9 @@ export function createApiApp(): express.Express {
       const rawQ = typeof req.query.q === 'string' ? req.query.q.trim() : '';
       const countryCodes = typeof req.query.countrycodes === 'string' ? req.query.countrycodes.replace(/[^a-z,]/gi, '') : '';
       const regionBias = typeof req.query.region === 'string' ? req.query.region.replace(/[^a-z]/gi, '').slice(0, 2).toLowerCase() : '';
+      const proximityLat = Number(req.query.lat);
+      const proximityLng = Number(req.query.lng);
+      const hasProximity = Number.isFinite(proximityLat) && Number.isFinite(proximityLng) && Math.abs(proximityLat) <= 90 && Math.abs(proximityLng) <= 180;
       if (!rawQ || rawQ.length < 2 || rawQ.length > 200) {
         return res.json({ results: [] });
       }
@@ -517,14 +522,17 @@ export function createApiApp(): express.Express {
         });
       }
 
-      const cacheKey = `${rawQ.toLowerCase()}|${countryCodes.toLowerCase()}|${regionBias}`;
+      const proximityKey = hasProximity ? `${proximityLat.toFixed(2)},${proximityLng.toFixed(2)}` : '';
+      const cacheKey = `${rawQ.toLowerCase()}|${countryCodes.toLowerCase()}|${regionBias}|${proximityKey}`;
       const cachedResults = geocodeSearchCache.get(cacheKey);
       if (cachedResults) {
         return res.json({ results: cachedResults, cached: true });
       }
 
       const googleServerKey = getGoogleMapsServerKey();
-      if (googleServerKey) {
+      // With a user position, ask Geoapify first: unlike plain geocoding, its proximity bias
+      // helps surface nearby named places before broad address matches.
+      if (googleServerKey && !hasProximity) {
         try {
           const gParams = new URLSearchParams({ address: rawQ, key: googleServerKey });
           if (regionBias) gParams.set('region', regionBias);
@@ -575,15 +583,17 @@ export function createApiApp(): express.Express {
         }
       }
 
-      const geoapifyKey = getGeoapifyApiKey();
+      const geoapifyKey = getGeoapifyServerKey();
       if (geoapifyKey) {
         try {
           const geoParams = new URLSearchParams({
             text: rawQ,
             apiKey: geoapifyKey,
-            limit: '6',
+            limit: '10',
             format: 'json',
+            lang: (typeof req.headers['accept-language'] === 'string' && req.headers['accept-language'].toLowerCase().includes('fr')) ? 'fr' : 'en',
           });
+          if (hasProximity) geoParams.set('bias', `proximity:${proximityLng},${proximityLat}`);
           if (countryCodes) geoParams.set('filter', `countrycode:${countryCodes.split(',').join(',')}`);
           const controller = new AbortController();
           const timeout = setTimeout(() => controller.abort(), 5000);
@@ -594,31 +604,39 @@ export function createApiApp(): express.Express {
           clearTimeout(timeout);
           if (geoRes.ok) {
             const geoData = (await geoRes.json()) as {
-              results?: Array<{
-                formatted?: string; address_line1?: string; address_line2?: string;
-                name?: string; street?: string; suburb?: string; city?: string;
-                lat?: number; lon?: number; result_type?: string;
+              features?: Array<{
+                properties?: Record<string, unknown>;
+                geometry?: { coordinates?: [number, number] };
               }>;
             };
-            const results = (geoData.results || []).slice(0, 6).map((item) => {
-              const displayName = item.formatted || [item.address_line1, item.address_line2].filter(Boolean).join(', ');
-              const shortName = [item.name || item.street, item.suburb, item.city].filter(Boolean).slice(0, 3).join(', ') || displayName;
-              return {
-                displayName,
-                shortName,
-                landmark: item.name || item.suburb || undefined,
-                lat: Number(item.lat || 0),
-                lng: Number(item.lon || 0),
-                type: item.result_type || 'place',
-              };
-            }).filter((item) => Number.isFinite(item.lat) && Number.isFinite(item.lng));
+            const results = (geoData.features || [])
+              .map((feature) => {
+                const props = feature.properties || {};
+                const coords = feature.geometry?.coordinates;
+                const lat = Number(coords?.[1]);
+                const lng = Number(coords?.[0]);
+                if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+                const placeName = String(props.name || props.address_line1 || '').trim();
+                const areaName = String(props.suburb || props.neighbourhood || props.district || props.city || '').trim();
+                const displayName = String(props.formatted || [placeName, areaName, props.state].filter(Boolean).join(', ') || rawQ);
+                const shortName = [placeName, areaName, props.state].filter(Boolean).map(String).slice(0, 3).join(', ') || displayName;
+                return {
+                  displayName,
+                  shortName,
+                  landmark: String(props.name || props.suburb || '') || undefined,
+                  lat,
+                  lng,
+                  type: String(props.result_type || (Array.isArray(props.categories) ? props.categories[0] : '') || 'place'),
+                };
+              })
+              .filter((item): item is NonNullable<typeof item> => item !== null);
             if (results.length) {
               geocodeSearchCache.set(cacheKey, results, 15 * 60_000);
               return res.json({ results, provider: 'geoapify' });
             }
           }
         } catch {
-          // Fall through to the free Nominatim provider.
+          // Continue to the existing Nominatim fallback.
         }
       }
 
@@ -744,7 +762,7 @@ export function createApiApp(): express.Express {
         }
       }
 
-      const geoapifyKey = getGeoapifyApiKey();
+      const geoapifyKey = getGeoapifyServerKey();
       if (geoapifyKey) {
         try {
           const geoParams = new URLSearchParams({
@@ -762,22 +780,22 @@ export function createApiApp(): express.Express {
           clearTimeout(timeout);
           if (geoRes.ok) {
             const geoData = (await geoRes.json()) as {
-              results?: Array<{
-                formatted?: string; address_line1?: string; address_line2?: string;
-                name?: string; street?: string; suburb?: string; city?: string;
-                country?: string; country_code?: string;
-              }>;
+              features?: Array<{ properties?: Record<string, unknown> }>;
             };
-            const first = geoData.results?.[0];
-            if (first) {
-              const shortName = [first.name || first.street || first.address_line1, first.suburb, first.city]
-                .filter(Boolean).join(', ') || first.formatted || `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+            const props = geoData.features?.[0]?.properties;
+            if (props) {
+              const displayName = String(props.formatted || props.address_line2 || `${lat.toFixed(5)}, ${lng.toFixed(5)}`);
+              const shortName = [
+                props.address_line1 || props.name,
+                props.suburb || props.district || props.city,
+                props.state,
+              ].filter(Boolean).map(String).slice(0, 3).join(', ') || displayName;
               const payload = {
-                displayName: first.formatted || [first.address_line1, first.address_line2].filter(Boolean).join(', ') || shortName,
+                displayName,
                 shortName,
-                landmark: first.name || first.suburb || undefined,
-                country: first.country || undefined,
-                countryCode: first.country_code?.toUpperCase(),
+                landmark: String(props.name || props.suburb || '') || undefined,
+                country: String(props.country || '') || undefined,
+                countryCode: String(props.country_code || '').toUpperCase() || undefined,
                 provider: 'geoapify',
               };
               reverseGeocodeCache.set(cacheKey, payload, 15 * 60_000);
@@ -785,7 +803,7 @@ export function createApiApp(): express.Express {
             }
           }
         } catch {
-          // Fall through to the free Nominatim provider.
+          // Continue to the existing Nominatim fallback.
         }
       }
 

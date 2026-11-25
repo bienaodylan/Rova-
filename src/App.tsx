@@ -8,18 +8,21 @@ import { RovaAppProvider, useRovaApp } from './context/RovaAppContext';
 import { AccountSectionId } from './components/account/accountTypes';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { RoleOnboarding } from './components/RoleOnboardingModal';
-import { FloatingBottomNav, PrimaryTab } from './components/InterfaceExplorerBar';
+import { FloatingBottomNav } from './components/InterfaceExplorerBar';
+import type { PrimaryTab } from './components/InterfaceExplorerBar';
 import { DeliveryComposerSheet } from './components/DeliveryComposerSheet';
 import { ReservationSheet } from './components/ReservationSheet';
-import { ShipmentDetailSheet } from './components/ShipmentDetailSheet';
+import { LiveTrackingWindow } from './components/LiveTrackingWindow';
+import { LiveNotificationBanner } from './components/LiveNotificationBanner';
+import { RovaSplashScreen } from './components/RovaSplashScreen';
 import { SupportSheet, TrackLookupSheet } from './components/UtilitySheets';
 import { AuthSheet } from './components/AuthSheet';
 import { ToastBanner } from './components/ToastBanner';
-import { RovaHomeView } from './pages/RovaHomeView';
-import { RovaShipmentsView } from './pages/RovaShipmentsView';
-import { RovaActivityView } from './pages/RovaActivityView';
-import { RovaAccountView } from './pages/RovaAccountView';
-import { RecipientTrackingPage } from './pages/RecipientTrackingPage';
+
+const RovaHomeView = lazy(() => import('./pages/RovaHomeView').then((m) => ({ default: m.RovaHomeView })));
+const RovaShipmentsView = lazy(() => import('./pages/RovaShipmentsView').then((m) => ({ default: m.RovaShipmentsView })));
+const RovaActivityView = lazy(() => import('./pages/RovaActivityView').then((m) => ({ default: m.RovaActivityView })));
+const RovaAccountView = lazy(() => import('./pages/RovaAccountView').then((m) => ({ default: m.RovaAccountView })));
 
 const DriverWorkspace = lazy(() =>
   import('./pages/DriverWorkspace').then((m) => ({ default: m.DriverWorkspace }))
@@ -28,7 +31,7 @@ const OperationsCenter = lazy(() =>
   import('./pages/OperationsCenter').then((m) => ({ default: m.OperationsCenter }))
 );
 
-type SecondaryWorkspace = 'none' | 'driver' | 'operations' | 'tracking';
+type SecondaryWorkspace = 'none' | 'driver' | 'operations';
 
 function readUrlState(): {
   tab: PrimaryTab;
@@ -39,10 +42,11 @@ function readUrlState(): {
     const params = new URLSearchParams(window.location.search);
     const track = params.get('track')?.trim() || '';
     if (track) {
-      return { tab: 'home', workspace: 'tracking', trackToken: track };
+      // Open tracking directly inside the unified fixed window on top of the main app
+      return { tab: 'home', workspace: 'none', trackToken: track };
     }
     const ws = params.get('workspace');
-    if (ws === 'driver' || ws === 'operations' || ws === 'tracking') {
+    if (ws === 'driver' || ws === 'operations') {
       return { tab: 'account', workspace: ws, trackToken: '' };
     }
     const tabParam = params.get('tab');
@@ -62,9 +66,8 @@ function pushUrlState(tab: PrimaryTab, workspace: SecondaryWorkspace, trackToken
     url.searchParams.delete('tab');
     url.searchParams.delete('workspace');
     url.searchParams.delete('track');
-    if (workspace === 'tracking') {
-      if (trackToken) url.searchParams.set('track', trackToken);
-      else url.searchParams.set('workspace', 'tracking');
+    if (trackToken) {
+      url.searchParams.set('track', trackToken);
     } else if (workspace !== 'none') {
       url.searchParams.set('workspace', workspace);
     } else if (tab !== 'home') {
@@ -88,7 +91,14 @@ function RovaApplicationShell({
   const { firebaseUser, profile, loading, authError, isAdmin, completeOnboarding, logout } =
     useAuth();
   const { t } = useLanguage();
-  const { activeDeliveries, toast, dismissToast } = useRovaApp();
+  const {
+    activeDeliveries,
+    selectedDelivery,
+    openShipmentDetail,
+    closeShipmentDetail,
+    toast,
+    dismissToast,
+  } = useRovaApp();
 
   const initial = readUrlState();
   const [activeTab, setActiveTab] = useState<PrimaryTab>(initial.tab);
@@ -119,18 +129,34 @@ function RovaApplicationShell({
   };
 
   const openWorkspace = (ws: 'driver' | 'operations' | 'tracking') => {
+    if (ws === 'tracking') {
+      // No second tracking page — open fixed tracking window directly over current view
+      setWorkspace('none');
+      if (activeDeliveries[0]) {
+        openShipmentDetail(activeDeliveries[0].id);
+      }
+      return;
+    }
     setWorkspace(ws);
-    if (ws !== 'tracking') setTrackingToken('');
+    setTrackingToken('');
     pushUrlState(activeTab, ws, '');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const openPublicTracking = (token: string) => {
+  const openTrackingTokenOverlay = (token: string) => {
     const clean = token.trim();
+    if (!clean) return;
+    closeShipmentDetail();
     setTrackingToken(clean);
-    setWorkspace('tracking');
-    pushUrlState(activeTab, 'tracking', clean);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    pushUrlState(activeTab, workspace, clean);
+  };
+
+  const closeUnifiedTracking = () => {
+    closeShipmentDetail();
+    if (trackingToken) {
+      setTrackingToken('');
+      pushUrlState(activeTab, workspace, '');
+    }
   };
 
   const returnToMainApp = () => {
@@ -140,112 +166,130 @@ function RovaApplicationShell({
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  if (loading) {
+  // First-time signed-in user onboarding (skip if viewing a shared tracking link)
+  if (!loading && firebaseUser && !profile && !trackingToken) {
     return (
-      <div className="min-h-screen bg-[#f8f8f9] text-neutral-950 flex items-center justify-center p-6">
-        <div className="text-center space-y-2.5">
-          <span className="font-display text-xl font-extrabold tracking-[0.22em]">ROVA</span>
-          <p className="text-xs text-neutral-500">
-            {t('Chargement de votre espace...', 'Opening your workspace...')}
-          </p>
-        </div>
-      </div>
+      <>
+        <RovaSplashScreen ready={!loading} />
+        <RoleOnboarding
+          email={firebaseUser.email || ''}
+          initialName={firebaseUser.displayName || ''}
+          canSelectAdmin={isAdmin}
+          onComplete={completeOnboarding}
+          onSignOut={logout}
+        />
+      </>
     );
   }
 
-  // First-time signed-in user onboarding (skip if viewing an isolated recipient tracking link)
-  if (firebaseUser && !profile && workspace !== 'tracking') {
-    return (
-      <RoleOnboarding
-        email={firebaseUser.email || ''}
-        initialName={firebaseUser.displayName || ''}
-        canSelectAdmin={isAdmin}
-        onComplete={completeOnboarding}
-        onSignOut={logout}
-      />
-    );
-  }
-
-  // Dedicated secondary workspaces (Driver App, Operations Center, Recipient Isolated Tracking)
+  // Dedicated secondary workspaces (Driver App & Operations Center)
   if (workspace !== 'none') {
     return (
-      <div className="min-h-screen bg-[#f8f8f9] flex flex-col">
-        {workspace !== 'tracking' && (
-          <div className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-neutral-200 px-4 py-2.5 flex items-center justify-between">
+      <div className="min-h-screen bg-white text-[#171717] flex flex-col">
+        <RovaSplashScreen ready={!loading} />
+
+        {workspace === 'operations' && (
+          <div className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-[#E5E5E5] px-4 py-2.5 flex items-center justify-between">
             <button
               type="button"
               onClick={returnToMainApp}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-neutral-100 hover:bg-neutral-950 hover:text-white text-xs font-semibold text-neutral-900 transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-[#F3F3F3] hover:bg-[#171717] hover:text-white text-xs font-semibold text-[#171717] transition-colors cursor-pointer"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
-              {t('Retour à ROVA', 'Back to ROVA')}
+              {t('Retour à Rovia', 'Back to Rovia')}
             </button>
-            <span className="text-xs font-medium text-neutral-500">
-              {workspace === 'driver'
-                ? t('Application Livreur', 'Driver App')
-                : t('Centre d’Opérations', 'Operations Center')}
+            <span className="text-xs font-medium text-[#777777]">
+              {t('Centre d’Opérations', 'Operations Center')}
             </span>
           </div>
         )}
 
         <Suspense
           fallback={
-            <div className="flex-1 flex items-center justify-center py-20 text-xs text-neutral-500">
+            <div className="flex-1 flex items-center justify-center py-20 text-xs text-[#777777]">
               {t('Chargement de l’interface...', 'Loading interface...')}
             </div>
           }
         >
-          {workspace === 'driver' && <DriverWorkspace onRequestSignIn={openAuthSheet} />}
+          {workspace === 'driver' && (
+            <DriverWorkspace
+              onRequestSignIn={openAuthSheet}
+              onBackToClient={returnToMainApp}
+              onOpenTrackingToken={openTrackingTokenOverlay}
+            />
+          )}
           {workspace === 'operations' && (
             <OperationsCenter
-              onOpenTracking={openPublicTracking}
+              onOpenTracking={openTrackingTokenOverlay}
               onRequestSignIn={openAuthSheet}
             />
           )}
-          {workspace === 'tracking' && (
-            <RecipientTrackingPage
-              trackingToken={trackingToken}
-              onBack={returnToMainApp}
-              onLookupToken={openPublicTracking}
-            />
-          )}
         </Suspense>
+
+        <LiveTrackingWindow
+          delivery={selectedDelivery}
+          trackingToken={trackingToken}
+          onClose={closeUnifiedTracking}
+          onLookupToken={openTrackingTokenOverlay}
+          onSwitchToToken={openTrackingTokenOverlay}
+        />
+        <AuthSheet open={authSheetOpen} onClose={closeAuthSheet} />
+        <ToastBanner toast={toast} onDismiss={dismissToast} />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#f8f8f9] text-neutral-950 flex flex-col">
+    <div className="min-h-screen bg-white text-[#171717] flex flex-col">
+      {/* Branded Splash Screen with current Rovia. logo */}
+      <RovaSplashScreen ready={!loading} />
+
+      {/* Interactive Live Notification Banner — tapping opens the fixed tracking window */}
+      <LiveNotificationBanner
+        onOpenDelivery={(deliveryId) => {
+          setTrackingToken('');
+          openShipmentDetail(deliveryId);
+        }}
+      />
+
       {authError && (
-        <div className="bg-neutral-950 text-white text-xs px-4 py-2.5 text-center">
+        <div className="bg-[#171717] text-white text-xs px-4 py-2.5 text-center">
           {t('Connexion interrompue :', 'Sign-in could not be completed:')} {authError}
         </div>
       )}
 
       {/* Continuous Animated Main Content Area */}
       <main className="flex-1 pb-28">
-        <AnimatePresence mode="wait" initial={false}>
-          <motion.div
-            key={activeTab}
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -4 }}
-            transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-          >
-            {activeTab === 'home' && <RovaHomeView onNavigateTab={navigateTab} />}
-            {activeTab === 'shipments' && (
-              <RovaShipmentsView onOpenPublicTracking={openPublicTracking} />
-            )}
-            {activeTab === 'activity' && <RovaActivityView />}
-            {activeTab === 'account' && (
-              <RovaAccountView
-                onOpenWorkspace={openWorkspace}
-                initialSection={pendingAccountSection}
-                onConsumeInitialSection={() => setPendingAccountSection(null)}
-              />
-            )}
-          </motion.div>
-        </AnimatePresence>
+        <Suspense
+          fallback={
+            <div className="min-h-[50vh] flex items-center justify-center text-xs text-neutral-500">
+              {t('Chargement de votre espace...', 'Loading your workspace...')}
+            </div>
+          }
+        >
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.div
+              key={activeTab}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+            >
+              {activeTab === 'home' && <RovaHomeView onNavigateTab={navigateTab} />}
+              {activeTab === 'shipments' && (
+                <RovaShipmentsView onOpenPublicTracking={openTrackingTokenOverlay} />
+              )}
+              {activeTab === 'activity' && <RovaActivityView />}
+              {activeTab === 'account' && (
+                <RovaAccountView
+                  onOpenWorkspace={openWorkspace}
+                  initialSection={pendingAccountSection}
+                  onConsumeInitialSection={() => setPendingAccountSection(null)}
+                />
+              )}
+            </motion.div>
+          </AnimatePresence>
+        </Suspense>
       </main>
 
       {/* Floating Glassmorphism 4-Tab Bottom Navigation Bar */}
@@ -255,11 +299,17 @@ function RovaApplicationShell({
         activeShipmentsBadge={activeDeliveries.length}
       />
 
-      {/* Contextual Bottom Sheets */}
+      {/* Contextual Bottom Sheets & Unified Fixed Live Tracking Window */}
       <DeliveryComposerSheet />
       <ReservationSheet />
-      <ShipmentDetailSheet onOpenPublicTracking={openPublicTracking} />
-      <TrackLookupSheet onOpenTracking={openPublicTracking} />
+      <LiveTrackingWindow
+        delivery={selectedDelivery}
+        trackingToken={trackingToken}
+        onClose={closeUnifiedTracking}
+        onLookupToken={openTrackingTokenOverlay}
+        onSwitchToToken={openTrackingTokenOverlay}
+      />
+      <TrackLookupSheet onOpenTracking={openTrackingTokenOverlay} />
       <SupportSheet />
       <AuthSheet open={authSheetOpen} onClose={closeAuthSheet} />
 

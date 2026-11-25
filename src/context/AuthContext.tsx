@@ -240,6 +240,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         ? 'La connexion Apple doit être activée dans votre fournisseur d’authentification.'
         : 'La connexion Google n’est pas activée dans votre fournisseur d’authentification.';
     }
+    const providerMessage = err instanceof Error ? err.message.toLowerCase() : '';
+    if (providerMessage.includes('provider is not enabled')) {
+      return providerName === 'Apple'
+        ? 'La connexion Apple n’est pas encore configurée sur Rovia. Utilisez une autre méthode de connexion.'
+        : 'La connexion Google n’est pas encore configurée sur Rovia. Utilisez une autre méthode de connexion.';
+    }
+    if (providerMessage.includes('redirect_to') || providerMessage.includes('redirect url')) {
+      return 'Adresse de retour de connexion non autorisée. Vérifiez les URL de redirection configurées dans Supabase.';
+    }
     if (code === 'auth/account-exists-with-different-credential') {
       return 'Un compte existe déjà avec cette adresse e-mail via un autre mode de connexion.';
     }

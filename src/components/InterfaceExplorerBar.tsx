@@ -37,10 +37,10 @@ export function FloatingBottomNav({
   ];
 
   return (
-    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 w-auto max-w-[calc(100vw-1rem)] pointer-events-none pb-[env(safe-area-inset-bottom,0px)]">
+    <div className="fixed bottom-3.5 left-1/2 -translate-x-1/2 z-50 w-auto max-w-[calc(100vw-1.5rem)] pointer-events-none pb-[env(safe-area-inset-bottom,0px)]">
       <nav
         aria-label={t('Navigation principale', 'Primary navigation')}
-        className="pointer-events-auto relative flex items-center gap-1.5 sm:gap-2 p-1.5 rounded-full bg-transparent backdrop-blur-md border border-white/60 ring-1 ring-black/[0.08] shadow-[0_12px_36px_rgba(0,0,0,0.08),inset_0_1px_1px_rgba(255,255,255,0.65)]"
+        className="pointer-events-auto relative flex items-center gap-1 p-1.5 rounded-full bg-white/95 backdrop-blur-xl border border-[#E5E5E5] shadow-[0_10px_30px_rgba(23,23,23,0.10)]"
       >
         {items.map((item) => {
           const Icon = item.icon;
@@ -52,72 +52,44 @@ export function FloatingBottomNav({
               type="button"
               onClick={() => onSelect(item.id)}
               aria-current={isActive ? 'page' : undefined}
-              className="group relative flex flex-col items-center justify-center min-w-[74px] sm:min-w-[92px] h-[52px] px-3 sm:px-5 rounded-full cursor-pointer select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/30 transition-transform duration-150 active:scale-95"
+              className="group relative flex flex-col items-center justify-center min-w-[72px] sm:min-w-[88px] h-[48px] px-3 sm:px-4 rounded-full cursor-pointer select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[#171717] transition-transform duration-150 active:scale-[0.96]"
             >
-              {/* Transparent glass rounded pill behind every icon */}
-              <span
-                aria-hidden="true"
-                className={`absolute inset-0 rounded-full transition-all duration-200 ${
-                  isActive
-                    ? 'opacity-0'
-                    : 'bg-transparent backdrop-blur-sm border border-white/40 group-hover:border-white/75'
-                }`}
-              />
-
-              {/* Animated transparent rounded glassmorphism pill behind the active icon */}
               {isActive && (
                 <motion.span
-                  layoutId="rova-active-glass-pill"
+                  layoutId="rova-active-nav-pill"
                   transition={{
                     type: 'spring',
-                    stiffness: 420,
-                    damping: 32,
-                    mass: 0.75,
+                    stiffness: 460,
+                    damping: 34,
+                    mass: 0.7,
                   }}
                   aria-hidden="true"
-                  className="absolute inset-0 rounded-full bg-transparent backdrop-blur-lg border border-white/85 ring-1 ring-black/[0.10] shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.8),0_4px_14px_rgba(0,0,0,0.08)]"
+                  className="absolute inset-0 rounded-full bg-[#F3F3F3]"
                 />
               )}
 
-              {/* Icon + Crisp Label + Red Active Indicator Dot */}
               <span className="relative z-10 flex flex-col items-center justify-center gap-0.5">
                 <span className="relative">
-                  <motion.span
-                    animate={isActive ? { y: [0, -2, 0], scale: [1, 1.12, 1] } : { y: 0, scale: 1 }}
-                    transition={isActive ? { duration: 0.34, ease: [0.2, 0.8, 0.2, 1] } : { duration: 0.18 }}
-                    className="inline-flex"
-                  >
-                    <Icon
-                      strokeWidth={isActive ? 2.3 : 1.85}
-                      className={`w-[19px] h-[19px] transition-colors duration-200 ${
-                        isActive ? 'text-neutral-950' : 'text-neutral-600 group-hover:text-neutral-900'
-                      }`}
-                    />
-                  </motion.span>
+                  <Icon
+                    strokeWidth={isActive ? 2.25 : 1.75}
+                    className={`w-[19px] h-[19px] transition-colors duration-150 ${
+                      isActive ? 'text-[#E52B32]' : 'text-[#777777] group-hover:text-[#171717]'
+                    }`}
+                  />
                   {item.badge && item.badge > 0 ? (
-                    <span className="absolute -top-1.5 -right-2.5 min-w-[16px] h-[16px] px-1 rounded-full bg-red-600 text-white font-mono text-[9px] font-bold flex items-center justify-center tabular-nums shadow-[0_2px_8px_rgba(220,38,38,0.45)]">
+                    <span className="absolute -top-1.5 -right-2.5 min-w-[16px] h-[16px] px-1 rounded-full bg-[#E52B32] text-white font-mono text-[9px] font-bold flex items-center justify-center tabular-nums">
                       {item.badge > 9 ? '9+' : item.badge}
                     </span>
                   ) : null}
                 </span>
-                <span className="inline-flex items-center gap-1">
-                  {isActive && (
-                    <motion.span
-                      layoutId="rova-active-red-dot"
-                      transition={{ type: 'spring', stiffness: 460, damping: 32 }}
-                      className="w-1.5 h-1.5 rounded-full bg-red-600 shrink-0"
-                      aria-hidden="true"
-                    />
-                  )}
-                  <span
-                    className={`text-[10px] leading-none tracking-tight whitespace-nowrap transition-colors duration-200 ${
-                      isActive
-                        ? 'font-semibold text-neutral-950'
-                        : 'font-medium text-neutral-600 group-hover:text-neutral-900'
-                    }`}
-                  >
-                    {item.label}
-                  </span>
+                <span
+                  className={`text-[10px] leading-none tracking-tight whitespace-nowrap transition-colors duration-150 ${
+                    isActive
+                      ? 'font-semibold text-[#171717]'
+                      : 'font-medium text-[#777777] group-hover:text-[#171717]'
+                  }`}
+                >
+                  {item.label}
                 </span>
               </span>
             </button>

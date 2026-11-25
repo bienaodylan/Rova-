@@ -34,6 +34,7 @@ import {
   X,
 } from 'lucide-react';
 import { db, handleFirestoreError, OperationType } from '../lib/firebase';
+import { isSupabaseConfigured, supabaseApiFetch } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { LanguageSelector, useLanguage } from '../context/LanguageContext';
 import {
@@ -89,9 +90,9 @@ interface OperationsCenterProps {
 }
 
 const EQUIPMENT_CATEGORIES: Array<{ id: EquipmentRecord['category']; labelFr: string; labelEn: string }> = [
-  { id: 'uniform', labelFr: 'Uniforme ROVA', labelEn: 'Branded Uniform' },
-  { id: 'jacket', labelFr: 'Veste ROVA', labelEn: 'ROVA Jacket' },
-  { id: 'shirt', labelFr: 'Polo / Chemise ROVA', labelEn: 'ROVA Polo / Shirt' },
+  { id: 'uniform', labelFr: 'Uniforme Rovia', labelEn: 'Branded Uniform' },
+  { id: 'jacket', labelFr: 'Veste Rovia', labelEn: 'Rovia Jacket' },
+  { id: 'shirt', labelFr: 'Polo / Chemise Rovia', labelEn: 'Rovia Polo / Shirt' },
   { id: 'helmet', labelFr: 'Casque de sécurité', labelEn: 'Safety Helmet' },
   { id: 'bag', labelFr: 'Sac isotherme', labelEn: 'Insulated Thermal Bag' },
   { id: 'delivery_box', labelFr: 'Caisson rigide', labelEn: 'Hard Delivery Box' },
@@ -126,6 +127,53 @@ export function OperationsCenter({
   const [section, setSection] = useState<OpsSection>('dashboard');
   const [statusBanner, setStatusBanner] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [activeCities, setActiveCities] = useState<Array<{ id: string; name: string; countryCode: string; currency: string; maxDeliveryDistanceKm: number }>>([]);
+  const [reconciling, setReconciling] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/v1/cities')
+      .then((r) => r.json())
+      .then((d) => {
+        if (Array.isArray(d.cities)) setActiveCities(d.cities);
+      })
+      .catch(() => {});
+  }, []);
+
+  const handleRunReconciliation = async () => {
+    if (!requireAdminAction()) return;
+    setReconciling(true);
+    try {
+      if (isSupabaseConfigured()) {
+        const res = await supabaseApiFetch<{
+          ok: boolean;
+          report?: {
+            expiredOffersCount: number;
+            staleCouriersFlaggedCount: number;
+            stuckSearchesEscalatedCount: number;
+            notificationsRetriedCount: number;
+          };
+        }>('/api/v1/ops/reconcile', { method: 'POST' });
+        const r = res.report;
+        flash(
+          t(
+            `Réconciliation terminée : ${r?.expiredOffersCount ?? 0} offres expirées, ${r?.staleCouriersFlaggedCount ?? 0} GPS obsolètes, ${r?.stuckSearchesEscalatedCount ?? 0} recherches escaladées.`,
+            `Reconciliation complete: ${r?.expiredOffersCount ?? 0} expired offers, ${r?.staleCouriersFlaggedCount ?? 0} stale GPS flagged, ${r?.stuckSearchesEscalatedCount ?? 0} stuck searches escalated.`
+          )
+        );
+      } else {
+        flash(
+          t(
+            'Réconciliation serveur active sur l’environnement Supabase production (/api/v1/ops/reconcile).',
+            'Server reconciliation runs against Supabase production (/api/v1/ops/reconcile).'
+          )
+        );
+      }
+    } catch (err) {
+      flash(err instanceof Error ? err.message : t('Erreur de réconciliation.', 'Reconciliation error.'));
+    } finally {
+      setReconciling(false);
+    }
+  };
 
   const [deliveries, setDeliveries] = useState<DeliveryRecord[]>([]);
   const [reservations, setReservations] = useState<ReservationRecord[]>([]);
@@ -485,7 +533,7 @@ export function OperationsCenter({
       await notifyUser(
         drv.uid,
         nextStatus === 'approved' ? 'Compte chauffeur validé' : 'Statut chauffeur mis à jour',
-        `Votre statut livreur ROVA est désormais : ${nextStatus}.`,
+        `Votre statut livreur Rovia est désormais : ${nextStatus}.`,
         `driver_${nextStatus}`
       );
       await logAudit(`driver_${nextStatus}`, 'driver', drv.id, `Chauffeur ${drv.fullName} -> ${nextStatus}`);
@@ -912,7 +960,7 @@ export function OperationsCenter({
       badge: kpis.pendingDispatchCount + kpis.pendingReservationsCount,
     },
     { id: 'drivers', label: t('Validation Livreurs', 'Drivers Queue'), icon: UserCheck, badge: kpis.pendingDriversCount },
-    { id: 'fleet', label: t('Flotte ROVA', 'ROVA Fleet'), icon: Truck },
+    { id: 'fleet', label: t('Flotte Rovia', 'Rovia Fleet'), icon: Truck },
     { id: 'equipment', label: t('Marque & Équipements', 'Brand & Equipment'), icon: Boxes },
     { id: 'partners', label: t('Partenaires', 'Partnerships'), icon: Handshake },
     { id: 'pricing', label: t('Moteur Tarifaire', 'Pricing Engine'), icon: Sliders },
@@ -925,7 +973,7 @@ export function OperationsCenter({
       <aside className="hidden lg:flex lg:flex-col lg:w-64 border-r border-neutral-200 bg-white shrink-0">
         <div className="h-16 px-6 flex items-center justify-between border-b border-neutral-200">
           <div>
-            <span className="font-display text-base font-extrabold tracking-[0.2em]">ROVA</span>
+            <span className="font-display text-base font-extrabold tracking-[0.2em]">Rovia</span>
             <p className="text-[11px] text-neutral-500">
               {t('Centre d’Opérations', 'Operations Center')}
             </p>
@@ -968,7 +1016,7 @@ export function OperationsCenter({
           <div className="flex items-center justify-between gap-2 pt-1">
             <div className="min-w-0">
               <p className="text-xs font-medium text-neutral-950 truncate">
-                {profile?.displayName || t('Administrateur ROVA', 'ROVA Admin')}
+                {profile?.displayName || t('Administrateur Rovia', 'Rovia Admin')}
               </p>
               <p className="text-[11px] text-neutral-500 truncate">
                 {uid ? actorEmail : t('Aperçu (non connecté)', 'Preview (signed out)')}
@@ -1069,7 +1117,7 @@ export function OperationsCenter({
                   { label: t('Livraisons du jour', 'Deliveries Today'), value: kpis.deliveriesToday, sub: `${deliveries.length} ${t('total', 'total')}` },
                   { label: t('Courses actives', 'Active Deliveries'), value: kpis.activeCount, sub: `${kpis.pendingDispatchCount} ${t('en attente', 'unassigned')}` },
                   { label: t('Livreurs en ligne', 'Online Drivers'), value: kpis.onlineDriversCount, sub: `${kpis.approvedDrivers.length} ${t('validés', 'approved')}` },
-                  { label: t('Flotte ROVA', 'ROVA Fleet'), value: kpis.fleetTotal, sub: `${kpis.reservedVehicles} ${t('réservés', 'reserved')}` },
+                  { label: t('Flotte Rovia', 'Rovia Fleet'), value: kpis.fleetTotal, sub: `${kpis.reservedVehicles} ${t('réservés', 'reserved')}` },
                   { label: t('Incidents ouverts', 'Open Incidents'), value: kpis.openIncidentsCount, sub: `${kpis.failedCount} ${t('échecs', 'failed')}` },
                   {
                     label: t('Volume brut', 'Gross Volume'),
@@ -1085,6 +1133,35 @@ export function OperationsCenter({
                     <p className="text-[11px] text-neutral-500 truncate">{kpi.sub}</p>
                   </div>
                 ))}
+              </div>
+
+              {/* Isolated City Network & Operational Reconciliation Bar */}
+              <div className="rounded-2xl border border-neutral-200 bg-white p-4 flex flex-wrap items-center justify-between gap-4">
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold text-neutral-950">
+                    {t('Zones urbaines isolées & réconciliation moteur', 'Isolated urban zones & engine reconciliation')}
+                  </p>
+                  <p className="text-[11px] text-neutral-500">
+                    {activeCities.length > 0
+                      ? activeCities
+                          .map((c) => `${c.name} (${c.currency}, ≤${c.maxDeliveryDistanceKm} km)`)
+                          .join(' · ')
+                      : t('Chargement des zones urbaines actives...', 'Loading active urban zones...')}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  disabled={reconciling}
+                  onClick={() => void handleRunReconciliation()}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-neutral-950 hover:bg-red-600 text-white text-xs font-semibold transition-colors disabled:opacity-50 cursor-pointer"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${reconciling ? 'animate-spin' : ''}`} />
+                  <span>
+                    {reconciling
+                      ? t('Réconciliation...', 'Reconciling...')
+                      : t('Exécuter réconciliation', 'Run reconciliation')}
+                  </span>
+                </button>
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -1404,9 +1481,9 @@ export function OperationsCenter({
             <div className="space-y-5">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <h2 className="font-display text-lg font-bold">{t('Flotte ROVA', 'ROVA Fleet')}</h2>
+                  <h2 className="font-display text-lg font-bold">{t('Flotte Rovia', 'Rovia Fleet')}</h2>
                   <p className="text-xs text-neutral-500">
-                    {t('Véhicules propriétaires, partenaires et chauffeurs', 'ROVA-owned, partner, and driver vehicles')}
+                    {t('Véhicules propriétaires, partenaires et chauffeurs', 'Rovia-owned, partner, and driver vehicles')}
                   </p>
                 </div>
                 <button
@@ -1559,7 +1636,7 @@ export function OperationsCenter({
                     <input
                       type="text"
                       required
-                      placeholder={t('Nom (ex. Caisson ROVA 45L)', 'Item name')}
+                      placeholder={t('Nom (ex. Caisson Rovia 45L)', 'Item name')}
                       value={equipForm.name}
                       onChange={(e) => setEquipForm((p) => ({ ...p, name: e.target.value }))}
                       className="rounded-xl border border-neutral-300 px-3 py-2 text-xs"
@@ -1685,7 +1762,7 @@ export function OperationsCenter({
                         <button
                           type="button"
                           onClick={() => handleReturnEquipment(a)}
-                          className="px-3 py-1 rounded-full border border-neutral-300 hover:border-neutral-950"
+                          className="min-h-[36px] px-4 py-2 rounded-full border border-neutral-300 font-semibold text-neutral-700 hover:border-neutral-950 hover:bg-neutral-950 hover:text-white transition-colors"
                         >
                           {t('Marquer restitué', 'Mark returned')}
                         </button>
@@ -1992,7 +2069,7 @@ export function OperationsCenter({
                       </p>
                     </div>
                     <div className="rounded-3xl border border-neutral-200 bg-white p-5">
-                      <p className="text-xs text-neutral-500">{t('Commission ROVA (15%)', 'Platform Fee (15%)')}</p>
+                      <p className="text-xs text-neutral-500">{t('Commission Rovia (15%)', 'Platform Fee (15%)')}</p>
                       <p className="font-mono text-2xl font-bold tabular-nums mt-1">
                         {formatLocalMoney(kpis.platformCommission, 'GHS')}
                       </p>

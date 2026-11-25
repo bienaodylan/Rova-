@@ -1,13 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { collection, onSnapshot, orderBy, query, where } from 'firebase/firestore';
 import {
-  CheckCircle2,
-  Copy,
-  ExternalLink,
+  Check,
+  Eye,
   HelpCircle,
   Loader2,
   MapPin,
-  RefreshCw,
+  Phone,
   ShieldCheck,
   XCircle,
 } from 'lucide-react';
@@ -37,7 +36,7 @@ export function ShipmentDetailContent({
   onOpenPublicTracking,
 }: ShipmentDetailContentProps) {
   const { lang, t, formatLocalMoney } = useLanguage();
-  const { busy, cancelDelivery, repeatDelivery, openSupportSheet, showToast } = useRovaApp();
+  const { busy, cancelDelivery, openSupportSheet } = useRovaApp();
 
   const [stops, setStops] = useState<DeliveryStopRecord[]>([]);
   const [loadingStops, setLoadingStops] = useState(true);
@@ -81,7 +80,6 @@ export function ShipmentDetailContent({
     return () => unsub();
   }, [delivery.id, delivery.merchantUid]);
 
-  // Fetch road polyline once stops load
   useEffect(() => {
     if (stops.length === 0) {
       setRouteCoords([]);
@@ -154,99 +152,120 @@ export function ShipmentDetailContent({
   ];
 
   const currentRank = DELIVERY_STATUS_ORDER.indexOf(delivery.status);
-  const canCancel = delivery.status === 'pending' || delivery.status === 'scheduled';
-
-  const copyTrackingUrl = (token: string) => {
-    const url = `${window.location.origin}${window.location.pathname}?track=${encodeURIComponent(token)}`;
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(url).catch(() => {});
-    }
-    showToast(t('Lien de suivi destinataire copié.', 'Recipient tracking link copied.'), 'success');
-  };
+  const canCancel =
+    delivery.status === 'pending' ||
+    delivery.status === 'scheduled' ||
+    delivery.status === 'driver_assigned' ||
+    delivery.status === 'driver_approaching_pickup';
+  const isPostPickup =
+    delivery.status === 'package_collected' ||
+    delivery.status === 'in_transit' ||
+    delivery.status === 'approaching_recipient' ||
+    delivery.status === 'arrived';
+  const hasReliableEta =
+    typeof delivery.estimatedDurationMin === 'number' &&
+    delivery.estimatedDurationMin > 0 &&
+    !['delivered', 'cancelled', 'failed'].includes(delivery.status);
+  const hasLiveGps =
+    typeof delivery.driverLat === 'number' && typeof delivery.driverLng === 'number';
 
   return (
     <div className="space-y-6">
-      {/* Status Headline + Key Metrics */}
-      <div className="flex flex-wrap items-start justify-between gap-4 pb-4 border-b border-neutral-100">
-        <div>
-          <p className="font-mono text-xs text-neutral-500">{delivery.reference}</p>
-          <p className={`text-base font-semibold mt-0.5 ${STATUS_META[delivery.status]?.text || 'text-neutral-950'}`}>
+      {/* Map-First Operational View */}
+      <div className="overflow-hidden rounded-2xl border border-[#E5E5E5]">
+        <RovaMap
+          center={[delivery.pickupLat, delivery.pickupLng]}
+          markers={markers}
+          routeCoordinates={routeCoords}
+          heightClass="h-[230px] sm:h-[260px]"
+        />
+      </div>
+
+      {/* Status & Financial Header */}
+      <div className="flex flex-wrap items-start justify-between gap-4 pb-4 border-b border-[#E5E5E5]">
+        <div className="space-y-0.5">
+          <p className="font-mono text-xs text-[#777777]">{delivery.reference}</p>
+          <p className={`font-display text-base font-bold ${STATUS_META[delivery.status]?.text || 'text-[#171717]'}`}>
             {getStatusLabel(delivery.status, lang)}
           </p>
-          <p className="text-xs text-neutral-500 mt-1">
+          <p className="text-xs text-[#777777]">
             {getVehicleLabel(delivery.vehicleCategory, lang)}
             <span aria-hidden="true"> · </span>
             <span className="font-mono tabular-nums">{delivery.totalDistanceKm.toFixed(1)} km</span>
-            <span aria-hidden="true"> · </span>
-            <span className="font-mono tabular-nums">~{delivery.estimatedDurationMin} min</span>
+            {hasReliableEta && (
+              <>
+                <span aria-hidden="true"> · </span>
+                <span className="font-mono tabular-nums">~{delivery.estimatedDurationMin} min</span>
+              </>
+            )}
           </p>
         </div>
+
         <div className="text-right">
-          <p className="font-mono text-lg font-bold text-neutral-950 tabular-nums">
+          <p className="font-mono text-lg font-bold text-[#171717] tabular-nums">
             {formatLocalMoney(delivery.quotedPrice, delivery.currency)}
           </p>
-          <p className="text-xs text-neutral-500 mt-0.5">
+          <p className="text-xs text-[#777777] mt-0.5">
             {getPaymentMethodLabelEn(delivery.paymentMethod)}
           </p>
         </div>
       </div>
 
-      {/* Live Map */}
-      <RovaMap
-        center={[delivery.pickupLat, delivery.pickupLng]}
-        markers={markers}
-        routeCoordinates={routeCoords}
-        heightClass="h-[230px] sm:h-[260px]"
-      />
-
-      {/* Driver & Vehicle Strip */}
-      <div className="rounded-2xl bg-neutral-50 border border-neutral-200/70 p-4 flex items-center justify-between gap-3">
+      {/* Courier & Vehicle Row */}
+      <div className="flex items-center justify-between gap-3 py-1">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="w-11 h-11 rounded-xl bg-white border border-neutral-200 flex items-center justify-center shrink-0">
-            <VehicleIllustration category={delivery.vehicleCategory} className="w-9 h-6 text-neutral-900" />
+          <div className="w-11 h-10 rounded-xl bg-[#F3F3F3] flex items-center justify-center shrink-0">
+            <VehicleIllustration category={delivery.vehicleCategory} className="w-9 h-6 text-[#171717]" />
           </div>
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-neutral-950 truncate">
-              {delivery.driverName || t('En attente d’un livreur ROVA', 'Awaiting ROVA driver')}
+            <p className="text-sm font-semibold text-[#171717] truncate">
+              {delivery.driverName || t('Affectation livreur en cours', 'Awaiting courier assignment')}
             </p>
-            <p className="text-xs text-neutral-500 truncate">
-              {getVehicleLabel(delivery.vehicleCategory, lang)} · {delivery.quantity}x {delivery.packageType} ({delivery.weightKg} kg)
+            <p className="text-xs text-[#777777] truncate">
+              {delivery.quantity}× {delivery.packageType} ({delivery.weightKg} kg)
             </p>
           </div>
         </div>
-        {delivery.driverName && (
-          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-neutral-950 shrink-0">
-            <span className="w-2 h-2 rounded-full bg-red-600" aria-hidden="true" />
-            {t('GPS actif', 'Live GPS')}
+        {hasLiveGps && (
+          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 shrink-0">
+            <span className="w-2 h-2 rounded-full bg-emerald-600" aria-hidden="true" />
+            <span>{t('GPS actif', 'Live GPS')}</span>
           </span>
         )}
       </div>
 
-      {/* Clear Status Timeline */}
+      {/* Linear Vertical Progress Spine */}
       {delivery.status !== 'cancelled' && delivery.status !== 'failed' && (
-        <div className="space-y-2.5">
-          <h3 className="text-xs font-semibold text-neutral-500">
+        <div className="space-y-3 pt-2 border-t border-[#E5E5E5]">
+          <h3 className="text-xs font-medium text-[#777777]">
             {t('Progression', 'Status timeline')}
           </h3>
-          <div className="space-y-2">
+          <div className="relative pl-6 space-y-3">
+            <div className="absolute left-[7px] top-2 bottom-2 w-px bg-[#E5E5E5]" aria-hidden="true" />
             {timelineSteps.map((step) => {
               const stepRank = DELIVERY_STATUS_ORDER.indexOf(step.key);
               const done = currentRank >= stepRank && currentRank >= 0;
               const isCurrent = delivery.status === step.key;
               return (
-                <div key={step.key} className="flex items-center gap-3 text-sm">
-                  <CheckCircle2
-                    className={`w-4 h-4 shrink-0 ${
-                      isCurrent ? 'text-red-600' : done ? 'text-neutral-950' : 'text-neutral-300'
+                <div key={step.key} className="relative flex items-center gap-3 text-sm">
+                  <span
+                    className={`absolute -left-6 w-4 h-4 rounded-full flex items-center justify-center border ${
+                      isCurrent
+                        ? 'border-[#E52B32] bg-[#E52B32] text-white'
+                        : done
+                        ? 'border-[#171717] bg-[#171717] text-white'
+                        : 'border-[#E5E5E5] bg-white'
                     }`}
-                  />
+                  >
+                    {(done || isCurrent) && <Check className="w-2.5 h-2.5 stroke-[3]" />}
+                  </span>
                   <span
                     className={
                       isCurrent
-                        ? 'font-semibold text-neutral-950'
+                        ? 'font-semibold text-[#171717]'
                         : done
-                        ? 'text-neutral-700'
-                        : 'text-neutral-400'
+                        ? 'text-[#171717]'
+                        : 'text-[#777777]'
                     }
                   >
                     {step.label}
@@ -258,58 +277,53 @@ export function ShipmentDetailContent({
         </div>
       )}
 
-      {/* Route & Stops with Isolated Recipient Tracking Links */}
-      <div className="space-y-3">
-        <h3 className="text-xs font-semibold text-neutral-500">
+      {/* Route & Recipients Ledger */}
+      <div className="space-y-2.5 pt-2 border-t border-[#E5E5E5]">
+        <h3 className="text-xs font-medium text-[#777777]">
           {t('Itinéraire & destinataires', 'Route & recipients')}
         </h3>
 
-        <div className="rounded-2xl border border-neutral-200 divide-y divide-neutral-100 overflow-hidden">
-          <div className="p-3.5 flex items-start gap-3 bg-neutral-50/70">
-            <div className="w-6 h-6 rounded-full bg-neutral-950 text-white font-mono text-[11px] font-bold flex items-center justify-center shrink-0 mt-0.5">
-              P
-            </div>
+        <div className="border-y border-[#E5E5E5] divide-y divide-[#E5E5E5]">
+          <div className="py-3.5 flex items-start gap-3">
+            <span className="mt-1.5 w-2.5 h-2.5 rounded-full bg-[#171717] shrink-0" aria-hidden="true" />
             <div className="min-w-0">
-              <p className="text-[11px] text-neutral-500">{t('Collecte', 'Pickup')}</p>
-              <p className="text-sm font-medium text-neutral-950">{delivery.pickupAddress}</p>
+              <p className="text-[11px] text-[#777777]">{t('Collecte', 'Pickup')}</p>
+              <p className="text-sm font-medium text-[#171717]">{delivery.pickupAddress}</p>
               {delivery.pickupInstructions && (
-                <p className="text-xs text-neutral-500 mt-0.5">{delivery.pickupInstructions}</p>
+                <p className="text-xs text-[#777777] mt-0.5">{delivery.pickupInstructions}</p>
               )}
             </div>
           </div>
 
           {loadingStops ? (
-            <div className="p-5 flex items-center justify-center gap-2 text-xs text-neutral-500">
+            <div className="py-5 flex items-center justify-center gap-2 text-xs text-[#777777]">
               <Loader2 className="w-4 h-4 animate-spin" />
-              {t('Chargement des arrêts...', 'Loading stops...')}
+              <span>{t('Chargement des arrêts...', 'Loading stops...')}</span>
             </div>
           ) : (
             stops.map((stop) => (
-              <div key={stop.id} className="p-3.5 space-y-2.5">
+              <div key={stop.id} className="py-3.5 space-y-2.5">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-start gap-3 min-w-0">
-                    <div className="w-6 h-6 rounded-full border-2 border-neutral-950 text-neutral-950 font-mono text-[11px] font-bold flex items-center justify-center shrink-0 mt-0.5">
-                      {stop.sequence}
-                    </div>
+                    <span className="mt-1.5 w-2.5 h-2.5 rounded-[2px] bg-[#E52B32] shrink-0" aria-hidden="true" />
                     <div className="min-w-0">
-                      <p className="text-sm font-semibold text-neutral-950 truncate">
+                      <p className="text-sm font-semibold text-[#171717] truncate">
+                        {stops.length > 1 ? `#${stop.sequence} · ` : ''}
                         {stop.recipientName}
                       </p>
-                      <p className="text-xs text-neutral-600">{stop.address}</p>
-                      <p className="text-[11px] text-neutral-500 mt-0.5">
+                      <p className="text-xs text-[#777777]">{stop.address}</p>
+                      <p className="text-[11px] text-[#777777] mt-0.5">
                         {stop.recipientPhone} · {getStatusLabel(stop.status, lang)}
                       </p>
                     </div>
                   </div>
-                  <div className="text-right shrink-0">
-                    <span className="font-mono text-xs font-semibold text-neutral-950">
-                      OTP {stop.otpCode}
-                    </span>
-                  </div>
+                  <span className="font-mono text-xs font-bold text-[#171717] bg-[#F3F3F3] px-2.5 py-1 rounded-lg shrink-0 tabular-nums">
+                    OTP {stop.otpCode}
+                  </span>
                 </div>
 
                 {stop.proofType && (
-                  <div className="flex items-center gap-1.5 text-xs text-emerald-700 pl-9">
+                  <div className="flex items-center gap-1.5 text-xs text-emerald-700 pl-5">
                     <ShieldCheck className="w-3.5 h-3.5" />
                     <span>
                       {t('Preuve validée :', 'Proof verified:')} {stop.proofType}
@@ -318,22 +332,23 @@ export function ShipmentDetailContent({
                   </div>
                 )}
 
-                <div className="flex flex-wrap items-center gap-2 pl-9">
-                  <button
-                    type="button"
-                    onClick={() => copyTrackingUrl(stop.trackingToken)}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-neutral-200 hover:border-neutral-950 text-xs font-medium text-neutral-800 transition-colors cursor-pointer"
-                  >
-                    <Copy className="w-3 h-3" />
-                    {t('Copier le lien client', 'Copy recipient link')}
-                  </button>
+                <div className="flex flex-wrap items-center gap-2 pl-5">
+                  {stop.recipientPhone && (
+                    <a
+                      href={`tel:${stop.recipientPhone}`}
+                      className="min-h-[34px] inline-flex items-center gap-1.5 px-3 rounded-lg border border-[#E5E5E5] hover:border-[#171717] text-xs font-medium text-[#171717] transition-colors"
+                    >
+                      <Phone className="w-3 h-3" />
+                      <span>{t('Appeler', 'Call')}</span>
+                    </a>
+                  )}
                   <button
                     type="button"
                     onClick={() => onOpenPublicTracking(stop.trackingToken)}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-neutral-100 hover:bg-neutral-200 text-xs font-medium text-neutral-900 transition-colors cursor-pointer"
+                    className="min-h-[34px] inline-flex items-center gap-1.5 px-3 rounded-lg bg-[#F3F3F3] hover:bg-[#E5E5E5] text-xs font-medium text-[#171717] transition-colors cursor-pointer"
                   >
-                    <ExternalLink className="w-3 h-3" />
-                    {t('Vue destinataire', 'Recipient view')}
+                    <Eye className="w-3 h-3" />
+                    <span>{t('Vue destinataire', 'Recipient view')}</span>
                   </button>
                 </div>
               </div>
@@ -342,33 +357,39 @@ export function ShipmentDetailContent({
         </div>
       </div>
 
-      {/* Contextual Actions */}
-      <div className="flex flex-wrap items-center gap-2.5 pt-2 border-t border-neutral-100">
-        <button
-          type="button"
-          onClick={() => repeatDelivery(delivery)}
-          className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-neutral-950 text-white text-xs font-medium hover:bg-neutral-800 transition-colors cursor-pointer"
-        >
-          <RefreshCw className="w-3.5 h-3.5" />
-          {t('Répéter cette livraison', 'Repeat delivery')}
-        </button>
+      {/* Post-pickup Policy Notice */}
+      {isPostPickup && (
+        <div className="rounded-xl border border-[#E5E5E5] bg-[#F3F3F3]/70 px-4 py-3 text-xs text-[#777777] leading-relaxed">
+          {t(
+            'Le colis est déjà pris en charge par le livreur. Contactez le support pour initier un retour expéditeur sécurisé.',
+            'Parcel is in courier custody. Contact support to initiate a secure return to sender.'
+          )}
+        </div>
+      )}
+
+      {/* Contextual State-Aware Actions */}
+      <div className="flex flex-wrap items-center gap-2.5 pt-3 border-t border-[#E5E5E5]">
         <button
           type="button"
           onClick={() => openSupportSheet(delivery.id)}
-          className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full border border-neutral-200 hover:border-neutral-950 text-xs font-medium text-neutral-800 transition-colors cursor-pointer"
+          className="min-h-[40px] inline-flex items-center gap-1.5 px-4 rounded-full border border-[#E5E5E5] hover:border-[#171717] text-xs font-semibold text-[#171717] transition-colors cursor-pointer"
         >
           <HelpCircle className="w-3.5 h-3.5" />
-          {t('Contacter le support', 'Contact support')}
+          <span>
+            {isPostPickup
+              ? t('Signaler un incident / Retour', 'Report incident / Return')
+              : t('Contacter le support', 'Contact support')}
+          </span>
         </button>
         {canCancel && (
           <button
             type="button"
             disabled={busy}
             onClick={() => cancelDelivery(delivery.id)}
-            className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full border border-red-200 text-red-700 hover:bg-red-50 text-xs font-medium transition-colors cursor-pointer disabled:opacity-50"
+            className="min-h-[40px] inline-flex items-center gap-1.5 px-4 rounded-full border border-red-200 text-[#E52B32] hover:bg-red-50 text-xs font-semibold transition-colors cursor-pointer disabled:opacity-50"
           >
             <XCircle className="w-3.5 h-3.5" />
-            {t('Annuler', 'Cancel')}
+            <span>{t('Annuler la livraison', 'Cancel delivery')}</span>
           </button>
         )}
       </div>
@@ -405,8 +426,8 @@ export function ShipmentDetailSheet({
           }}
         />
       ) : (
-        <div className="py-12 text-center text-sm text-neutral-500">
-          <MapPin className="w-5 h-5 mx-auto mb-2 text-neutral-400" />
+        <div className="py-12 text-center text-sm text-[#777777]">
+          <MapPin className="w-5 h-5 mx-auto mb-2 text-[#777777]" />
           {t('Sélectionnez une expédition.', 'Select a shipment.')}
         </div>
       )}

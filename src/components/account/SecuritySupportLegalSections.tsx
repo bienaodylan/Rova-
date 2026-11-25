@@ -497,12 +497,6 @@ export function LegalSection({
               subtitle: t('Dispatch temps réel, validation des livreurs et grille tarifaire.', 'Live dispatch, driver verification, and pricing rules.'),
               icon: Shield,
             },
-            {
-              id: 'tracking' as const,
-              title: t('Page de suivi destinataire', 'Recipient Tracking Page'),
-              subtitle: t('Consultation publique d’un colis sans création de compte.', 'Isolated parcel tracking without login.'),
-              icon: Send,
-            },
           ].map((ws) => {
             const Icon = ws.icon;
             return (
