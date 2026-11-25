@@ -20,6 +20,7 @@ import { useRovaApp } from '../context/RovaAppContext';
 import { BottomSheet } from '../components/BottomSheet';
 import { RovaMap } from '../components/RovaMap';
 import { AddressMapIllustration } from '../components/RovaIllustrations';
+import { useHideOnScroll } from '../hooks/useHideOnScroll';
 import { PAYMENT_METHODS_EN } from '../lib/logistics';
 import { PaymentMethod, SavedRecipient } from '../types/rova';
 
@@ -45,6 +46,7 @@ export function RovaAccountView({ onOpenWorkspace }: RovaAccountViewProps) {
     requestSignIn,
     busy,
   } = useRovaApp();
+  const { hidden: headerHidden, scrolled: headerScrolled } = useHideOnScroll();
 
   // Edit Profile Sheet
   const [profileSheetOpen, setProfileSheetOpen] = useState(false);
@@ -145,9 +147,17 @@ export function RovaAccountView({ onOpenWorkspace }: RovaAccountViewProps) {
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-5 sm:pt-7 pb-8 space-y-6">
-      {/* Header */}
-      <header>
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-0 sm:pt-7 pb-8 space-y-6">
+      {/* Header — Mobile Auto-Hide on Scroll Down, Reveal on Scroll Up */}
+      <header
+        className={`sticky top-0 z-30 -mx-4 px-4 py-3 transition-transform duration-200 ease-out will-change-transform motion-reduce:transition-none sm:static sm:mx-0 sm:px-0 sm:py-0 sm:translate-y-0 sm:pointer-events-auto sm:bg-transparent sm:backdrop-blur-none sm:border-none ${
+          headerHidden ? '-translate-y-full pointer-events-none' : 'translate-y-0'
+        } ${
+          headerScrolled
+            ? 'bg-[#f8f8f9]/92 backdrop-blur-md border-b border-neutral-200/70'
+            : 'bg-transparent border-b border-transparent'
+        }`}
+      >
         <h1 className="font-display text-2xl font-bold tracking-tight text-neutral-950">
           {t('Compte', 'Account')}
         </h1>

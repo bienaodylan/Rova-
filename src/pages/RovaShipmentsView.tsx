@@ -5,6 +5,7 @@ import { ShipmentFilter, useRovaApp } from '../context/RovaAppContext';
 import { VehicleIllustration } from '../components/VehicleIllustration';
 import { TrackingParcelIllustration } from '../components/RovaIllustrations';
 import { ShipmentDetailContent } from '../components/ShipmentDetailSheet';
+import { useHideOnScroll } from '../hooks/useHideOnScroll';
 import {
   getStatusLabel,
   getVehicleLabel,
@@ -32,6 +33,7 @@ export function RovaShipmentsView({ onOpenPublicTracking }: RovaShipmentsViewPro
 
   const [search, setSearch] = useState('');
   const [desktopSelectedId, setDesktopSelectedId] = useState<string | null>(null);
+  const { hidden: headerHidden, scrolled: headerScrolled } = useHideOnScroll();
 
   const counts = useMemo(() => {
     const active = deliveries.filter(
@@ -109,9 +111,17 @@ export function RovaShipmentsView({ onOpenPublicTracking }: RovaShipmentsViewPro
   };
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-5 sm:pt-7 pb-8 space-y-5">
-      {/* Header */}
-      <header className="flex flex-wrap items-center justify-between gap-3">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-0 sm:pt-7 pb-8 space-y-5">
+      {/* Header — Mobile Auto-Hide on Scroll Down, Reveal on Scroll Up */}
+      <header
+        className={`sticky top-0 z-30 -mx-4 px-4 py-3 flex flex-wrap items-center justify-between gap-3 transition-transform duration-200 ease-out will-change-transform motion-reduce:transition-none sm:static sm:mx-0 sm:px-0 sm:py-0 sm:translate-y-0 sm:pointer-events-auto sm:bg-transparent sm:backdrop-blur-none sm:border-none ${
+          headerHidden ? '-translate-y-full pointer-events-none' : 'translate-y-0'
+        } ${
+          headerScrolled
+            ? 'bg-[#f8f8f9]/92 backdrop-blur-md border-b border-neutral-200/70'
+            : 'bg-transparent border-b border-transparent'
+        }`}
+      >
         <div>
           <h1 className="font-display text-2xl font-bold tracking-tight text-neutral-950">
             {t('Expéditions', 'Shipments')}

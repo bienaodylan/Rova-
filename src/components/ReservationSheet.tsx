@@ -3,6 +3,7 @@ import { Calendar, Check, Loader2 } from 'lucide-react';
 import { BottomSheet } from './BottomSheet';
 import { RovaMap } from './RovaMap';
 import { VehicleIllustration } from './VehicleIllustration';
+import { ScheduleVehicleIllustration } from './RovaIllustrations';
 import { useRovaApp } from '../context/RovaAppContext';
 import { useLanguage } from '../context/LanguageContext';
 import { getEffectivePricingRule, VEHICLE_CATALOG } from '../lib/logistics';
@@ -94,6 +95,23 @@ export function ReservationSheet() {
       }
     >
       <form id="rova-reservation-form" onSubmit={handleSubmit} className="space-y-5">
+        {/* Minimalist Editorial Visual Strip */}
+        <div className="rounded-2xl bg-neutral-50 border border-neutral-200/80 px-4 py-3 flex items-center justify-between gap-4">
+          <div className="min-w-0 space-y-0.5">
+            <p className="inline-flex items-center gap-1.5 text-xs font-bold text-neutral-950">
+              <span className="w-1.5 h-1.5 rounded-full bg-red-600 shrink-0" aria-hidden="true" />
+              <span>{t('Réservation dédiée avec chauffeur', 'Dedicated vehicle & driver')}</span>
+            </p>
+            <p className="text-xs text-neutral-500 leading-relaxed">
+              {t(
+                'Bloquez un véhicule à l’heure, à la demi-journée ou pour toute la journée.',
+                'Book a vehicle for a window, half day, or full-day operations.'
+              )}
+            </p>
+          </div>
+          <ScheduleVehicleIllustration className="w-20 h-16 shrink-0" />
+        </div>
+
         {/* Vehicle Picker */}
         <div className="space-y-2">
           <label className="block text-xs font-medium text-neutral-700">
@@ -113,7 +131,10 @@ export function ReservationSheet() {
                       : 'border-neutral-200 bg-white hover:border-neutral-400 text-neutral-900'
                   }`}
                 >
-                  <VehicleIllustration category={v.id} className="w-10 h-7 mb-2" />
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <VehicleIllustration category={v.id} className="w-10 h-7" />
+                    {active && <span className="w-1.5 h-1.5 rounded-full bg-red-500 mt-1 shrink-0" aria-hidden="true" />}
+                  </div>
                   <p className="text-xs font-semibold truncate">{lang === 'fr' ? v.labelFr : v.label}</p>
                   <p className={`text-[11px] font-mono ${active ? 'text-neutral-300' : 'text-neutral-500'}`}>
                     ≤ {v.maxWeightKg} kg
@@ -138,13 +159,16 @@ export function ReservationSheet() {
                 key={opt.id}
                 type="button"
                 onClick={() => setDurationType(opt.id)}
-                className={`py-2.5 px-3 rounded-xl border text-xs font-semibold transition-colors cursor-pointer ${
+                className={`py-2.5 px-3 rounded-xl border text-xs font-semibold transition-colors cursor-pointer inline-flex items-center justify-center gap-1.5 ${
                   durationType === opt.id
                     ? 'border-neutral-950 bg-neutral-950 text-white'
                     : 'border-neutral-200 bg-white text-neutral-700 hover:border-neutral-400'
                 }`}
               >
-                {opt.label}
+                {durationType === opt.id && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" aria-hidden="true" />
+                )}
+                <span>{opt.label}</span>
               </button>
             ))}
           </div>

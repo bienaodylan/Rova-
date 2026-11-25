@@ -20,8 +20,11 @@ import {
   HeroDeliveryScene,
   MultiStopRouteIllustration,
   ScheduleVehicleIllustration,
+  ShortcutCardIllustration,
   TrackingParcelIllustration,
+  UrbanHorizonIllustration,
 } from '../components/RovaIllustrations';
+import { useHideOnScroll } from '../hooks/useHideOnScroll';
 import { BottomSheet } from '../components/BottomSheet';
 import { PrimaryTab } from '../components/InterfaceExplorerBar';
 import {
@@ -53,6 +56,7 @@ export function RovaHomeView({ onNavigateTab }: RovaHomeViewProps) {
   } = useRovaApp();
 
   const [notifsOpen, setNotifsOpen] = useState(false);
+  const { hidden: headerHidden, scrolled: headerScrolled } = useHideOnScroll();
 
   const firstName = useMemo(() => {
     const raw = profile?.displayName || firebaseUser?.displayName || '';
@@ -65,9 +69,17 @@ export function RovaHomeView({ onNavigateTab }: RovaHomeViewProps) {
   };
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-7 pb-8 space-y-6">
-      {/* Minimal App Header — White / Black / Red Signature */}
-      <header className="flex items-center justify-between gap-4">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-0 sm:pt-7 pb-8 space-y-6">
+      {/* Minimal App Header — Mobile Auto-Hide on Scroll Down, Reveal on Scroll Up */}
+      <header
+        className={`sticky top-0 z-30 -mx-4 px-4 py-3 flex items-center justify-between gap-4 transition-transform duration-200 ease-out will-change-transform motion-reduce:transition-none sm:static sm:mx-0 sm:px-0 sm:py-0 sm:translate-y-0 sm:pointer-events-auto sm:bg-transparent sm:backdrop-blur-none sm:border-none ${
+          headerHidden ? '-translate-y-full pointer-events-none' : 'translate-y-0'
+        } ${
+          headerScrolled
+            ? 'bg-[#f8f8f9]/92 backdrop-blur-md border-b border-neutral-200/70'
+            : 'bg-transparent border-b border-transparent'
+        }`}
+      >
         <span className="font-display text-lg font-extrabold tracking-[0.22em] text-neutral-950 select-none inline-flex items-baseline">
           ROVA<span className="text-red-600 tracking-normal">.</span>
         </span>
@@ -122,19 +134,24 @@ export function RovaHomeView({ onNavigateTab }: RovaHomeViewProps) {
       {/* Main Responsive Operational Grid */}
       <div className="grid grid-cols-1 gap-6 items-start">
         <div className="w-full space-y-6">
-          {/* Greeting */}
-          <section className="space-y-1 pt-1">
-            <h1 className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-neutral-950">
-              {firstName
-                ? t(`Bonjour, ${firstName}`, `Hello, ${firstName}`)
-                : t('Expédiez en toute simplicité', 'Ship with clarity')}
-            </h1>
-            <p className="text-sm text-neutral-500">
-              {t(
-                'Créez une livraison, réservez un véhicule ou suivez vos colis en direct.',
-                'Create a delivery, reserve a vehicle, or track active shipments live.'
-              )}
-            </p>
+          {/* Greeting with Minimalist Urban Horizon Illustration */}
+          <section className="flex items-end justify-between gap-4 pt-1">
+            <div className="space-y-1 min-w-0">
+              <h1 className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-neutral-950">
+                {firstName
+                  ? t(`Bonjour, ${firstName}`, `Hello, ${firstName}`)
+                  : t('Expédiez en toute simplicité', 'Ship with clarity')}
+              </h1>
+              <p className="text-sm text-neutral-500 max-w-lg">
+                {t(
+                  'Créez une livraison, réservez un véhicule ou suivez vos colis en direct.',
+                  'Create a delivery, reserve a vehicle, or track active shipments live.'
+                )}
+              </p>
+            </div>
+            <div aria-hidden="true" className="shrink-0 pointer-events-none opacity-90">
+              <UrbanHorizonIllustration className="w-24 h-10 sm:w-44 sm:h-16" />
+            </div>
           </section>
 
           {/* Prioritized Main Actions with Custom Editorial Illustrations */}
@@ -351,9 +368,15 @@ export function RovaHomeView({ onNavigateTab }: RovaHomeViewProps) {
           {upcomingReservations.length > 0 && (
             <section className="space-y-3">
               <div className="flex items-center justify-between">
-                <h2 className="font-display text-base font-bold text-neutral-950">
-                  {t('Réservations à venir', 'Upcoming reservations')}
-                </h2>
+                <div className="flex items-center gap-2">
+                  <h2 className="font-display text-base font-bold text-neutral-950">
+                    {t('Réservations à venir', 'Upcoming reservations')}
+                  </h2>
+                  <span className="inline-flex items-center gap-1 font-mono text-xs font-semibold text-red-600 tabular-nums">
+                    <span className="w-1.5 h-1.5 rounded-full bg-red-600" aria-hidden="true" />
+                    {upcomingReservations.length}
+                  </span>
+                </div>
                 <button
                   type="button"
                   onClick={() => onNavigateTab('shipments')}
@@ -363,16 +386,21 @@ export function RovaHomeView({ onNavigateTab }: RovaHomeViewProps) {
                   <ChevronRight className="w-3.5 h-3.5" />
                 </button>
               </div>
-              <div className="rounded-3xl bg-white border border-neutral-200/80 divide-y divide-neutral-100 overflow-hidden">
+              <div className="relative rounded-3xl bg-white border border-neutral-200/80 divide-y divide-neutral-100 overflow-hidden">
                 {upcomingReservations.slice(0, 2).map((res) => (
                   <div key={res.id} className="p-4 flex items-center justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-neutral-950 truncate">
-                        {getVehicleLabel(res.vehicleCategory, lang)} · {res.reservationDate}
-                      </p>
-                      <p className="text-xs text-neutral-500 truncate mt-0.5">
-                        {res.startTime}–{res.endTime} · {res.pickupAddress}
-                      </p>
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-11 h-10 rounded-2xl bg-neutral-50 border border-neutral-200/80 flex items-center justify-center shrink-0">
+                        <ScheduleVehicleIllustration className="w-9 h-7" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-neutral-950 truncate">
+                          {getVehicleLabel(res.vehicleCategory, lang)} · {res.reservationDate}
+                        </p>
+                        <p className="text-xs text-neutral-500 truncate mt-0.5">
+                          {res.startTime}–{res.endTime} · {res.pickupAddress}
+                        </p>
+                      </div>
                     </div>
                     <span className="font-mono text-xs font-semibold text-neutral-950 tabular-nums shrink-0">
                       {formatLocalMoney(res.quotedPrice, res.currency)}
@@ -383,7 +411,7 @@ export function RovaHomeView({ onNavigateTab }: RovaHomeViewProps) {
             </section>
           )}
 
-          {/* Contextual Useful Shortcuts */}
+          {/* Contextual Useful Shortcuts with Minimalist Editorial Corner Motifs */}
           <section className="space-y-2.5">
             <h2 className="text-xs font-semibold text-neutral-500">
               {t('Raccourcis', 'Shortcuts')}
@@ -391,21 +419,25 @@ export function RovaHomeView({ onNavigateTab }: RovaHomeViewProps) {
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
               {[
                 {
+                  kind: 'addresses' as const,
                   label: t('Adresses', 'Addresses'),
                   icon: Bookmark,
                   onClick: () => onNavigateTab('account'),
                 },
                 {
+                  kind: 'payments' as const,
                   label: 'Payments',
                   icon: CreditCard,
                   onClick: () => onNavigateTab('account'),
                 },
                 {
+                  kind: 'history' as const,
                   label: t('Historique', 'History'),
                   icon: Package,
                   onClick: () => onNavigateTab('activity'),
                 },
                 {
+                  kind: 'support' as const,
                   label: t('Support', 'Support'),
                   icon: HelpCircle,
                   onClick: () => openSupportSheet(),
@@ -417,16 +449,22 @@ export function RovaHomeView({ onNavigateTab }: RovaHomeViewProps) {
                     key={s.label}
                     type="button"
                     onClick={s.onClick}
-                    className="group flex items-center justify-between gap-2 px-3.5 py-3.5 rounded-2xl bg-white border border-neutral-200/80 hover:border-neutral-950 text-xs font-medium text-neutral-800 transition-colors cursor-pointer"
+                    className="group relative overflow-hidden flex flex-col justify-between gap-3 px-4 py-3.5 min-h-[82px] rounded-2xl bg-white border border-neutral-200/80 hover:border-neutral-950 text-left text-xs font-medium text-neutral-800 transition-colors cursor-pointer"
                   >
-                    <span className="flex items-center gap-2.5 min-w-0">
+                    <div className="relative z-10 flex items-center justify-between w-full">
                       <Icon className="w-4 h-4 text-neutral-500 group-hover:text-neutral-950 transition-colors shrink-0" />
-                      <span className="truncate">{s.label}</span>
-                    </span>
-                    <span
-                      className="w-1.5 h-1.5 rounded-full bg-neutral-200 group-hover:bg-red-600 transition-colors shrink-0"
+                      <span
+                        className="w-1.5 h-1.5 rounded-full bg-neutral-200 group-hover:bg-red-600 transition-colors shrink-0"
+                        aria-hidden="true"
+                      />
+                    </div>
+                    <span className="relative z-10 font-semibold text-neutral-900 truncate">{s.label}</span>
+                    <div
                       aria-hidden="true"
-                    />
+                      className="pointer-events-none absolute right-1 bottom-1 opacity-75 group-hover:opacity-100 transition-transform duration-200 group-hover:scale-105"
+                    >
+                      <ShortcutCardIllustration kind={s.kind} className="w-12 h-10" />
+                    </div>
                   </button>
                 );
               })}

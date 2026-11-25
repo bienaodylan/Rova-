@@ -3,6 +3,7 @@ import { Calendar, ChevronRight, CreditCard, Package, RefreshCw } from 'lucide-r
 import { useLanguage } from '../context/LanguageContext';
 import { ActivityFilter, useRovaApp } from '../context/RovaAppContext';
 import { ActivityLedgerIllustration } from '../components/RovaIllustrations';
+import { useHideOnScroll } from '../hooks/useHideOnScroll';
 import {
   getPaymentMethodLabelEn,
   getStatusLabel,
@@ -20,6 +21,7 @@ export function RovaActivityView() {
     repeatDelivery,
     openComposer,
   } = useRovaApp();
+  const { hidden: headerHidden, scrolled: headerScrolled } = useHideOnScroll();
 
   const summary = useMemo(() => {
     const completed = deliveries.filter((d) => d.status === 'delivered');
@@ -123,8 +125,16 @@ export function RovaActivityView() {
   ];
 
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-5 sm:pt-7 pb-8 space-y-6">
-      <header>
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-0 sm:pt-7 pb-8 space-y-6">
+      <header
+        className={`sticky top-0 z-30 -mx-4 px-4 py-3 transition-transform duration-200 ease-out will-change-transform motion-reduce:transition-none sm:static sm:mx-0 sm:px-0 sm:py-0 sm:translate-y-0 sm:pointer-events-auto sm:bg-transparent sm:backdrop-blur-none sm:border-none ${
+          headerHidden ? '-translate-y-full pointer-events-none' : 'translate-y-0'
+        } ${
+          headerScrolled
+            ? 'bg-[#f8f8f9]/92 backdrop-blur-md border-b border-neutral-200/70'
+            : 'bg-transparent border-b border-transparent'
+        }`}
+      >
         <h1 className="font-display text-2xl font-bold tracking-tight text-neutral-950">
           {t('Activité', 'Activity')}
         </h1>

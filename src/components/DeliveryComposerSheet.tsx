@@ -17,6 +17,13 @@ import {
 import { BottomSheet } from './BottomSheet';
 import { MapMarkerItem, RovaMap } from './RovaMap';
 import { VehicleIllustration } from './VehicleIllustration';
+import {
+  CheckoutSummaryIllustration,
+  DestinationStepIllustration,
+  FleetStepIllustration,
+  ParcelDetailsIllustration,
+  PickupStepIllustration,
+} from './RovaIllustrations';
 import { DraftStop, useRovaApp } from '../context/RovaAppContext';
 import { useLanguage } from '../context/LanguageContext';
 import {
@@ -466,6 +473,22 @@ export function DeliveryComposerSheet() {
         {/* ============================================================== */}
         {draft.step === 1 && (
           <div className="space-y-4">
+            <div className="rounded-2xl bg-neutral-50 border border-neutral-200/80 px-4 py-3 flex items-center justify-between gap-4">
+              <div className="min-w-0 space-y-0.5">
+                <p className="inline-flex items-center gap-1.5 text-xs font-bold text-neutral-950">
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-600 shrink-0" aria-hidden="true" />
+                  <span>{t('Point de collecte', 'Pickup location')}</span>
+                </p>
+                <p className="text-xs text-neutral-500 leading-relaxed">
+                  {t(
+                    'Indiquez où le livreur doit récupérer le colis sur la carte.',
+                    'Pin where the courier should pick up the parcel on the map.'
+                  )}
+                </p>
+              </div>
+              <PickupStepIllustration className="w-20 h-13 shrink-0" />
+            </div>
+
             <RovaMap
               center={[draft.pickup.lat, draft.pickup.lng]}
               markers={mapMarkers}
@@ -577,6 +600,22 @@ export function DeliveryComposerSheet() {
         {/* ============================================================== */}
         {draft.step === 2 && currentStop && (
           <div className="space-y-4">
+            <div className="rounded-2xl bg-neutral-50 border border-neutral-200/80 px-4 py-3 flex items-center justify-between gap-4">
+              <div className="min-w-0 space-y-0.5">
+                <p className="inline-flex items-center gap-1.5 text-xs font-bold text-neutral-950">
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-600 shrink-0" aria-hidden="true" />
+                  <span>{t('Lieu de livraison', 'Delivery location')}</span>
+                </p>
+                <p className="text-xs text-neutral-500 leading-relaxed">
+                  {t(
+                    'Ajoutez un ou plusieurs lieux de livraison et optimisez votre tournée.',
+                    'Add one or more delivery stops and optimize your route.'
+                  )}
+                </p>
+              </div>
+              <DestinationStepIllustration className="w-20 h-13 shrink-0" />
+            </div>
+
             <RovaMap
               center={[currentStop.lat, currentStop.lng]}
               markers={mapMarkers}
@@ -613,6 +652,9 @@ export function DeliveryComposerSheet() {
                         : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
                     }`}
                   >
+                    {idx === safeStopIdx && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" aria-hidden="true" />
+                    )}
                     <span className="font-mono">#{idx + 1}</span>
                     <span className="max-w-[90px] truncate">
                       {s.recipientName || s.address || t('Arrêt', 'Stop')}
@@ -766,12 +808,21 @@ export function DeliveryComposerSheet() {
         {/* ============================================================== */}
         {draft.step === 3 && (
           <div className="space-y-3">
-            <p className="text-xs text-neutral-500">
-              {t(
-                'Choisissez le véhicule adapté à votre chargement. Le tarif s’actualise instantanément.',
-                'Choose the right vehicle for your cargo. Pricing updates immediately.'
-              )}
-            </p>
+            <div className="rounded-2xl bg-neutral-50 border border-neutral-200/80 px-4 py-3 flex items-center justify-between gap-4">
+              <div className="min-w-0 space-y-0.5">
+                <p className="inline-flex items-center gap-1.5 text-xs font-bold text-neutral-950">
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-600 shrink-0" aria-hidden="true" />
+                  <span>{t('Flotte adaptée à votre volume', 'Fleet matched to your cargo')}</span>
+                </p>
+                <p className="text-xs text-neutral-500 leading-relaxed">
+                  {t(
+                    'Choisissez le véhicule adapté à votre chargement. Le tarif s’actualise instantanément.',
+                    'Choose the right vehicle for your cargo. Pricing updates immediately.'
+                  )}
+                </p>
+              </div>
+              <FleetStepIllustration className="w-20 h-13 shrink-0" />
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {VEHICLE_CATALOG.map((v) => {
                 const selected = draft.vehicleCategory === v.id;
@@ -796,8 +847,9 @@ export function DeliveryComposerSheet() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-baseline justify-between gap-2">
-                        <h3 className="font-display text-sm font-bold truncate">
-                          {lang === 'fr' ? v.labelFr : v.label}
+                        <h3 className="font-display text-sm font-bold truncate inline-flex items-center gap-1.5">
+                          {selected && <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" aria-hidden="true" />}
+                          <span className="truncate">{lang === 'fr' ? v.labelFr : v.label}</span>
                         </h3>
                         <span className="font-mono text-xs font-semibold tabular-nums shrink-0">
                           {estimateVehiclePrice(v.id)}
@@ -836,6 +888,22 @@ export function DeliveryComposerSheet() {
         {/* ============================================================== */}
         {draft.step === 4 && (
           <div className="space-y-4">
+            <div className="rounded-2xl bg-neutral-50 border border-neutral-200/80 px-4 py-3 flex items-center justify-between gap-4">
+              <div className="min-w-0 space-y-0.5">
+                <p className="inline-flex items-center gap-1.5 text-xs font-bold text-neutral-950">
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-600 shrink-0" aria-hidden="true" />
+                  <span>{t('Colis, créneau & sécurité', 'Parcel, timing & security')}</span>
+                </p>
+                <p className="text-xs text-neutral-500 leading-relaxed">
+                  {t(
+                    'Précisez le poids, la preuve de remise OTP et l’horaire souhaité.',
+                    'Set weight, OTP proof of delivery, and preferred dispatch timing.'
+                  )}
+                </p>
+              </div>
+              <ParcelDetailsIllustration className="w-20 h-13 shrink-0" />
+            </div>
+
             {/* Timing Toggle */}
             <div className="space-y-2">
               <label className="block text-xs font-medium text-neutral-700">
@@ -845,24 +913,30 @@ export function DeliveryComposerSheet() {
                 <button
                   type="button"
                   onClick={() => setDraft((p) => ({ ...p, timingType: 'instant', scheduledFor: '' }))}
-                  className={`py-2.5 px-4 rounded-xl text-xs font-semibold border transition-colors cursor-pointer ${
+                  className={`py-2.5 px-4 rounded-xl text-xs font-semibold border transition-colors cursor-pointer inline-flex items-center justify-center gap-1.5 ${
                     draft.timingType === 'instant'
                       ? 'bg-neutral-950 text-white border-neutral-950'
                       : 'bg-white text-neutral-700 border-neutral-200 hover:border-neutral-400'
                   }`}
                 >
-                  {t('Immédiat', 'Now (Instant)')}
+                  {draft.timingType === 'instant' && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" aria-hidden="true" />
+                  )}
+                  <span>{t('Immédiat', 'Now (Instant)')}</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setDraft((p) => ({ ...p, timingType: 'scheduled' }))}
-                  className={`py-2.5 px-4 rounded-xl text-xs font-semibold border transition-colors cursor-pointer ${
+                  className={`py-2.5 px-4 rounded-xl text-xs font-semibold border transition-colors cursor-pointer inline-flex items-center justify-center gap-1.5 ${
                     draft.timingType === 'scheduled'
                       ? 'bg-neutral-950 text-white border-neutral-950'
                       : 'bg-white text-neutral-700 border-neutral-200 hover:border-neutral-400'
                   }`}
                 >
-                  {t('Planifier plus tard', 'Schedule for later')}
+                  {draft.timingType === 'scheduled' && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" aria-hidden="true" />
+                  )}
+                  <span>{t('Planifier plus tard', 'Schedule for later')}</span>
                 </button>
               </div>
               {draft.timingType === 'scheduled' && (
@@ -946,7 +1020,7 @@ export function DeliveryComposerSheet() {
                     type="checkbox"
                     checked={draft.fragile}
                     onChange={(e) => setDraft((p) => ({ ...p, fragile: e.target.checked }))}
-                    className="w-4 h-4 accent-neutral-950"
+                    className="w-4 h-4 accent-red-600"
                   />
                 </label>
               </div>
@@ -972,6 +1046,22 @@ export function DeliveryComposerSheet() {
         {/* ============================================================== */}
         {draft.step === 5 && (
           <div className="space-y-4">
+            <div className="rounded-2xl bg-neutral-50 border border-neutral-200/80 px-4 py-3 flex items-center justify-between gap-4">
+              <div className="min-w-0 space-y-0.5">
+                <p className="inline-flex items-center gap-1.5 text-xs font-bold text-neutral-950">
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-600 shrink-0" aria-hidden="true" />
+                  <span>{t('Récapitulatif & confirmation', 'Summary & confirmation')}</span>
+                </p>
+                <p className="text-xs text-neutral-500 leading-relaxed">
+                  {t(
+                    'Vérifiez votre itinéraire, sélectionnez le mode de paiement et lancez l’expédition.',
+                    'Review your route, choose your payment method, and dispatch.'
+                  )}
+                </p>
+              </div>
+              <CheckoutSummaryIllustration className="w-20 h-13 shrink-0" />
+            </div>
+
             {/* Route & Vehicle Summary */}
             <div className="rounded-2xl border border-neutral-200 divide-y divide-neutral-100 overflow-hidden">
               <div className="p-4 flex items-start gap-3">
@@ -1050,7 +1140,10 @@ export function DeliveryComposerSheet() {
                             : 'border-neutral-200 bg-white text-neutral-800'
                         }`}
                       >
-                        <p className="font-semibold">{m.driver.firstName}</p>
+                        <p className="font-semibold inline-flex items-center gap-1.5">
+                          {picked && <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" aria-hidden="true" />}
+                          <span>{m.driver.firstName}</span>
+                        </p>
                         <p className={picked ? 'text-neutral-300' : 'text-neutral-500'}>
                           {m.distanceKm} km · {m.etaMinutes} min
                         </p>
@@ -1083,7 +1176,10 @@ export function DeliveryComposerSheet() {
                           : 'border-neutral-200 bg-white hover:border-neutral-400 text-neutral-900'
                       }`}
                     >
-                      <p className="text-xs font-semibold">{pm.label}</p>
+                      <p className="text-xs font-semibold inline-flex items-center gap-1.5">
+                        {active && <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" aria-hidden="true" />}
+                        <span>{pm.label}</span>
+                      </p>
                       <p className={`text-[11px] mt-0.5 ${active ? 'text-neutral-300' : 'text-neutral-500'}`}>
                         {pm.subtitle}
                       </p>
