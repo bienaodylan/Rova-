@@ -10,7 +10,7 @@ import {
 } from '../lib/logistics';
 
 export function RovaActivityView() {
-  const { lang, t } = useLanguage();
+  const { lang, t, formatLocalMoney } = useLanguage();
   const {
     deliveries,
     reservations,
@@ -68,7 +68,7 @@ export function RovaActivityView() {
           title: `${d.reference} · ${d.primaryDestinationLabel || d.pickupAddress}`,
           subtitle: `${getStatusLabel(d.status, lang)} · ${getVehicleLabel(d.vehicleCategory, lang)}`,
           meta: dateStr,
-          amount: formatMoney(d.quotedPrice, d.currency),
+          amount: formatLocalMoney(d.quotedPrice, d.currency),
           deliveryObj: d,
         });
       });
