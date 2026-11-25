@@ -70,9 +70,24 @@ export function LocationSearchField({ value, center, placeholder, onSelect }: Lo
     const timer = window.setTimeout(async () => {
       setSearching(true);
       try {
-        const response = await fetch(`/api/geo/search?q=${encodeURIComponent(q)}`);
+        const params = new URLSearchParams({ q });
+        if (Number.isFinite(center[0]) && Number.isFinite(center[1])) {
+          params.set('lat', String(center[0]));
+          params.set('lng', String(center[1]));
+        }
+        const response = await fetch(`/api/geo/search?${params.toString()}`);
         const data = await response.json();
-        if (!cancelled) setResults(Array.isArray(data.results) ? data.results : []);
+        if (!cancelled) {
+          const places = Array.isArray(data.results) ? data.results as GeoPlace[] : [];
+          const distanceKm = (place: GeoPlace) => {
+            const toRad = (value: number) => (value * Math.PI) / 180;
+            const dLat = toRad(place.lat - center[0]);
+            const dLng = toRad(place.lng - center[1]);
+            const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(center[0])) * Math.cos(toRad(place.lat)) * Math.sin(dLng / 2) ** 2;
+            return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+          };
+          setResults(places.sort((a, b) => distanceKm(a) - distanceKm(b)));
+        }
       } catch {
         if (!cancelled) setResults([]);
       } finally {
@@ -80,7 +95,7 @@ export function LocationSearchField({ value, center, placeholder, onSelect }: Lo
       }
     }, 320);
     return () => { cancelled = true; window.clearTimeout(timer); };
-  }, [query]);
+  }, [query, center[0], center[1]]);
 
   const resolvePoint = async (lat: number, lng: number) => {
     setResolving(true);
