@@ -96,6 +96,8 @@ export function LiveNotificationBanner({ onOpenDelivery }: LiveNotificationBanne
     notifications.forEach((n) => seenNotifIdsRef.current.add(n.id));
 
     if (newestUnread) {
+      const eventType = newestUnread.eventType || '';
+      if (newestUnread.deliveryId && eventType.startsWith('delivery.') && !claimDeliveryEvent(newestUnread.deliveryId, eventType)) return;
       const linkedDelivery = newestUnread.deliveryId
         ? deliveries.find((d) => d.id === newestUnread.deliveryId)
         : undefined;
@@ -127,6 +129,10 @@ export function LiveNotificationBanner({ onOpenDelivery }: LiveNotificationBanne
     for (const d of deliveries) {
       const prev = deliveryStatusMapRef.current.get(d.id);
       if (prev && prev !== d.status) {
+        if (!claimDeliveryEvent(d.id, `delivery.${d.status}`)) {
+          deliveryStatusMapRef.current.set(d.id, d.status);
+          continue;
+        }
         const statusText = getStatusLabel(d.status, lang);
         const etaLabel =
           !['delivered', 'cancelled', 'failed'].includes(d.status) && d.estimatedDurationMin > 0
