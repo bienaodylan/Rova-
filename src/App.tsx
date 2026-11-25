@@ -1,10 +1,11 @@
 import React, { Suspense, lazy, useEffect, useState } from 'react';
-import { APIProvider } from '@vis.gl/react-google-maps';
 import { AnimatePresence, MotionConfig, motion } from 'motion/react';
 import { ArrowLeft } from 'lucide-react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { LanguageProvider, useLanguage } from './context/LanguageContext';
+import { RovaMapsProvider } from './context/MapsContext';
 import { RovaAppProvider, useRovaApp } from './context/RovaAppContext';
+import { AccountSectionId } from './components/account/accountTypes';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { RoleOnboarding } from './components/RoleOnboardingModal';
 import { FloatingBottomNav, PrimaryTab } from './components/InterfaceExplorerBar';
@@ -93,6 +94,7 @@ function RovaApplicationShell({
   const [activeTab, setActiveTab] = useState<PrimaryTab>(initial.tab);
   const [workspace, setWorkspace] = useState<SecondaryWorkspace>(initial.workspace);
   const [trackingToken, setTrackingToken] = useState<string>(initial.trackToken);
+  const [pendingAccountSection, setPendingAccountSection] = useState<AccountSectionId | null>(null);
 
   // Sync browser Back / Forward cleanly without page reload
   useEffect(() => {
@@ -106,9 +108,12 @@ function RovaApplicationShell({
     return () => window.removeEventListener('popstate', onPopState);
   }, []);
 
-  const navigateTab = (next: PrimaryTab) => {
+  const navigateTab = (next: PrimaryTab, accountSection?: string) => {
     setWorkspace('none');
     setActiveTab(next);
+    if (next === 'account' && accountSection) {
+      setPendingAccountSection(accountSection as AccountSectionId);
+    }
     pushUrlState(next, 'none', '');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -232,7 +237,13 @@ function RovaApplicationShell({
               <RovaShipmentsView onOpenPublicTracking={openPublicTracking} />
             )}
             {activeTab === 'activity' && <RovaActivityView />}
-            {activeTab === 'account' && <RovaAccountView onOpenWorkspace={openWorkspace} />}
+            {activeTab === 'account' && (
+              <RovaAccountView
+                onOpenWorkspace={openWorkspace}
+                initialSection={pendingAccountSection}
+                onConsumeInitialSection={() => setPendingAccountSection(null)}
+              />
+            )}
           </motion.div>
         </AnimatePresence>
       </main>
@@ -255,27 +266,6 @@ function RovaApplicationShell({
       {/* Subtle Floating Toast Feedback */}
       <ToastBanner toast={toast} onDismiss={dismissToast} />
     </div>
-  );
-}
-
-const GOOGLE_MAPS_API_KEY = (import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined)?.trim() || '';
-
-function GoogleMapsProvider({ children }: { children: React.ReactNode }) {
-  const { lang, region } = useLanguage();
-
-  if (!GOOGLE_MAPS_API_KEY) {
-    return <>{children}</>;
-  }
-
-  return (
-    <APIProvider
-      apiKey={GOOGLE_MAPS_API_KEY}
-      language={lang}
-      region={region.countryCode}
-      libraries={['marker', 'places']}
-    >
-      {children}
-    </APIProvider>
   );
 }
 
@@ -310,7 +300,7 @@ export default function App() {
     <ErrorBoundary>
       <MotionConfig reducedMotion="user">
         <LanguageProvider>
-          <GoogleMapsProvider>
+          <RovaMapsProvider>
             {mapsQuotaExceeded && (
               <div className="bg-amber-50 border-b border-amber-200 text-amber-900 px-4 py-2.5 text-xs md:text-sm text-center sticky top-0 z-50 shadow-sm">
                 <span>
@@ -330,7 +320,7 @@ export default function App() {
             <AuthProvider>
               <AppWithStore />
             </AuthProvider>
-          </GoogleMapsProvider>
+          </RovaMapsProvider>
         </LanguageProvider>
       </MotionConfig>
     </ErrorBoundary>

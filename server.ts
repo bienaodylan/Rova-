@@ -311,17 +311,117 @@ app.get('/api/region/detect', async (req, res) => {
 });
 
 // ============================================================================
-// 1. REAL GEOCODING SEARCH (OpenStreetMap Nominatim + GPS + GhanaPostGPS)
+// GOOGLE MAPS PLATFORM SERVER HELPERS (Private server-only key + TTL caches)
+// ============================================================================
+const PLACEHOLDER_KEY_PREFIXES = ['MY_', 'YOUR_', 'REPLACE_', 'INSERT_', 'CHANGE_ME', 'PLACEHOLDER'];
+
+function getValidEnvKey(raw: string | undefined): string {
+  if (!raw) return '';
+  const trimmed = raw.trim();
+  if (trimmed.length < 20 || /\s/.test(trimmed)) return '';
+  const upper = trimmed.toUpperCase();
+  if (PLACEHOLDER_KEY_PREFIXES.some((p) => upper.startsWith(p))) return '';
+  return trimmed;
+}
+
+function getGoogleMapsServerKey(): string {
+  // Strictly server-only key — NEVER read or expose this to browser code
+  return getValidEnvKey(process.env.GOOGLE_MAPS_SERVER_API_KEY);
+}
+
+function getGoogleMapsPublicBrowserKey(): string {
+  // Public browser key restricted by HTTP referrer in Google Cloud Console
+  return getValidEnvKey(process.env.VITE_GOOGLE_MAPS_API_KEY);
+}
+
+// Bounded TTL cache helper to prevent redundant API spend
+function createBoundedTtlCache<T>(maxEntries = 500) {
+  const store = new Map<string, { value: T; expiresAt: number }>();
+  return {
+    get(key: string): T | null {
+      const hit = store.get(key);
+      if (!hit) return null;
+      if (Date.now() > hit.expiresAt) {
+        store.delete(key);
+        return null;
+      }
+      return hit.value;
+    },
+    set(key: string, value: T, ttlMs: number): void {
+      if (store.size >= maxEntries) {
+        const oldest = store.keys().next().value;
+        if (oldest) store.delete(oldest);
+      }
+      store.set(key, { value, expiresAt: Date.now() + ttlMs });
+    },
+  };
+}
+
+const geocodeSearchCache = createBoundedTtlCache<Array<Record<string, unknown>>>(500);
+const reverseGeocodeCache = createBoundedTtlCache<Record<string, unknown>>(500);
+const routeComputeCache = createBoundedTtlCache<{
+  provider: string;
+  distanceKm: number;
+  durationMin: number;
+  coordinates: [number, number][];
+  geometry: [number, number][];
+}>(500);
+
+function decodeGooglePolyline(encoded: string): [number, number][] {
+  const coords: [number, number][] = [];
+  let index = 0;
+  let lat = 0;
+  let lng = 0;
+
+  while (index < encoded.length) {
+    let shift = 0;
+    let result = 0;
+    let byte = 0;
+    do {
+      byte = encoded.charCodeAt(index++) - 63;
+      result |= (byte & 0x1f) << shift;
+      shift += 5;
+    } while (byte >= 0x20 && index < encoded.length);
+    const dLat = result & 1 ? ~(result >> 1) : result >> 1;
+    lat += dLat;
+
+    shift = 0;
+    result = 0;
+    do {
+      byte = encoded.charCodeAt(index++) - 63;
+      result |= (byte & 0x1f) << shift;
+      shift += 5;
+    } while (byte >= 0x20 && index < encoded.length);
+    const dLng = result & 1 ? ~(result >> 1) : result >> 1;
+    lng += dLng;
+
+    coords.push([lat / 1e5, lng / 1e5]);
+  }
+  return coords;
+}
+
+// Public runtime config for browser Maps JS SDK (NEVER exposes server key)
+app.get('/api/maps/client-config', (_req, res) => {
+  res.json({
+    browserApiKey: getGoogleMapsPublicBrowserKey(),
+    serverGeocodingEnabled: Boolean(getGoogleMapsServerKey()),
+    serverRoutesEnabled: Boolean(getGoogleMapsServerKey()),
+  });
+});
+
+// ============================================================================
+// 1. REAL GEOCODING SEARCH (GPS + GhanaPostGPS + Google Geocoding + Nominatim)
 // ============================================================================
 app.get('/api/geo/search', async (req, res) => {
   try {
     const rawQ = typeof req.query.q === 'string' ? req.query.q.trim() : '';
     const countryCodes = typeof req.query.countrycodes === 'string' ? req.query.countrycodes.replace(/[^a-z,]/gi, '') : '';
+    const regionBias = typeof req.query.region === 'string' ? req.query.region.replace(/[^a-z]/gi, '').slice(0, 2).toLowerCase() : '';
     if (!rawQ || rawQ.length < 2 || rawQ.length > 200) {
       return res.json({ results: [] });
     }
 
-    // 1. Direct lat, lng coordinate input
+    // 1. Direct lat, lng coordinate input (zero external API cost)
     const coordMatch = rawQ.match(COORD_PAIR_RE);
     if (coordMatch) {
       const lat = parseFloat(coordMatch[1]);
@@ -362,7 +462,69 @@ app.get('/api/geo/search', async (req, res) => {
       });
     }
 
-    // 3. Real OpenStreetMap Nominatim Search
+    const cacheKey = `${rawQ.toLowerCase()}|${countryCodes.toLowerCase()}|${regionBias}`;
+    const cachedResults = geocodeSearchCache.get(cacheKey);
+    if (cachedResults) {
+      return res.json({ results: cachedResults, cached: true });
+    }
+
+    // 3. Google Geocoding API (when private GOOGLE_MAPS_SERVER_API_KEY is configured)
+    const googleServerKey = getGoogleMapsServerKey();
+    if (googleServerKey) {
+      try {
+        const gParams = new URLSearchParams({
+          address: rawQ,
+          key: googleServerKey,
+        });
+        if (regionBias) gParams.set('region', regionBias);
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 5000);
+        const gRes = await fetch(
+          `https://maps.googleapis.com/maps/api/geocode/json?${gParams.toString()}`,
+          { signal: controller.signal }
+        );
+        clearTimeout(timeout);
+        if (gRes.ok) {
+          const gData = (await gRes.json()) as {
+            status?: string;
+            results?: Array<{
+              formatted_address: string;
+              geometry?: { location?: { lat: number; lng: number } };
+              address_components?: Array<{ long_name: string; short_name: string; types: string[] }>;
+              types?: string[];
+            }>;
+          };
+          if (gData.status === 'OK' && Array.isArray(gData.results) && gData.results.length > 0) {
+            const results = gData.results.slice(0, 6).map((item) => {
+              const comps = item.address_components || [];
+              const findComp = (type: string) =>
+                comps.find((c) => c.types.includes(type))?.long_name || '';
+              const premise = findComp('point_of_interest') || findComp('establishment') || findComp('premise');
+              const route = findComp('route');
+              const sublocality = findComp('sublocality') || findComp('neighborhood');
+              const locality = findComp('locality') || findComp('administrative_area_level_1');
+              const shortName =
+                [premise || route, sublocality, locality].filter(Boolean).slice(0, 3).join(', ') ||
+                item.formatted_address;
+              return {
+                displayName: item.formatted_address,
+                shortName,
+                landmark: premise || sublocality || undefined,
+                lat: item.geometry?.location?.lat ?? 0,
+                lng: item.geometry?.location?.lng ?? 0,
+                type: item.types?.[0] || 'place',
+              };
+            });
+            geocodeSearchCache.set(cacheKey, results, 15 * 60_000);
+            return res.json({ results, provider: 'google_geocoding' });
+          }
+        }
+      } catch {
+        // Fall through cleanly to Nominatim
+      }
+    }
+
+    // 4. OpenStreetMap Nominatim Fallback Search
     const params = new URLSearchParams({
       q: rawQ,
       format: 'jsonv2',
@@ -412,7 +574,8 @@ app.get('/api/geo/search', async (req, res) => {
       };
     });
 
-    return res.json({ results });
+    geocodeSearchCache.set(cacheKey, results, 10 * 60_000);
+    return res.json({ results, provider: 'nominatim' });
   } catch (err) {
     console.error('Geocode search error:', err);
     return res.status(500).json({ error: 'Unable to search addresses right now', results: [] });
@@ -420,7 +583,7 @@ app.get('/api/geo/search', async (req, res) => {
 });
 
 // ============================================================================
-// 2. REAL REVERSE GEOCODING (OpenStreetMap Nominatim)
+// 2. REAL REVERSE GEOCODING (Google Geocoding API + Nominatim Fallback)
 // ============================================================================
 app.get('/api/geo/reverse', async (req, res) => {
   try {
@@ -430,6 +593,69 @@ app.get('/api/geo/reverse', async (req, res) => {
       return res.status(400).json({ error: 'Valid lat and lng are required' });
     }
 
+    const cacheKey = `${lat.toFixed(4)},${lng.toFixed(4)}`;
+    const cached = reverseGeocodeCache.get(cacheKey);
+    if (cached) {
+      return res.json({ ...cached, lat, lng });
+    }
+
+    // 1. Google Reverse Geocoding API (when private server key is configured)
+    const googleServerKey = getGoogleMapsServerKey();
+    if (googleServerKey) {
+      try {
+        const gParams = new URLSearchParams({
+          latlng: `${lat},${lng}`,
+          key: googleServerKey,
+        });
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 5000);
+        const gRes = await fetch(
+          `https://maps.googleapis.com/maps/api/geocode/json?${gParams.toString()}`,
+          { signal: controller.signal }
+        );
+        clearTimeout(timeout);
+        if (gRes.ok) {
+          const gData = (await gRes.json()) as {
+            status?: string;
+            results?: Array<{
+              formatted_address: string;
+              address_components?: Array<{ long_name: string; short_name: string; types: string[] }>;
+            }>;
+          };
+          const first = gData.results?.[0];
+          if (gData.status === 'OK' && first) {
+            const comps = first.address_components || [];
+            const findLong = (type: string) =>
+              comps.find((c) => c.types.includes(type))?.long_name || '';
+            const findShort = (type: string) =>
+              comps.find((c) => c.types.includes(type))?.short_name || '';
+            const road = findLong('route');
+            const area = findLong('sublocality') || findLong('neighborhood');
+            const city = findLong('locality') || findLong('administrative_area_level_1');
+            const country = findLong('country');
+            const countryCode = findShort('country').toUpperCase() || undefined;
+            const shortName =
+              [road, area, city].filter(Boolean).join(', ') ||
+              first.formatted_address ||
+              `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+            const payload = {
+              displayName: first.formatted_address || shortName,
+              shortName,
+              landmark: area || undefined,
+              country: country || undefined,
+              countryCode,
+              provider: 'google_geocoding',
+            };
+            reverseGeocodeCache.set(cacheKey, payload, 15 * 60_000);
+            return res.json({ ...payload, lat, lng });
+          }
+        }
+      } catch {
+        // Fall through cleanly to Nominatim
+      }
+    }
+
+    // 2. OpenStreetMap Nominatim Fallback
     const params = new URLSearchParams({
       lat: String(lat),
       lon: String(lng),
@@ -471,15 +697,16 @@ app.get('/api/geo/reverse', async (req, res) => {
     const city = addr.city || addr.town || addr.village || addr.state || '';
     const shortName = [road || landmark, area, city].filter(Boolean).join(', ') || data.display_name || `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
 
-    return res.json({
+    const payload = {
       displayName: data.display_name || shortName,
       shortName,
       landmark: landmark || undefined,
       country: addr.country || undefined,
       countryCode: addr.country_code ? addr.country_code.toUpperCase() : undefined,
-      lat,
-      lng,
-    });
+      provider: 'nominatim',
+    };
+    reverseGeocodeCache.set(cacheKey, payload, 10 * 60_000);
+    return res.json({ ...payload, lat, lng });
   } catch (err) {
     console.error('Reverse geocode error:', err);
     const lat = parseFloat(String(req.query.lat ?? '0'));
@@ -494,7 +721,8 @@ app.get('/api/geo/reverse', async (req, res) => {
 });
 
 // ============================================================================
-// 3. REAL ROAD ROUTING & MULTI-STOP OPTIMIZATION (OSRM + Haversine Fallback)
+// 3. REAL ROAD ROUTING & MULTI-STOP OPTIMIZATION
+//    Google Routes API v2 (server key) -> OSRM -> Haversine Fallback
 // ============================================================================
 interface CoordPoint {
   lat: number;
@@ -531,6 +759,74 @@ app.post('/api/geo/route', async (req, res) => {
       return res.status(400).json({ error: 'Provide 2 to 40 valid coordinate points' });
     }
 
+    const cacheKey = points.map((p) => `${p.lat.toFixed(4)},${p.lng.toFixed(4)}`).join('|');
+    const cachedRoute = routeComputeCache.get(cacheKey);
+    if (cachedRoute) {
+      return res.json({ ...cachedRoute, cached: true });
+    }
+
+    // 1. Google Routes API v2 (when private GOOGLE_MAPS_SERVER_API_KEY is configured)
+    const googleServerKey = getGoogleMapsServerKey();
+    if (googleServerKey && points.length <= 27) {
+      try {
+        const origin = points[0];
+        const destination = points[points.length - 1];
+        const intermediates = points.slice(1, -1).map((p) => ({
+          location: { latLng: { latitude: p.lat, longitude: p.lng } },
+        }));
+
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 6000);
+        const gRes = await fetch('https://routes.googleapis.com/directions/v2:computeRoutes', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Goog-Api-Key': googleServerKey,
+            'X-Goog-FieldMask': 'routes.duration,routes.distanceMeters,routes.polyline.encodedPolyline',
+          },
+          body: JSON.stringify({
+            origin: { location: { latLng: { latitude: origin.lat, longitude: origin.lng } } },
+            destination: { location: { latLng: { latitude: destination.lat, longitude: destination.lng } } },
+            ...(intermediates.length > 0 ? { intermediates } : {}),
+            travelMode: 'DRIVE',
+            routingPreference: 'TRAFFIC_AWARE',
+          }),
+          signal: controller.signal,
+        });
+        clearTimeout(timeout);
+
+        if (gRes.ok) {
+          const gData = (await gRes.json()) as {
+            routes?: Array<{
+              distanceMeters?: number;
+              duration?: string;
+              polyline?: { encodedPolyline?: string };
+            }>;
+          };
+          const gRoute = gData.routes?.[0];
+          const encoded = gRoute?.polyline?.encodedPolyline;
+          if (gRoute && encoded) {
+            const decodedPath = decodeGooglePolyline(encoded);
+            const distanceKm = Number(((gRoute.distanceMeters || 0) / 1000).toFixed(2));
+            const durationSec = parseInt(String(gRoute.duration || '0').replace(/[^0-9]/g, ''), 10) || 0;
+            const durationMin = Math.max(3, Math.round(durationSec / 60));
+            const result = {
+              provider: 'google_routes',
+              distanceKm,
+              durationMin,
+              coordinates: decodedPath,
+              geometry: decodedPath,
+            };
+            routeComputeCache.set(cacheKey, result, 10 * 60_000);
+            return res.json(result);
+          }
+        }
+      } catch {
+        // Fall through cleanly to OSRM
+      }
+    }
+
+    // 2. OSRM Open Road Routing Fallback
     const coordsStr = points.map((p) => `${p.lng},${p.lat}`).join(';');
     try {
       const controller = new AbortController();
@@ -555,26 +851,28 @@ app.post('/api/geo/route', async (req, res) => {
         };
         const route = data.routes?.[0];
         if (route) {
-          const latLngPath = route.geometry.coordinates.map(([lng, lat]) => [lat, lng]);
-          return res.json({
+          const latLngPath = route.geometry.coordinates.map(([lng, lat]): [number, number] => [lat, lng]);
+          const result = {
             provider: 'osrm',
             distanceKm: Number((route.distance / 1000).toFixed(2)),
             durationMin: Math.max(3, Math.round(route.duration / 60)),
             coordinates: latLngPath,
             geometry: latLngPath,
-          });
+          };
+          routeComputeCache.set(cacheKey, result, 10 * 60_000);
+          return res.json(result);
         }
       }
     } catch {
       // Fallback below
     }
 
-    // Fallback: road-adjusted Haversine polyline
+    // 3. Road-adjusted Haversine Fallback
     let totalKm = 0;
     for (let i = 0; i < points.length - 1; i++) {
       totalKm += haversineKm(points[i].lat, points[i].lng, points[i + 1].lat, points[i + 1].lng) * 1.28;
     }
-    const fallbackPath = points.map((p) => [p.lat, p.lng]);
+    const fallbackPath: [number, number][] = points.map((p) => [p.lat, p.lng]);
     return res.json({
       provider: 'haversine_fallback',
       distanceKm: Number(totalKm.toFixed(2)),

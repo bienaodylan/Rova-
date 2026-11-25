@@ -1,10 +1,13 @@
-import {createRoot} from 'react-dom/client';
+import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
+import { markGoogleMapsAuthFailed } from './lib/mapsConfig';
 
-// Tier 1 Google Maps Platform quota & auth failure listener
+// Google Maps Platform auth & quota failure listeners.
+// Separates quota warnings from invalid/restricted API keys so mobile & preview domains
+// seamlessly fall back to OpenStreetMap/Leaflet instead of displaying "API key required".
 (window as unknown as { gm_authFailure?: () => void }).gm_authFailure = () => {
-  window.dispatchEvent(new CustomEvent('gmp-quota-exceeded'));
+  markGoogleMapsAuthFailed('gm_authFailure');
 };
 
 const origConsoleError = console.error;
@@ -13,6 +16,16 @@ console.error = (...args: unknown[]) => {
   const msg = args.map((a) => String(a)).join(' ');
   if (msg.includes('OverQuotaMapError') || msg.includes('QuotaExceededError')) {
     window.dispatchEvent(new CustomEvent('gmp-quota-exceeded'));
+  }
+  if (
+    msg.includes('MissingKeyMapError') ||
+    msg.includes('InvalidKeyMapError') ||
+    msg.includes('RefererNotAllowedMapError') ||
+    msg.includes('ApiNotActivatedMapError') ||
+    msg.includes('BillingNotEnabledMapError') ||
+    msg.includes('NoApiKeys')
+  ) {
+    markGoogleMapsAuthFailed(msg.slice(0, 160));
   }
 };
 

@@ -7,7 +7,6 @@ import {
   ChevronRight,
   CreditCard,
   HelpCircle,
-  MapPin,
   Package,
   Route,
   Search,
@@ -25,11 +24,9 @@ import {
   TrackingParcelIllustration,
   UrbanHorizonIllustration,
 } from '../components/RovaIllustrations';
-import { MapMarkerItem, RovaMap } from '../components/RovaMap';
 import { useHideOnScroll } from '../hooks/useHideOnScroll';
 import { BottomSheet } from '../components/BottomSheet';
 import { PrimaryTab } from '../components/InterfaceExplorerBar';
-import { GeoPlace } from '../types/rova';
 import {
   getStatusLabel,
   getVehicleLabel,
@@ -37,17 +34,15 @@ import {
 } from '../lib/logistics';
 
 interface RovaHomeViewProps {
-  onNavigateTab: (tab: PrimaryTab) => void;
+  onNavigateTab: (tab: PrimaryTab, accountSection?: string) => void;
 }
 
 export function RovaHomeView({ onNavigateTab }: RovaHomeViewProps) {
   const { firebaseUser, profile } = useAuth();
-  const { lang, t, formatLocalMoney, region } = useLanguage();
+  const { lang, t, formatLocalMoney } = useLanguage();
   const {
     loadingData,
-    business,
     activeDeliveries,
-    onlineDrivers,
     upcomingReservations,
     notifications,
     unreadNotifCount,
@@ -61,64 +56,7 @@ export function RovaHomeView({ onNavigateTab }: RovaHomeViewProps) {
   } = useRovaApp();
 
   const [notifsOpen, setNotifsOpen] = useState(false);
-  const [pickedPlace, setPickedPlace] = useState<GeoPlace | null>(null);
   const { hidden: headerHidden, scrolled: headerScrolled } = useHideOnScroll();
-
-  const homeMapCenter = useMemo<[number, number]>(() => {
-    if (pickedPlace) return [pickedPlace.lat, pickedPlace.lng];
-    const firstActive = activeDeliveries[0];
-    if (firstActive && Number.isFinite(firstActive.pickupLat) && Number.isFinite(firstActive.pickupLng)) {
-      return [firstActive.pickupLat, firstActive.pickupLng];
-    }
-    if (business?.defaultPickupLat && business?.defaultPickupLng) {
-      return [business.defaultPickupLat, business.defaultPickupLng];
-    }
-    return [region.lat, region.lng];
-  }, [pickedPlace, activeDeliveries, business?.defaultPickupLat, business?.defaultPickupLng, region.lat, region.lng]);
-
-  const homeMapMarkers = useMemo<MapMarkerItem[]>(() => {
-    const list: MapMarkerItem[] = [];
-    if (pickedPlace) {
-      list.push({
-        id: 'home_picked',
-        lat: pickedPlace.lat,
-        lng: pickedPlace.lng,
-        kind: 'pickup',
-        label: pickedPlace.shortName || pickedPlace.displayName,
-        draggable: true,
-      });
-    } else if (activeDeliveries[0]) {
-      const del = activeDeliveries[0];
-      list.push({
-        id: `home_del_${del.id}`,
-        lat: del.pickupLat,
-        lng: del.pickupLng,
-        kind: 'pickup',
-        label: `${del.reference} · ${del.pickupAddress}`,
-      });
-      if (typeof del.driverLat === 'number' && typeof del.driverLng === 'number') {
-        list.push({
-          id: `home_drv_${del.id}`,
-          lat: del.driverLat,
-          lng: del.driverLng,
-          kind: 'driver',
-          label: del.driverName || t('Livreur ROVA', 'ROVA Driver'),
-        });
-      }
-    }
-    onlineDrivers.slice(0, 6).forEach((d) => {
-      if (typeof d.currentLat === 'number' && typeof d.currentLng === 'number') {
-        list.push({
-          id: `online_${d.uid}`,
-          lat: d.currentLat,
-          lng: d.currentLng,
-          kind: 'driver',
-          label: d.firstName || t('Livreur disponible', 'Available driver'),
-        });
-      }
-    });
-    return list;
-  }, [pickedPlace, activeDeliveries, onlineDrivers, t]);
 
   const firstName = useMemo(() => {
     const raw = profile?.displayName || firebaseUser?.displayName || '';
@@ -313,88 +251,6 @@ export function RovaHomeView({ onNavigateTab }: RovaHomeViewProps) {
             </div>
           </section>
 
-          {/* Interactive Live Google Map — Directly Visible on Mobile & Desktop */}
-          <section aria-label={t('Carte en direct', 'Live map')} className="space-y-2.5">
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2 min-w-0">
-                <h2 className="font-display text-base font-bold text-neutral-950 truncate">
-                  {t('Carte en direct', 'Live map')}
-                </h2>
-                <span className="inline-flex items-center gap-1.5 text-xs text-neutral-500 truncate">
-                  <span className="w-1.5 h-1.5 rounded-full bg-red-600 shrink-0" aria-hidden="true" />
-                  <span className="truncate">
-                    {region.city}, {region.countryName}
-                  </span>
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={() =>
-                  pickedPlace
-                    ? openComposer('single', undefined, {
-                        address: pickedPlace.shortName || pickedPlace.displayName,
-                        landmark: pickedPlace.landmark,
-                        lat: pickedPlace.lat,
-                        lng: pickedPlace.lng,
-                      })
-                    : openComposer('single')
-                }
-                className="text-xs font-semibold text-neutral-950 hover:text-red-600 inline-flex items-center gap-1 transition-colors cursor-pointer whitespace-nowrap shrink-0"
-              >
-                <MapPin className="w-3.5 h-3.5 text-red-600" />
-                <span>
-                  {pickedPlace
-                    ? t('Expédier d’ici', 'Ship from here')
-                    : t('Choisir sur la carte', 'Pick on map')}
-                </span>
-              </button>
-            </div>
-
-            <div className="rounded-3xl bg-white border border-neutral-200/80 p-2 sm:p-2.5 shadow-xs space-y-2">
-              <RovaMap
-                center={homeMapCenter}
-                zoom={13}
-                markers={homeMapMarkers}
-                interactivePick
-                showSearchBar
-                initialSearchText={pickedPlace?.shortName || ''}
-                searchPlaceholder={t(
-                  `Rechercher une adresse à ${region.city} ou ailleurs...`,
-                  `Search an address in ${region.city} or anywhere...`
-                )}
-                heightClass="h-[240px] sm:h-[300px]"
-                onLocationSelected={(place) => setPickedPlace(place)}
-              />
-
-              {pickedPlace && (
-                <div className="px-2.5 py-2 rounded-2xl bg-neutral-50 border border-neutral-200/70 flex items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="text-[11px] text-neutral-500">
-                      {t('Point de collecte sélectionné', 'Selected pickup point')}
-                    </p>
-                    <p className="text-xs font-semibold text-neutral-950 truncate">
-                      {pickedPlace.shortName || pickedPlace.displayName}
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      openComposer('single', undefined, {
-                        address: pickedPlace.shortName || pickedPlace.displayName,
-                        landmark: pickedPlace.landmark,
-                        lat: pickedPlace.lat,
-                        lng: pickedPlace.lng,
-                      })
-                    }
-                    className="px-3.5 py-2 rounded-full bg-neutral-950 hover:bg-neutral-800 text-white text-xs font-semibold transition-colors whitespace-nowrap shrink-0 cursor-pointer"
-                  >
-                    {t('Expédier ici', 'Ship here')}
-                  </button>
-                </div>
-              )}
-            </div>
-          </section>
-
           {/* Active Shipments Section */}
           <section className="space-y-3">
             <div className="flex items-center justify-between">
@@ -566,13 +422,13 @@ export function RovaHomeView({ onNavigateTab }: RovaHomeViewProps) {
                   kind: 'addresses' as const,
                   label: t('Adresses', 'Addresses'),
                   icon: Bookmark,
-                  onClick: () => onNavigateTab('account'),
+                  onClick: () => onNavigateTab('account', 'addresses'),
                 },
                 {
                   kind: 'payments' as const,
                   label: 'Payments',
                   icon: CreditCard,
-                  onClick: () => onNavigateTab('account'),
+                  onClick: () => onNavigateTab('account', 'payments'),
                 },
                 {
                   kind: 'history' as const,

@@ -15,6 +15,8 @@ import {
 import { Crosshair, Loader2, MapPin, Search, X } from 'lucide-react';
 import { GeoPlace } from '../types/rova';
 import { useLanguage } from '../context/LanguageContext';
+import { useMapsRuntime } from '../context/MapsContext';
+import { getValidGeoapifyKey } from '../lib/mapsConfig';
 
 export interface MapMarkerItem {
   id: string;
@@ -24,6 +26,7 @@ export interface MapMarkerItem {
   kind: 'pickup' | 'stop' | 'driver' | 'selected';
   sequence?: number;
   draggable?: boolean;
+  meta?: string;
 }
 
 interface RovaMapProps {
@@ -36,12 +39,12 @@ interface RovaMapProps {
   searchPlaceholder?: string;
   initialSearchText?: string;
   onLocationSelected?: (place: GeoPlace) => void;
+  onMarkerClick?: (marker: MapMarkerItem) => void;
+  followDriver?: boolean;
   heightClass?: string;
   className?: string;
 }
 
-const GOOGLE_MAPS_API_KEY =
-  (import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined)?.trim() || '';
 const COORD_OR_DIGITAL_RE = /^(-?\d+(?:\.\d+)?\s*,\s*-?\d+(?:\.\d+)?|[A-Z]{2}-\d{3,4}-\d{4})$/i;
 
 function isQuotaError(err: unknown): boolean {
@@ -92,10 +95,12 @@ function RovaAdvancedMarker({
   marker,
   draggable,
   onDragEnd,
+  onMarkerClick,
 }: {
   marker: MapMarkerItem;
   draggable: boolean;
   onDragEnd?: (lat: number, lng: number) => void;
+  onMarkerClick?: (marker: MapMarkerItem) => void;
 }) {
   const [markerRef, markerInstance] = useAdvancedMarkerRef();
   const [infoOpen, setInfoOpen] = useState(false);
@@ -107,7 +112,10 @@ function RovaAdvancedMarker({
         position={{ lat: marker.lat, lng: marker.lng }}
         title={marker.label}
         draggable={draggable}
-        onClick={() => setInfoOpen((prev) => !prev)}
+        onClick={() => {
+          onMarkerClick?.(marker);
+          setInfoOpen((prev) => !prev);
+        }}
         onDragEnd={(e) => {
           const lat = e.latLng?.lat();
           const lng = e.latLng?.lng();
@@ -135,11 +143,13 @@ function GoogleMapCameraAndRoute({
   markers,
   routeCoordinates,
   panTarget,
+  followDriver = false,
 }: {
   center: [number, number];
   markers: MapMarkerItem[];
   routeCoordinates: [number, number][];
   panTarget: { lat: number; lng: number; zoom: number; nonce: number } | null;
+  followDriver?: boolean;
 }) {
   const map = useMap();
   const mapsLib = useMapsLibrary('maps');
@@ -147,6 +157,7 @@ function GoogleMapCameraAndRoute({
   const polylineRef = useRef<google.maps.Polyline | null>(null);
   const lastBoundsKeyRef = useRef<string>('');
   const lastCenterKeyRef = useRef<string>('');
+  const lastDriverKeyRef = useRef<string>('');
 
   // Render route polyline cleanly via Maps JS SDK
   useEffect(() => {
@@ -232,6 +243,17 @@ function GoogleMapCameraAndRoute({
     }
   }, [map, coreLib, markers, routeCoordinates]);
 
+  // Real-time driver GPS tracking hook: smoothly pans to live driver updates when enabled
+  useEffect(() => {
+    if (!map || !followDriver) return;
+    const driver = markers.find((m) => m.kind === 'driver' && Number.isFinite(m.lat) && Number.isFinite(m.lng));
+    if (!driver) return;
+    const key = `${driver.id}:${driver.lat.toFixed(5)},${driver.lng.toFixed(5)}`;
+    if (key === lastDriverKeyRef.current) return;
+    lastDriverKeyRef.current = key;
+    map.panTo({ lat: driver.lat, lng: driver.lng });
+  }, [map, followDriver, markers]);
+
   // Pan smoothly when default region center updates and no markers/route pin the camera
   useEffect(() => {
     if (!map || markers.length > 0 || routeCoordinates.length >= 2) return;
@@ -271,10 +293,12 @@ function GoogleRovaMap({
   searchPlaceholder,
   initialSearchText = '',
   onLocationSelected,
+  onMarkerClick,
+  followDriver = false,
   heightClass = 'h-[360px]',
   className = '',
 }: RovaMapProps) {
-  const { t } = useLanguage();
+  const { t, region } = useLanguage();
   const loadingStatus = useApiLoadingStatus();
   const placesLib = useMapsLibrary('places');
 
@@ -352,7 +376,9 @@ function GoogleRovaMap({
       try {
         // Direct GPS coordinates or GhanaPostGPS codes use the dedicated backend parser
         if (COORD_OR_DIGITAL_RE.test(trimmed) || !placesLib) {
-          const res = await fetch(`/api/geo/search?q=${encodeURIComponent(trimmed)}`);
+          const res = await fetch(
+            `/api/geo/search?q=${encodeURIComponent(trimmed)}&region=${encodeURIComponent(region.countryCode)}`
+          );
           const data = await res.json();
           if (!cancelled) {
             const list: GeoPlace[] = Array.isArray(data.results) ? data.results : [];
@@ -405,7 +431,9 @@ function GoogleRovaMap({
         }
         // Fallback silently to backend geocoder so search keeps working
         try {
-          const res = await fetch(`/api/geo/search?q=${encodeURIComponent(trimmed)}`);
+          const res = await fetch(
+            `/api/geo/search?q=${encodeURIComponent(trimmed)}&region=${encodeURIComponent(region.countryCode)}`
+          );
           const data = await res.json();
           if (!cancelled) {
             const list: GeoPlace[] = Array.isArray(data.results) ? data.results : [];
@@ -430,7 +458,7 @@ function GoogleRovaMap({
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [query, showSearchBar, dropdownOpen, placesLib]);
+  }, [query, showSearchBar, dropdownOpen, placesLib, region.countryCode]);
 
   const handleSelectOption = async (opt: SearchOption) => {
     setDropdownOpen(false);
@@ -530,6 +558,8 @@ function GoogleRovaMap({
         searchPlaceholder={searchPlaceholder}
         initialSearchText={initialSearchText}
         onLocationSelected={onLocationSelected}
+        onMarkerClick={onMarkerClick}
+        followDriver={followDriver}
         heightClass={heightClass}
         className={className}
       />
@@ -648,12 +678,14 @@ function GoogleRovaMap({
             markers={validMarkers}
             routeCoordinates={routeCoordinates}
             panTarget={panTarget}
+            followDriver={followDriver}
           />
           {validMarkers.map((m) => (
             <RovaAdvancedMarker
               key={m.id}
               marker={m}
               draggable={Boolean(m.draggable && interactivePick)}
+              onMarkerClick={onMarkerClick}
               onDragEnd={(lat, lng) => void reverseGeocodePoint(lat, lng)}
             />
           ))}
@@ -720,6 +752,8 @@ function LeafletRovaMap({
   searchPlaceholder,
   initialSearchText = '',
   onLocationSelected,
+  onMarkerClick,
+  followDriver = false,
   heightClass = 'h-[360px]',
   className = '',
 }: RovaMapProps) {
@@ -737,6 +771,8 @@ function LeafletRovaMap({
 
   const onLocationSelectedRef = useRef(onLocationSelected);
   onLocationSelectedRef.current = onLocationSelected;
+  const onMarkerClickRef = useRef(onMarkerClick);
+  onMarkerClickRef.current = onMarkerClick;
 
   useEffect(() => {
     setQuery(initialSearchText);
@@ -784,7 +820,7 @@ function LeafletRovaMap({
 
     L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-    const geoapifyKey = import.meta.env.VITE_GEOAPIFY_API_KEY as string | undefined;
+    const geoapifyKey = getValidGeoapifyKey();
     L.tileLayer(
       geoapifyKey
         ? `https://maps.geoapify.com/v1/tile/osm-bright-grey/{z}/{x}/{y}.png?apiKey=${encodeURIComponent(geoapifyKey)}`
@@ -852,6 +888,9 @@ function LeafletRovaMap({
         direction: 'top',
         offset: [0, -12],
       });
+      leafletMarker.on('click', () => {
+        onMarkerClickRef.current?.(m);
+      });
       if (m.draggable && interactivePick) {
         leafletMarker.on('dragend', () => {
           const pos = leafletMarker.getLatLng();
@@ -901,7 +940,14 @@ function LeafletRovaMap({
         map.setView(boundsPoints[0], Math.max(map.getZoom(), 14), { animate: true });
       }
     }
-  }, [markers, routeCoordinates, interactivePick]);
+
+    if (followDriver) {
+      const driver = markers.find((m) => m.kind === 'driver' && Number.isFinite(m.lat) && Number.isFinite(m.lng));
+      if (driver) {
+        map.panTo([driver.lat, driver.lng], { animate: true });
+      }
+    }
+  }, [markers, routeCoordinates, interactivePick, followDriver]);
 
   useEffect(() => {
     if (!showSearchBar || !dropdownOpen) return;
@@ -1058,7 +1104,8 @@ function LeafletRovaMap({
 // ============================================================================
 
 export function RovaMap(props: RovaMapProps) {
-  if (GOOGLE_MAPS_API_KEY) {
+  const { googleMapsAvailable } = useMapsRuntime();
+  if (googleMapsAvailable) {
     return <GoogleRovaMap {...props} />;
   }
   return <LeafletRovaMap {...props} />;
