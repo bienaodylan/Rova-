@@ -372,7 +372,7 @@ export function ShipmentDetailContent({
         <button
           type="button"
           onClick={() => openSupportSheet(delivery.id)}
-          className="min-h-[40px] inline-flex items-center gap-1.5 px-4 rounded-xl border border-[#E5E5E5] hover:border-[#171717] text-xs font-semibold text-[#171717] transition-colors cursor-pointer"
+          className="min-h-[40px] inline-flex items-center gap-1.5 px-4 rounded-full border border-[#E5E5E5] hover:border-[#171717] text-xs font-semibold text-[#171717] transition-colors cursor-pointer"
         >
           <HelpCircle className="w-3.5 h-3.5" />
           <span>
@@ -386,7 +386,7 @@ export function ShipmentDetailContent({
             type="button"
             disabled={busy}
             onClick={() => cancelDelivery(delivery.id)}
-            className="min-h-[40px] inline-flex items-center gap-1.5 px-4 rounded-xl border border-red-200 text-[#E52B32] hover:bg-red-50 text-xs font-semibold transition-colors cursor-pointer disabled:opacity-50"
+            className="min-h-[40px] inline-flex items-center gap-1.5 px-4 rounded-full border border-red-200 text-[#E52B32] hover:bg-red-50 text-xs font-semibold transition-colors cursor-pointer disabled:opacity-50"
           >
             <XCircle className="w-3.5 h-3.5" />
             <span>{t('Annuler la livraison', 'Cancel delivery')}</span>
