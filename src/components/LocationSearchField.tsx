@@ -28,6 +28,7 @@ export function LocationSearchField({ value, center, placeholder, onSelect }: Lo
   queryRef.current = query;
 
   useEffect(() => setQuery(value), [value]);
+  useEffect(() => setSearchCenter(center), [center[0], center[1]]);
 
   // Freeze the page underneath the full-screen map picker.
   useEffect(() => {
