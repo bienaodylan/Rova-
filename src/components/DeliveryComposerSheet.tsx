@@ -15,7 +15,7 @@ import {
   Upload,
 } from 'lucide-react';
 import { BottomSheet } from './BottomSheet';
-import { MapMarkerItem, RovaMap } from './RovaMap';
+import { LocationSearchField } from './LocationSearchField';
 import { VehicleIllustration } from './VehicleIllustration';
 import {
   CheckoutSummaryIllustration,
@@ -489,47 +489,23 @@ export function DeliveryComposerSheet() {
               <PickupStepIllustration className="w-20 h-13 shrink-0" />
             </div>
 
-            <RovaMap
+            <LocationSearchField
+              value={draft.pickup.address}
               center={[draft.pickup.lat, draft.pickup.lng]}
-              markers={mapMarkers}
-              interactivePick
-              showSearchBar
-              initialSearchText={draft.pickup.address}
-              searchPlaceholder={t(
-                'Rechercher l’adresse ou le lieu de collecte...',
-                'Search pickup street, business, or landmark...'
-              )}
-              heightClass="h-[240px] sm:h-[280px]"
-              onLocationSelected={(place) => {
-                setDraft((p) => ({
-                  ...p,
-                  pickup: {
-                    ...p.pickup,
-                    address: place.shortName || place.displayName,
-                    landmark: place.landmark || p.pickup.landmark,
-                    lat: place.lat,
-                    lng: place.lng,
-                  },
-                }));
-              }}
+              placeholder={t('Rechercher une adresse, un lieu ou un repère...', 'Search an address, place or landmark...')}
+              onSelect={(place) => setDraft((p) => ({
+                ...p,
+                pickup: {
+                  ...p.pickup,
+                  address: place.shortName || place.displayName,
+                  landmark: place.landmark || p.pickup.landmark,
+                  lat: place.lat,
+                  lng: place.lng,
+                },
+              }))}
             />
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="sm:col-span-2">
-                <label className="block text-xs font-medium text-neutral-700 mb-1.5">
-                  {t('Adresse de collecte', 'Pickup address')}
-                </label>
-                <input
-                  type="text"
-                  value={draft.pickup.address}
-                  onChange={(e) =>
-                    setDraft((p) => ({ ...p, pickup: { ...p.pickup, address: e.target.value } }))
-                  }
-                  placeholder={t('Ex. Boutique Plateau, Rue du Commerce', 'e.g. Downtown Store, Main St')}
-                  className="w-full rounded-xl border border-neutral-300 px-3.5 py-2.5 text-sm focus:outline-none focus:border-neutral-950"
-                />
-              </div>
-
               <div>
                 <label className="block text-xs font-medium text-neutral-700 mb-1.5">
                   {t('Point de repère (optionnel)', 'Landmark (optional)')}
@@ -601,75 +577,6 @@ export function DeliveryComposerSheet() {
         {draft.step === 2 && currentStop && (
           <div className="space-y-4">
             <div className="rounded-2xl bg-neutral-50 border border-neutral-200/80 px-4 py-3 flex items-center justify-between gap-4">
-              <div className="min-w-0 space-y-0.5">
-                <p className="inline-flex items-center gap-1.5 text-xs font-bold text-neutral-950">
-                  <span className="w-1.5 h-1.5 rounded-full bg-red-600 shrink-0" aria-hidden="true" />
-                  <span>{t('Lieu de livraison', 'Delivery location')}</span>
-                </p>
-                <p className="text-xs text-neutral-500 leading-relaxed">
-                  {t(
-                    'Ajoutez un ou plusieurs lieux de livraison et optimisez votre tournée.',
-                    'Add one or more delivery stops and optimize your route.'
-                  )}
-                </p>
-              </div>
-              <DestinationStepIllustration className="w-20 h-13 shrink-0" />
-            </div>
-
-            <RovaMap
-              center={[currentStop.lat, currentStop.lng]}
-              markers={mapMarkers}
-              routeCoordinates={routeCoords}
-              interactivePick
-              showSearchBar
-              initialSearchText={currentStop.address}
-              searchPlaceholder={t(
-                `Rechercher le lieu de livraison #${safeStopIdx + 1}...`,
-                `Search delivery location #${safeStopIdx + 1}...`
-              )}
-              heightClass="h-[220px] sm:h-[260px]"
-              onLocationSelected={(place) => {
-                updateStop(safeStopIdx, {
-                  address: place.shortName || place.displayName,
-                  landmark: place.landmark || currentStop.landmark,
-                  lat: place.lat,
-                  lng: place.lng,
-                });
-              }}
-            />
-
-            {/* Stop Selector Strip + Multi-Stop Controls */}
-            <div className="flex items-center justify-between gap-2 flex-wrap">
-              <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
-                {draft.stops.map((s, idx) => (
-                  <button
-                    key={s.id}
-                    type="button"
-                    onClick={() => setActiveStopIdx(idx)}
-                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap shrink-0 transition-colors cursor-pointer ${
-                      idx === safeStopIdx
-                        ? 'bg-neutral-950 text-white'
-                        : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
-                    }`}
-                  >
-                    {idx === safeStopIdx && (
-                      <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" aria-hidden="true" />
-                    )}
-                    <span className="font-mono">#{idx + 1}</span>
-                    <span className="max-w-[90px] truncate">
-                      {s.recipientName || s.address || t('Arrêt', 'Stop')}
-                    </span>
-                  </button>
-                ))}
-                <button
-                  type="button"
-                  onClick={addStop}
-                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full border border-dashed border-neutral-300 hover:border-neutral-950 text-xs font-medium text-neutral-700 whitespace-nowrap shrink-0 cursor-pointer"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  {t('Ajouter un arrêt', 'Add stop')}
-                </button>
-              </div>
 
               <div className="flex items-center gap-2">
                 {draft.stops.length > 1 && (
