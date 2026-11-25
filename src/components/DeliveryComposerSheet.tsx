@@ -20,7 +20,6 @@ import { VehicleIllustration } from './VehicleIllustration';
 import { DraftStop, useRovaApp } from '../context/RovaAppContext';
 import { useLanguage } from '../context/LanguageContext';
 import {
-  formatMoney,
   getEffectivePricingRule,
   getPaymentMethodLabelEn,
   getVehicleLabel,
@@ -32,7 +31,7 @@ import {
 import { PaymentMethod, ProofType, QuoteResult } from '../types/rova';
 
 export function DeliveryComposerSheet() {
-  const { lang, t } = useLanguage();
+  const { lang, t, formatLocalMoney } = useLanguage();
   const {
     composerOpen,
     closeComposer,
@@ -349,7 +348,7 @@ export function DeliveryComposerSheet() {
       rule.minimumFare,
       rule.baseFee + dist * rule.perKmRate + Math.max(0, validStopsCount - 1) * rule.multiStopFee
     );
-    return formatMoney(Number(total.toFixed(2)), rule.currency || 'GHS');
+    return formatLocalMoney(Number(total.toFixed(2)), rule.currency || 'GHS');
   };
 
   const sheetTitle =
@@ -1015,7 +1014,7 @@ export function DeliveryComposerSheet() {
                 <div className="text-right">
                   <p className="font-mono text-base font-bold text-neutral-950 tabular-nums">
                     {quote
-                      ? formatMoney(quote.total, quote.currency)
+                      ? formatLocalMoney(quote.total, quote.currency)
                       : estimateVehiclePrice(draft.vehicleCategory)}
                   </p>
                   <p className="text-[11px] text-neutral-500">
