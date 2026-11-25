@@ -40,7 +40,6 @@ import {
   VehicleCategory,
 } from '../types/rova';
 import {
-  formatMoney,
   getNextDriverStatus,
   getStatusLabel,
   getVehicleLabel,
@@ -60,7 +59,7 @@ interface DriverWorkspaceProps {
 
 export function DriverWorkspace({ workspaceSwitcher, onRequestSignIn }: DriverWorkspaceProps) {
   const { firebaseUser, profile, logout } = useAuth();
-  const { lang, t } = useLanguage();
+  const { lang, t, formatLocalMoney } = useLanguage();
   const uid = firebaseUser?.uid || '';
 
   const [tab, setTab] = useState<DriverTab>('radar');
@@ -857,7 +856,7 @@ export function DriverWorkspace({ workspaceSwitcher, onRequestSignIn }: DriverWo
                         <div className="flex items-center justify-between">
                           <span className="font-mono text-xs font-bold">{job.reference}</span>
                           <span className="font-mono text-sm font-bold tabular-nums">
-                            {formatMoney(job.quotedPrice * 0.85, job.currency)}
+                            {formatLocalMoney(job.quotedPrice * 0.85, job.currency)}
                           </span>
                         </div>
                         <div className="text-xs text-neutral-600 space-y-1">
