@@ -7,6 +7,7 @@ import {
   isSupabaseServerConfigured,
 } from './supabaseAdmin.ts';
 import { createSupabaseRouter } from './supabaseRoutes.ts';
+import { createOperationsRouter } from './operationsRoutes.ts';
 
 dotenv.config();
 
@@ -462,8 +463,9 @@ export function createApiApp(): express.Express {
   });
 
   // ============================================================================
-  // SUPABASE AUTHENTICATED & PUBLIC BACKEND API (/api/v1/*)
+  // SUPABASE AUTHENTICATED & OPERATIONAL BACKEND API (/api/v1/*)
   // ============================================================================
+  app.use('/api/v1', createOperationsRouter());
   app.use('/api/v1', createSupabaseRouter());
 
   // ============================================================================

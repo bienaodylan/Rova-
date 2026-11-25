@@ -5,6 +5,29 @@ import {
   requireSupabaseAuth,
   SupabaseAuthRequest,
 } from './supabaseAdmin.ts';
+import {
+  DEFAULT_CITIES,
+  validateDeliveryGeospatial,
+} from './engines/geospatialEngine.ts';
+import {
+  generateAuthoritativeQuote,
+  verifyQuoteForOrderConfirmation,
+} from './engines/pricingEngine.ts';
+import {
+  buildDispatchWaveOffers,
+  DispatchCourierCandidate,
+} from './engines/dispatchEngine.ts';
+import {
+  ActorRole,
+  CanonicalDeliveryStatus,
+  CustodyStatus,
+  validateDeliveryTransition,
+} from './engines/stateMachineEngine.ts';
+import { renderNotificationTemplate } from './engines/notificationEngine.ts';
+import {
+  computeServerRoadRoute,
+  getRememberedServerQuote,
+} from './operationsRoutes.ts';
 
 // ============================================================================
 // VALIDATION & FIELD MAPPING HELPERS (snake_case DB <-> camelCase App)
@@ -567,7 +590,7 @@ export function createSupabaseRouter(): express.Router {
     }
   });
 
-  // Deliveries: create delivery + stops + public tracking
+  // Deliveries: authoritative server-side geospatial + quote validation, order creation & Wave-1 dispatch offers
   router.post('/deliveries', requireSupabaseAuth, async (req: SupabaseAuthRequest, res) => {
     try {
       const admin = getSupabaseAdmin()!;
@@ -585,14 +608,7 @@ export function createSupabaseRouter(): express.Router {
         ? String(body.vehicleCategory)
         : 'motorcycle';
       const timingType = cleanStr(body.timingType, 30) || 'instant';
-      const driverUid = cleanStr(body.driverUid, 128);
-      const driverName = cleanStr(body.driverName, 120);
       const reference = cleanStr(body.reference, 40) || `RV-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
-      const status = driverUid
-        ? 'driver_assigned'
-        : timingType === 'scheduled'
-        ? 'scheduled'
-        : 'pending';
 
       type PreparedStop = {
         id: string;
@@ -636,16 +652,88 @@ export function createSupabaseRouter(): express.Router {
         return res.status(400).json({ error: 'Provide at least one stop with valid address and coordinates.' });
       }
 
+      // 1. Strict City-Based Geospatial Isolation Check (rejects Abidjan -> Bouaké, Accra -> Abidjan, etc.)
+      const stopCoords = preparedStops.map((s) => ({ lat: s.lat, lng: s.lng }));
+      const geoCheck = validateDeliveryGeospatial({
+        pickup: pickupCoords,
+        stops: stopCoords,
+        vehicleCategory,
+        cities: DEFAULT_CITIES,
+      });
+      if (!geoCheck.ok) {
+        return res.status(422).json({
+          error: geoCheck.messageFr,
+          errorEn: geoCheck.messageEn,
+          code: geoCheck.code,
+          details: geoCheck.details,
+        });
+      }
+
+      // 2. Authoritative Server-Side Pricing & Quote Verification (NEVER trust frontend price)
+      const submittedQuoteId = cleanStr(body.quoteId, 64);
+      let authoritativeQuote = submittedQuoteId ? getRememberedServerQuote(submittedQuoteId) : null;
+
+      if (authoritativeQuote) {
+        const verified = verifyQuoteForOrderConfirmation({
+          quote: authoritativeQuote,
+          pickup: pickupCoords,
+          stops: stopCoords,
+          vehicleCategory,
+          clientSubmittedPrice:
+            typeof body.quotedPrice === 'number' && Number.isFinite(body.quotedPrice)
+              ? body.quotedPrice
+              : undefined,
+        });
+        if (!verified.ok) {
+          return res.status(422).json({
+            error: verified.messageFr,
+            errorEn: verified.messageEn,
+            code: verified.code,
+          });
+        }
+        authoritativeQuote.status = 'consumed';
+      } else {
+        const routeEstimate = await computeServerRoadRoute([pickupCoords, ...stopCoords]);
+        const fresh = generateAuthoritativeQuote({
+          pickup: pickupCoords,
+          stops: stopCoords,
+          vehicleCategory,
+          timingType,
+          weightKg: Math.max(0.5, cleanNum(body.weightKg, 1)),
+          packageSize: (cleanStr(body.packageSize, 20) || 'small') as 'small' | 'medium' | 'large' | 'bulk',
+          fragile: Boolean(body.fragile),
+          routeOverride: routeEstimate,
+          cities: DEFAULT_CITIES,
+        });
+        if (!fresh.ok) {
+          return res.status(422).json({
+            error: fresh.messageFr,
+            errorEn: fresh.messageEn,
+            code: fresh.code,
+          });
+        }
+        authoritativeQuote = fresh.quote;
+        authoritativeQuote.status = 'consumed';
+      }
+
+      // 3. Separate Order Confirmation from Courier Assignment
+      // Orders always start unassigned in searching_courier (or scheduled) and dispatch offers to couriers
+      const status = timingType === 'scheduled' ? 'scheduled' : 'searching_courier';
+      const nowIso = new Date().toISOString();
+
       const { data: createdDelivery, error: delErr } = await admin
         .from('deliveries')
         .insert({
           id: deliveryId,
           reference,
+          city_id: authoritativeQuote.cityId,
+          quote_id: submittedQuoteId || null,
+          pricing_rule_version_id: authoritativeQuote.pricingRuleVersionId,
           business_id: cleanStr(body.businessId, 128) || null,
           merchant_uid: uid,
           merchant_name: cleanStr(body.merchantName, 160) || 'Marchand ROVA',
-          driver_uid: driverUid,
-          driver_name: driverName || null,
+          driver_uid: '',
+          driver_name: null,
           vehicle_category: vehicleCategory,
           timing_type: timingType,
           scheduled_for: cleanStr(body.scheduledFor, 60) || null,
@@ -664,17 +752,22 @@ export function createSupabaseRouter(): express.Router {
           special_handling: cleanStr(body.specialHandling, 240) || null,
           proof_required: cleanStr(body.proofRequired, 30) || 'otp',
           status,
+          custody_status: 'with_sender',
           is_multi_stop: preparedStops.length > 1,
           stop_count: preparedStops.length,
           completed_stop_count: 0,
-          total_distance_km: Math.max(0.5, cleanNum(body.totalDistanceKm, 2)),
-          estimated_duration_min: Math.max(8, Math.round(cleanNum(body.estimatedDurationMin, 20))),
-          quoted_price: Math.max(0, cleanNum(body.quotedPrice, 0)),
-          currency: cleanStr(body.currency, 8) || 'XOF',
+          total_distance_km: authoritativeQuote.distanceKm,
+          estimated_duration_min: authoritativeQuote.durationMin,
+          distance_source: authoritativeQuote.distanceSource,
+          is_fallback_estimate: authoritativeQuote.isFallbackEstimate,
+          quoted_price: authoritativeQuote.customerTotal,
+          courier_earnings: authoritativeQuote.courierEarnings,
+          platform_commission: authoritativeQuote.platformCommission,
+          currency: authoritativeQuote.currency,
           payment_method: cleanStr(body.paymentMethod, 30) || 'mobile_money',
           payment_status: body.paymentMethod === 'invoice' ? 'invoiced' : 'authorized',
-          driver_lat: typeof body.driverLat === 'number' ? body.driverLat : null,
-          driver_lng: typeof body.driverLng === 'number' ? body.driverLng : null,
+          search_started_at: status === 'searching_courier' ? nowIso : null,
+          dispatch_wave: status === 'searching_courier' ? 1 : 0,
         })
         .select('*')
         .single();
@@ -688,7 +781,7 @@ export function createSupabaseRouter(): express.Router {
         id: s.id,
         delivery_id: deliveryId,
         merchant_uid: uid,
-        driver_uid: driverUid,
+        driver_uid: '',
         sequence: s.sequence,
         recipient_name: s.recipientName,
         recipient_phone: s.recipientPhone,
@@ -703,46 +796,133 @@ export function createSupabaseRouter(): express.Router {
         tracking_token: s.trackingToken,
       }));
 
-      const { error: stopsErr } = await admin.from('delivery_stops').insert(stopsRows);
-      if (stopsErr) {
-        console.error('Stops insert error:', stopsErr);
-      }
+      await admin.from('delivery_stops').insert(stopsRows);
 
       const trackingRows = preparedStops.map((s) => ({
         tracking_token: s.trackingToken,
         delivery_id: deliveryId,
         stop_id: s.id,
         merchant_uid: uid,
-        driver_uid: driverUid,
+        driver_uid: '',
         reference,
         recipient_first_name: (s.recipientName.split(' ')[0] || 'Client').slice(0, 80),
         destination_label: s.address,
         destination_lat: s.lat,
         destination_lng: s.lng,
         status,
-        driver_first_name: driverName ? driverName.slice(0, 80) : null,
+        driver_first_name: null,
         vehicle_category: vehicleCategory,
-        driver_lat: typeof body.driverLat === 'number' ? body.driverLat : null,
-        driver_lng: typeof body.driverLng === 'number' ? body.driverLng : null,
-        eta_minutes: Math.max(8, Math.round(cleanNum(body.estimatedDurationMin, 20))),
-        show_live_driver: s.sequence === 1 && Boolean(driverUid),
+        driver_lat: null,
+        driver_lng: null,
+        eta_minutes: authoritativeQuote.durationMin,
+        show_live_driver: false,
         otp_hint: `••${s.otpCode.slice(-2)}`,
       }));
 
       await admin.from('public_tracking').insert(trackingRows);
 
+      // 4. Trigger Wave-1 Dispatch Offers to Eligible Couriers in the Same City
+      let offersDispatched = 0;
+      if (status === 'searching_courier') {
+        const { data: onlineDrivers } = await admin
+          .from('driver_dispatch')
+          .select('*')
+          .eq('approval_status', 'approved')
+          .eq('is_online', true);
+
+        const candidates: DispatchCourierCandidate[] = (onlineDrivers || []).map((d) => ({
+          uid: String(d.uid),
+          firstName: String(d.first_name || 'Livreur'),
+          cityId: String(d.city_id || geoCheck.city.id),
+          approvalStatus: 'approved',
+          isOnline: Boolean(d.is_online),
+          availabilityStatus: (d.availability_status || 'AVAILABLE') as DispatchCourierCandidate['availabilityStatus'],
+          vehicleCategory: String(d.vehicle_category || 'motorcycle'),
+          currentLat: Number(d.current_lat || geoCheck.city.center.lat),
+          currentLng: Number(d.current_lng || geoCheck.city.center.lng),
+          gpsAccuracyMeters: typeof d.gps_accuracy_m === 'number' ? d.gps_accuracy_m : 20,
+          gpsUpdatedAtMs: d.gps_updated_at ? Date.parse(String(d.gps_updated_at)) : Date.now(),
+          rating: Number(d.rating || 4.8),
+          acceptanceRate: Number(d.acceptance_rate || 95),
+          activeDeliveryCount: Number(d.active_delivery_count || 0),
+          maxConcurrentDeliveries: Number(d.max_concurrent_deliveries || 1),
+        }));
+
+        const wavePlan = buildDispatchWaveOffers({
+          deliveryId,
+          city: geoCheck.city,
+          pickup: pickupCoords,
+          requiredVehicle: vehicleCategory,
+          weightKg: Math.max(0.5, cleanNum(body.weightKg, 1)),
+          offeredEarnings: authoritativeQuote.courierEarnings,
+          waveNumber: 1,
+          candidates,
+        });
+
+        if (wavePlan.offers.length > 0) {
+          await admin.from('delivery_offers').insert(
+            wavePlan.offers.map((o) => ({
+              id: o.id,
+              delivery_id: o.deliveryId,
+              city_id: o.cityId,
+              courier_uid: o.courierUid,
+              wave_number: o.waveNumber,
+              status: o.status,
+              internal_score: o.internalScore,
+              estimated_pickup_distance_km: o.estimatedPickupDistanceKm,
+              estimated_pickup_eta_min: o.estimatedPickupEtaMin,
+              offered_earnings: o.offeredEarnings,
+              currency: o.currency,
+              expires_at: o.expiresAt,
+              sent_at: o.sentAt,
+            }))
+          );
+          offersDispatched = wavePlan.offers.length;
+        }
+      }
+
+      // 5. Record immutable audit event & template-driven customer notification
+      await admin.from('delivery_events').insert({
+        id: `evt_${crypto.randomBytes(8).toString('hex')}`,
+        delivery_id: deliveryId,
+        city_id: authoritativeQuote.cityId,
+        event_type: 'delivery.created',
+        actor_uid: uid,
+        actor_role: 'customer',
+        from_status: null,
+        to_status: status,
+        payload: {
+          quoteId: authoritativeQuote.id,
+          customerTotal: authoritativeQuote.customerTotal,
+          currency: authoritativeQuote.currency,
+          offersDispatched,
+        },
+      });
+
+      const notif = renderNotificationTemplate('delivery.created', 'fr', {
+        reference,
+        cityName: authoritativeQuote.cityName,
+      });
       await admin.from('notifications').insert({
         user_id: uid,
-        title: `Livraison ${reference} confirmée`,
-        message: driverName
-          ? `Assignée à ${driverName}.`
-          : 'Votre demande est en cours d’affectation.',
-        event_type: 'delivery_created',
+        title: notif.title,
+        message: notif.message,
+        event_type: 'delivery.created',
         delivery_id: deliveryId,
         read: false,
       });
 
-      return res.status(201).json({ delivery: mapDeliveryRow(createdDelivery) });
+      return res.status(201).json({
+        delivery: mapDeliveryRow(createdDelivery),
+        quote: {
+          id: authoritativeQuote.id,
+          cityId: authoritativeQuote.cityId,
+          customerTotal: authoritativeQuote.customerTotal,
+          currency: authoritativeQuote.currency,
+          distanceSource: authoritativeQuote.distanceSource,
+        },
+        offersDispatched,
+      });
     } catch (err) {
       console.error('POST /deliveries error:', err);
       return res.status(500).json({ error: 'Unable to create delivery.' });
@@ -785,38 +965,58 @@ export function createSupabaseRouter(): express.Router {
     }
   });
 
-  // Delivery status update (owner can cancel, driver/admin can transition)
+  // Delivery status update (enforces centralized state machine, role rules, and template notifications)
   router.patch('/deliveries/:id/status', requireSupabaseAuth, async (req: SupabaseAuthRequest, res) => {
     try {
       const admin = getSupabaseAdmin()!;
       const uid = req.supabaseUser!.id;
       const deliveryId = cleanStr(req.params.id, 128);
-      const nextStatus = cleanStr(req.body?.status, 40);
-
-      if (!ALLOWED_DELIVERY_STATUSES.has(nextStatus)) {
-        return res.status(400).json({ error: 'Invalid delivery status.' });
-      }
+      const nextStatus = cleanStr(req.body?.status, 40) as CanonicalDeliveryStatus;
 
       const { data: existing } = await admin
         .from('deliveries')
-        .select('merchant_uid, driver_uid, reference, driver_name, estimated_duration_min')
+        .select('merchant_uid, driver_uid, reference, driver_name, estimated_duration_min, status, custody_status, proof_required, city_id')
         .eq('id', deliveryId)
         .maybeSingle();
 
       if (!existing) return res.status(404).json({ error: 'Delivery not found.' });
 
-      const isMerchant = existing.merchant_uid === uid;
-      const isDriver = existing.driver_uid === uid;
-      if (!isMerchant && !isDriver && !req.isRovaAdmin) {
-        return res.status(403).json({ error: 'Forbidden.' });
+      const actorRole: ActorRole = req.isRovaAdmin
+        ? 'admin'
+        : existing.driver_uid === uid
+        ? 'courier'
+        : 'customer';
+
+      const check = validateDeliveryTransition(
+        {
+          currentStatus: String(existing.status) as CanonicalDeliveryStatus,
+          nextStatus,
+          actorUid: uid,
+          actorRole,
+          merchantUid: String(existing.merchant_uid),
+          assignedDriverUid: existing.driver_uid ? String(existing.driver_uid) : null,
+          proofRequired: (existing.proof_required || 'otp') as 'otp',
+          proofPayload: req.body?.proof,
+          failureReason: cleanStr(req.body?.failureReason, 300),
+        },
+        (existing.custody_status || 'with_sender') as CustodyStatus
+      );
+
+      if (!check.ok) {
+        return res.status(check.code === 'UNAUTHORIZED_ACTOR' ? 403 : 422).json({
+          error: check.messageFr,
+          errorEn: check.messageEn,
+          code: check.code,
+        });
       }
-      if (isMerchant && !isDriver && !req.isRovaAdmin && nextStatus !== 'cancelled') {
-        return res.status(403).json({ error: 'Merchants may only cancel their own deliveries.' });
+
+      if (check.idempotent) {
+        return res.json({ ok: true, idempotent: true });
       }
 
       const { error } = await admin
         .from('deliveries')
-        .update({ status: nextStatus })
+        .update({ status: nextStatus, custody_status: check.nextCustodyStatus })
         .eq('id', deliveryId);
 
       if (error) return res.status(500).json({ error: 'Unable to update delivery status.' });
@@ -824,36 +1024,39 @@ export function createSupabaseRouter(): express.Router {
         .from('public_tracking')
         .update({
           status: nextStatus,
-          show_live_driver: ['driver_assigned', 'driver_approaching_pickup', 'package_collected', 'in_transit', 'arrived'].includes(nextStatus),
+          show_live_driver: !check.shouldStopTracking,
         })
         .eq('delivery_id', deliveryId);
 
-      // Notify sender automatically on every driver/admin progression
-      if (existing.merchant_uid && nextStatus !== 'cancelled') {
-        const statusTitles: Record<string, string> = {
-          driver_assigned: 'Livreur assigné',
-          driver_approaching_pickup: 'Livreur en route vers la collecte',
-          package_collected: 'Marchandise récupérée',
-          in_transit: 'Livraison en cours',
-          arrived: 'Livreur arrivé à destination',
-          delivered: 'Livraison terminée',
-        };
-        const etaMin = Math.max(2, Number(existing.estimated_duration_min || 15));
-        const driverLabel = existing.driver_name || 'Votre livreur ROVA';
+      await admin.from('delivery_events').insert({
+        id: `evt_${crypto.randomBytes(8).toString('hex')}`,
+        delivery_id: deliveryId,
+        city_id: existing.city_id ? String(existing.city_id) : null,
+        event_type: check.eventType || `delivery.${nextStatus}`,
+        actor_uid: uid,
+        actor_role: actorRole,
+        from_status: String(existing.status),
+        to_status: nextStatus,
+        payload: {},
+      });
+
+      if (existing.merchant_uid) {
+        const rendered = renderNotificationTemplate(check.eventType || `delivery.${nextStatus}`, 'fr', {
+          reference: String(existing.reference),
+          courierName: existing.driver_name ? String(existing.driver_name) : undefined,
+          etaMinutes: Math.max(2, Number(existing.estimated_duration_min || 15)),
+        });
         await admin.from('notifications').insert({
           user_id: existing.merchant_uid,
-          title: `${statusTitles[nextStatus] || 'Mise à jour livraison'} · ${existing.reference}`,
-          message:
-            nextStatus === 'delivered'
-              ? `${driverLabel} a remis la marchandise. Appuyez pour voir le récapitulatif.`
-              : `${driverLabel} progresse (arrivée estimée ~${etaMin} min). Appuyez pour ouvrir le suivi en direct.`,
-          event_type: nextStatus,
+          title: rendered.title,
+          message: rendered.message,
+          event_type: check.eventType || nextStatus,
           delivery_id: deliveryId,
           read: false,
         });
       }
 
-      return res.json({ ok: true });
+      return res.json({ ok: true, status: nextStatus, custodyStatus: check.nextCustodyStatus });
     } catch (err) {
       console.error('PATCH /deliveries/:id/status error:', err);
       return res.status(500).json({ error: 'Unable to update delivery status.' });

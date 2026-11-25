@@ -1,15 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { collection, onSnapshot, orderBy, query, where } from 'firebase/firestore';
 import {
-  BellRing,
   CheckCircle2,
-  Copy,
   Eye,
   HelpCircle,
   Loader2,
   MapPin,
-  RefreshCw,
-  Share2,
+  Phone,
   ShieldCheck,
   XCircle,
 } from 'lucide-react';
@@ -39,7 +36,7 @@ export function ShipmentDetailContent({
   onOpenPublicTracking,
 }: ShipmentDetailContentProps) {
   const { lang, t, formatLocalMoney } = useLanguage();
-  const { busy, cancelDelivery, repeatDelivery, openSupportSheet, showToast } = useRovaApp();
+  const { busy, cancelDelivery, openSupportSheet } = useRovaApp();
 
   const [stops, setStops] = useState<DeliveryStopRecord[]>([]);
   const [loadingStops, setLoadingStops] = useState(true);
@@ -156,57 +153,20 @@ export function ShipmentDetailContent({
   ];
 
   const currentRank = DELIVERY_STATUS_ORDER.indexOf(delivery.status);
-  const canCancel = delivery.status === 'pending' || delivery.status === 'scheduled';
-
-  const copyTrackingUrl = (token: string) => {
-    const url = `${window.location.origin}${window.location.pathname}?track=${encodeURIComponent(token)}`;
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(url).catch(() => {});
-    }
-    showToast(t('Lien de suivi copié.', 'Tracking link copied.'), 'success');
-  };
-
-  const notifyRecipient = async (stop: DeliveryStopRecord) => {
-    const url = `${window.location.origin}${window.location.pathname}?track=${encodeURIComponent(stop.trackingToken)}`;
-    const etaMin = Math.max(1, Math.round(delivery.estimatedDurationMin || 15));
-    const etaClock = new Date(Date.now() + etaMin * 60_000).toLocaleTimeString(
-      lang === 'fr' ? 'fr-FR' : 'en-US',
-      { hour: '2-digit', minute: '2-digit' }
-    );
-    const statusLabel = getStatusLabel(delivery.status, lang);
-    const message =
-      lang === 'fr'
-        ? `Bonjour ${stop.recipientName}, votre colis ROVA (${delivery.reference}) est « ${statusLabel} ». Arrivée estimée vers ${etaClock} (~${etaMin} min). Suivez l'évolution en direct : ${url}`
-        : `Hello ${stop.recipientName}, your ROVA parcel (${delivery.reference}) is "${statusLabel}". Estimated arrival around ${etaClock} (~${etaMin} min). Follow live progress: ${url}`;
-
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: `ROVA · ${delivery.reference}`,
-          text: message,
-          url,
-        });
-        showToast(
-          t(`Notification partagée avec ${stop.recipientName}.`, `Update shared with ${stop.recipientName}.`),
-          'success'
-        );
-        return;
-      } catch {
-        // Fallback to clipboard if user cancels native share
-      }
-    }
-
-    if (navigator.clipboard) {
-      await navigator.clipboard.writeText(message).catch(() => {});
-    }
-    showToast(
-      t(
-        `Message de notification avec heure d’arrivée (${etaClock}) copié pour ${stop.recipientName}.`,
-        `Notification message with arrival time (${etaClock}) copied for ${stop.recipientName}.`
-      ),
-      'success'
-    );
-  };
+  const canCancel =
+    delivery.status === 'pending' ||
+    delivery.status === 'scheduled' ||
+    delivery.status === 'driver_assigned' ||
+    delivery.status === 'driver_approaching_pickup';
+  const isPostPickup =
+    delivery.status === 'package_collected' ||
+    delivery.status === 'in_transit' ||
+    delivery.status === 'approaching_recipient' ||
+    delivery.status === 'arrived';
+  const hasReliableEta =
+    typeof delivery.estimatedDurationMin === 'number' &&
+    delivery.estimatedDurationMin > 0 &&
+    !['delivered', 'cancelled', 'failed'].includes(delivery.status);
 
   return (
     <div className="space-y-6">
@@ -221,8 +181,12 @@ export function ShipmentDetailContent({
             {getVehicleLabel(delivery.vehicleCategory, lang)}
             <span aria-hidden="true"> · </span>
             <span className="font-mono tabular-nums">{delivery.totalDistanceKm.toFixed(1)} km</span>
-            <span aria-hidden="true"> · </span>
-            <span className="font-mono tabular-nums">~{delivery.estimatedDurationMin} min</span>
+            {hasReliableEta && (
+              <>
+                <span aria-hidden="true"> · </span>
+                <span className="font-mono tabular-nums">~{delivery.estimatedDurationMin} min</span>
+              </>
+            )}
           </p>
         </div>
         <div className="text-right">
@@ -363,29 +327,22 @@ export function ShipmentDetailContent({
                 )}
 
                 <div className="flex flex-wrap items-center gap-2 pl-9">
-                  <button
-                    type="button"
-                    onClick={() => void notifyRecipient(stop)}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-neutral-950 hover:bg-red-600 text-xs font-semibold text-white transition-colors cursor-pointer"
-                  >
-                    <BellRing className="w-3 h-3" />
-                    {t('Notifier le destinataire', 'Notify recipient')}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => copyTrackingUrl(stop.trackingToken)}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-neutral-200 hover:border-neutral-950 text-xs font-medium text-neutral-800 transition-colors cursor-pointer"
-                  >
-                    <Copy className="w-3 h-3" />
-                    {t('Copier le lien', 'Copy link')}
-                  </button>
+                  {stop.recipientPhone && (
+                    <a
+                      href={`tel:${stop.recipientPhone}`}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-neutral-200 hover:border-neutral-950 text-xs font-medium text-neutral-800 transition-colors"
+                    >
+                      <Phone className="w-3 h-3" />
+                      {t('Appeler le destinataire', 'Call recipient')}
+                    </a>
+                  )}
                   <button
                     type="button"
                     onClick={() => onOpenPublicTracking(stop.trackingToken)}
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-neutral-100 hover:bg-neutral-200 text-xs font-medium text-neutral-900 transition-colors cursor-pointer"
                   >
                     <Eye className="w-3 h-3" />
-                    {t('Aperçu destinataire', 'Recipient preview')}
+                    {t('Vue suivi destinataire', 'Recipient tracking view')}
                   </button>
                 </div>
               </div>
@@ -394,23 +351,35 @@ export function ShipmentDetailContent({
         </div>
       </div>
 
-      {/* Contextual Actions */}
+      {/* Automatic Lifecycle Notifications Notice */}
+      <p className="text-[11px] text-neutral-500 leading-relaxed">
+        {t(
+          'Les notifications d’évolution sont envoyées automatiquement à chaque étape clé de la livraison.',
+          'Lifecycle progress updates are sent automatically at every delivery milestone.'
+        )}
+      </p>
+
+      {/* Post-pickup Return/Support Notice */}
+      {isPostPickup && (
+        <div className="rounded-2xl border border-neutral-200 bg-neutral-50 px-4 py-3 text-xs text-neutral-700 leading-relaxed">
+          {t(
+            'Le colis est déjà en possession du livreur. L’annulation directe n’est plus disponible : contactez le support pour initier un retour expéditeur sécurisé.',
+            'Parcel is already in courier custody. Direct cancellation is disabled: contact support to initiate a secure return to sender.'
+          )}
+        </div>
+      )}
+
+      {/* Contextual Actions — Minimal, Operational & State-Aware */}
       <div className="flex flex-wrap items-center gap-2.5 pt-2 border-t border-neutral-100">
-        <button
-          type="button"
-          onClick={() => repeatDelivery(delivery)}
-          className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-neutral-950 text-white text-xs font-medium hover:bg-neutral-800 transition-colors cursor-pointer"
-        >
-          <RefreshCw className="w-3.5 h-3.5" />
-          {t('Répéter cette livraison', 'Repeat delivery')}
-        </button>
         <button
           type="button"
           onClick={() => openSupportSheet(delivery.id)}
           className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full border border-neutral-200 hover:border-neutral-950 text-xs font-medium text-neutral-800 transition-colors cursor-pointer"
         >
           <HelpCircle className="w-3.5 h-3.5" />
-          {t('Contacter le support', 'Contact support')}
+          {isPostPickup
+            ? t('Signaler un incident / Retour', 'Report incident / Return')
+            : t('Contacter le support', 'Contact support')}
         </button>
         {canCancel && (
           <button
@@ -420,7 +389,7 @@ export function ShipmentDetailContent({
             className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full border border-red-200 text-red-700 hover:bg-red-50 text-xs font-medium transition-colors cursor-pointer disabled:opacity-50"
           >
             <XCircle className="w-3.5 h-3.5" />
-            {t('Annuler', 'Cancel')}
+            {t('Annuler la livraison', 'Cancel delivery')}
           </button>
         )}
       </div>

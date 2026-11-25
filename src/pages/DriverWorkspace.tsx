@@ -17,7 +17,6 @@ import {
   AlertTriangle,
   ArrowLeft,
   ArrowRight,
-  BellRing,
   Camera,
   CheckCircle2,
   Clock,
@@ -756,35 +755,6 @@ export function DriverWorkspace({
     }
   };
 
-  const notifyRecipientFromDriver = async (stop: DeliveryStopRecord) => {
-    if (!activeDelivery) return;
-    const url = `${window.location.origin}${window.location.pathname}?track=${encodeURIComponent(stop.trackingToken)}`;
-    const etaLabel = computeEtaClock(activeDelivery.estimatedDurationMin || 15, lang);
-    const msg =
-      lang === 'fr'
-        ? `Bonjour ${stop.recipientName}, je suis ${driver?.fullName || 'votre livreur ROVA'}. Votre colis (${activeDelivery.reference}) est en chemin — arrivée estimée vers ${etaLabel}. Suivez mon trajet en direct : ${url}`
-        : `Hello ${stop.recipientName}, this is ${driver?.fullName || 'your ROVA driver'}. Your parcel (${activeDelivery.reference}) is on the way — estimated arrival around ${etaLabel}. Track live: ${url}`;
-
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: `ROVA · ${activeDelivery.reference}`, text: msg, url });
-        flash(t(`Alerte envoyée à ${stop.recipientName}.`, `Alert sent to ${stop.recipientName}.`));
-        return;
-      } catch {
-        // Fallback to clipboard
-      }
-    }
-    if (navigator.clipboard) {
-      await navigator.clipboard.writeText(msg).catch(() => {});
-    }
-    flash(
-      t(
-        `Notification avec heure d’arrivée (${etaLabel}) copiée pour ${stop.recipientName}.`,
-        `ETA notification (${etaLabel}) copied for ${stop.recipientName}.`
-      )
-    );
-  };
-
   const activeMapMarkers: MapMarkerItem[] = useMemo(() => {
     if (!activeDelivery) return [];
     const m: MapMarkerItem[] = [
@@ -1327,16 +1297,6 @@ export function DriverWorkspace({
                                 </div>
 
                                 <div className="flex flex-wrap items-center gap-2 pl-9">
-                                  {s.status !== 'delivered' && (
-                                    <button
-                                      type="button"
-                                      onClick={() => void notifyRecipientFromDriver(s)}
-                                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-neutral-200 hover:border-neutral-950 text-xs font-medium text-neutral-800 transition-colors cursor-pointer"
-                                    >
-                                      <BellRing className="w-3 h-3 text-red-600" />
-                                      <span>{t('Notifier l’arrivée', 'Send ETA alert')}</span>
-                                    </button>
-                                  )}
                                   {s.trackingToken && onOpenTrackingToken && (
                                     <button
                                       type="button"

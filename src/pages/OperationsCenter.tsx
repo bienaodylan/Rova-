@@ -34,6 +34,7 @@ import {
   X,
 } from 'lucide-react';
 import { db, handleFirestoreError, OperationType } from '../lib/firebase';
+import { isSupabaseConfigured, supabaseApiFetch } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { LanguageSelector, useLanguage } from '../context/LanguageContext';
 import {
@@ -126,6 +127,53 @@ export function OperationsCenter({
   const [section, setSection] = useState<OpsSection>('dashboard');
   const [statusBanner, setStatusBanner] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [activeCities, setActiveCities] = useState<Array<{ id: string; name: string; countryCode: string; currency: string; maxDeliveryDistanceKm: number }>>([]);
+  const [reconciling, setReconciling] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/v1/cities')
+      .then((r) => r.json())
+      .then((d) => {
+        if (Array.isArray(d.cities)) setActiveCities(d.cities);
+      })
+      .catch(() => {});
+  }, []);
+
+  const handleRunReconciliation = async () => {
+    if (!requireAdminAction()) return;
+    setReconciling(true);
+    try {
+      if (isSupabaseConfigured()) {
+        const res = await supabaseApiFetch<{
+          ok: boolean;
+          report?: {
+            expiredOffersCount: number;
+            staleCouriersFlaggedCount: number;
+            stuckSearchesEscalatedCount: number;
+            notificationsRetriedCount: number;
+          };
+        }>('/api/v1/ops/reconcile', { method: 'POST' });
+        const r = res.report;
+        flash(
+          t(
+            `Réconciliation terminée : ${r?.expiredOffersCount ?? 0} offres expirées, ${r?.staleCouriersFlaggedCount ?? 0} GPS obsolètes, ${r?.stuckSearchesEscalatedCount ?? 0} recherches escaladées.`,
+            `Reconciliation complete: ${r?.expiredOffersCount ?? 0} expired offers, ${r?.staleCouriersFlaggedCount ?? 0} stale GPS flagged, ${r?.stuckSearchesEscalatedCount ?? 0} stuck searches escalated.`
+          )
+        );
+      } else {
+        flash(
+          t(
+            'Réconciliation serveur active sur l’environnement Supabase production (/api/v1/ops/reconcile).',
+            'Server reconciliation runs against Supabase production (/api/v1/ops/reconcile).'
+          )
+        );
+      }
+    } catch (err) {
+      flash(err instanceof Error ? err.message : t('Erreur de réconciliation.', 'Reconciliation error.'));
+    } finally {
+      setReconciling(false);
+    }
+  };
 
   const [deliveries, setDeliveries] = useState<DeliveryRecord[]>([]);
   const [reservations, setReservations] = useState<ReservationRecord[]>([]);
@@ -1085,6 +1133,35 @@ export function OperationsCenter({
                     <p className="text-[11px] text-neutral-500 truncate">{kpi.sub}</p>
                   </div>
                 ))}
+              </div>
+
+              {/* Isolated City Network & Operational Reconciliation Bar */}
+              <div className="rounded-2xl border border-neutral-200 bg-white p-4 flex flex-wrap items-center justify-between gap-4">
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold text-neutral-950">
+                    {t('Zones urbaines isolées & réconciliation moteur', 'Isolated urban zones & engine reconciliation')}
+                  </p>
+                  <p className="text-[11px] text-neutral-500">
+                    {activeCities.length > 0
+                      ? activeCities
+                          .map((c) => `${c.name} (${c.currency}, ≤${c.maxDeliveryDistanceKm} km)`)
+                          .join(' · ')
+                      : t('Chargement des zones urbaines actives...', 'Loading active urban zones...')}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  disabled={reconciling}
+                  onClick={() => void handleRunReconciliation()}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-neutral-950 hover:bg-red-600 text-white text-xs font-semibold transition-colors disabled:opacity-50 cursor-pointer"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${reconciling ? 'animate-spin' : ''}`} />
+                  <span>
+                    {reconciling
+                      ? t('Réconciliation...', 'Reconciling...')
+                      : t('Exécuter réconciliation', 'Run reconciliation')}
+                  </span>
+                </button>
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

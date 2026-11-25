@@ -58,6 +58,14 @@ export function DeliveryComposerSheet() {
   const [routeDistanceKm, setRouteDistanceKm] = useState(0);
   const [routeDurationMin, setRouteDurationMin] = useState(0);
   const [quote, setQuote] = useState<QuoteResult | null>(null);
+  const [quoteError, setQuoteError] = useState<string | null>(null);
+  const [quoteMeta, setQuoteMeta] = useState<{
+    id: string;
+    cityName: string;
+    isFallbackEstimate: boolean;
+    distanceSource: string;
+    expiresAt: string;
+  } | null>(null);
   const [optimizing, setOptimizing] = useState(false);
 
   const safeStopIdx = Math.min(activeStopIdx, Math.max(0, draft.stops.length - 1));
@@ -112,45 +120,86 @@ export function DeliveryComposerSheet() {
     };
   }, [composerOpen, draft.pickup.address, draft.pickup.lat, draft.pickup.lng, draft.stops]);
 
-  // Live dynamic quote from /api/pricing/quote
+  // Authoritative server-side quote + city geospatial isolation via /api/v1/quotes
   useEffect(() => {
     if (!composerOpen) return;
-    const rule = getEffectivePricingRule(pricingRules, draft.vehicleCategory);
-    const validStopsCount = Math.max(1, draft.stops.filter((s) => s.address.trim()).length);
-    const dist = Math.max(1, routeDistanceKm || 4);
+    const validStops = draft.stops.filter((s) => s.address.trim().length > 0);
+    if (!draft.pickup.address.trim() || validStops.length === 0) {
+      setQuoteError(null);
+      setQuoteMeta(null);
+      return;
+    }
 
     let cancelled = false;
-    fetch('/api/pricing/quote', {
+    setQuoteError(null);
+
+    fetch('/api/v1/quotes', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept-Language': lang,
+      },
       body: JSON.stringify({
+        pickup: { lat: draft.pickup.lat, lng: draft.pickup.lng },
+        stops: validStops.map((s) => ({ lat: s.lat, lng: s.lng })),
         vehicleCategory: draft.vehicleCategory,
-        distanceKm: dist,
-        stopCount: validStopsCount,
         timingType: draft.timingType,
         weightKg: draft.weightKg,
+        packageSize: draft.packageSize,
         fragile: draft.fragile,
-        rule,
       }),
     })
-      .then((r) => r.json())
-      .then((data) => {
-        if (!cancelled && typeof data.total === 'number') {
-          setQuote(data);
+      .then(async (r) => {
+        const data = await r.json();
+        if (cancelled) return;
+        if (!r.ok) {
+          setQuote(null);
+          setQuoteMeta(null);
+          setQuoteError(
+            (lang === 'en' ? data.errorEn || data.error : data.error || data.errorEn) ||
+              t(
+                'Cet itinéraire est hors de nos zones de livraison urbaines actives.',
+                'This route is outside supported urban service areas.'
+              )
+          );
+          return;
+        }
+        if (data.quote) {
+          setQuoteError(null);
+          setRouteDistanceKm(Number(data.quote.distanceKm) || routeDistanceKm);
+          setRouteDurationMin(Number(data.quote.durationMin) || routeDurationMin);
+          setQuote({
+            currency: data.quote.currency,
+            total: data.quote.customerTotal,
+            breakdown: Array.isArray(data.quote.breakdown)
+              ? data.quote.breakdown.map((b: { labelFr?: string; labelEn?: string; label?: string; amount: number }) => ({
+                  label: lang === 'fr' ? b.labelFr || b.label || '' : b.labelEn || b.label || '',
+                  amount: b.amount,
+                }))
+              : [],
+          });
+          setQuoteMeta({
+            id: data.quote.id,
+            cityName: data.quote.cityName,
+            isFallbackEstimate: Boolean(data.quote.isFallbackEstimate),
+            distanceSource: String(data.quote.distanceSource || 'osrm'),
+            expiresAt: String(data.quote.expiresAt || ''),
+          });
         }
       })
       .catch(() => {
-        if (!cancelled) {
-          const fallbackTotal = Math.max(
-            rule.minimumFare,
-            rule.baseFee + dist * rule.perKmRate + Math.max(0, validStopsCount - 1) * rule.multiStopFee
-          );
-          setQuote({
-            currency: rule.currency || 'GHS',
-            total: Number(fallbackTotal.toFixed(2)),
-            breakdown: [{ label: t('Tarif estimé', 'Estimated fare'), amount: Number(fallbackTotal.toFixed(2)) }],
-          });
-        }
+        if (cancelled) return;
+        const rule = getEffectivePricingRule(pricingRules, draft.vehicleCategory);
+        const dist = Math.max(1, routeDistanceKm || 4);
+        const fallbackTotal = Math.max(
+          rule.minimumFare,
+          rule.baseFee + dist * rule.perKmRate + Math.max(0, validStops.length - 1) * rule.multiStopFee
+        );
+        setQuote({
+          currency: rule.currency || 'XOF',
+          total: Number(fallbackTotal.toFixed(2)),
+          breakdown: [{ label: t('Tarif estimé', 'Estimated fare'), amount: Number(fallbackTotal.toFixed(2)) }],
+        });
       });
 
     return () => {
@@ -159,12 +208,16 @@ export function DeliveryComposerSheet() {
   }, [
     composerOpen,
     pricingRules,
+    draft.pickup.address,
+    draft.pickup.lat,
+    draft.pickup.lng,
     draft.vehicleCategory,
     draft.stops,
     draft.timingType,
     draft.weightKg,
+    draft.packageSize,
     draft.fragile,
-    routeDistanceKm,
+    lang,
     t,
   ]);
 
@@ -412,7 +465,7 @@ export function DeliveryComposerSheet() {
           ) : (
             <button
               type="button"
-              disabled={busy || !draft.pickup.address.trim() || validStopsCount === 0}
+              disabled={busy || Boolean(quoteError) || !draft.pickup.address.trim() || validStopsCount === 0}
               onClick={() =>
                 submitDelivery(
                   routeDistanceKm,
@@ -1070,13 +1123,42 @@ export function DeliveryComposerSheet() {
                       : estimateVehiclePrice(draft.vehicleCategory)}
                   </p>
                   <p className="text-[11px] text-neutral-500">
-                    {matchedDrivers.length > 0
+                    {quoteMeta
+                      ? `${quoteMeta.cityName} · ${quoteMeta.isFallbackEstimate ? t('Estimation secours', 'Fallback est.') : t('Tarif vérifié', 'Verified quote')}`
+                      : matchedDrivers.length > 0
                       ? t(`~${matchedDrivers[0].etaMinutes} min d’approche`, `~${matchedDrivers[0].etaMinutes} min ETA`)
                       : t('Affectation auto', 'Auto dispatch')}
                   </p>
                 </div>
               </div>
             </div>
+
+            {/* Geospatial / City-Isolation Rejection Banner */}
+            {quoteError && (
+              <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-800 leading-relaxed">
+                <p className="font-semibold text-red-900">
+                  {t('Zone de livraison non desservie', 'Delivery route not supported')}
+                </p>
+                <p className="mt-0.5">{quoteError}</p>
+              </div>
+            )}
+
+            {/* Itemized Server Quote Breakdown */}
+            {!quoteError && quote && quote.breakdown.length > 0 && (
+              <div className="rounded-2xl border border-neutral-200 bg-white px-4 py-3 space-y-1.5">
+                <p className="text-[11px] font-semibold text-neutral-500">
+                  {t('Détail du tarif serveur', 'Authoritative fare breakdown')}
+                </p>
+                {quote.breakdown.map((item, idx) => (
+                  <div key={`${item.label}-${idx}`} className="flex items-center justify-between text-xs text-neutral-700">
+                    <span>{item.label}</span>
+                    <span className="font-mono tabular-nums font-medium text-neutral-950">
+                      {formatLocalMoney(item.amount, quote.currency)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
 
             {/* Matched Driver Preview (if any live online driver matches) */}
             {matchedDrivers.length > 0 && (

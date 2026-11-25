@@ -6,10 +6,8 @@ import {
   BellRing,
   CheckCircle2,
   Clock,
-  Copy,
   MapPin,
   Search,
-  Share2,
   ShieldCheck,
   Truck,
   X,
@@ -324,31 +322,6 @@ export function LiveTrackingWindow({
       ),
       'info'
     );
-  };
-
-  const handleShareRecipientLink = async () => {
-    if (!trackingToken.trim()) return;
-    const url = `${window.location.origin}${window.location.pathname}?track=${encodeURIComponent(trackingToken.trim())}`;
-    const eta = formatArrivalTime(record?.etaMinutes, lang);
-    const shareText = eta
-      ? t(
-          `Suivez votre colis ROVA ${record?.reference || ''} en direct — arrivée estimée vers ${eta.clock} (${eta.relative}) : ${url}`,
-          `Track your ROVA parcel ${record?.reference || ''} live — estimated arrival around ${eta.clock} (${eta.relative}): ${url}`
-        )
-      : t(`Suivez votre colis ROVA en direct : ${url}`, `Track your ROVA parcel live: ${url}`);
-
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: 'ROVA Live', text: shareText, url });
-        return;
-      } catch {
-        // User cancelled share sheet
-      }
-    }
-    if (navigator.clipboard) {
-      await navigator.clipboard.writeText(url).catch(() => {});
-    }
-    showToast(t('Lien de suivi copié.', 'Tracking link copied.'), 'success');
   };
 
   const recipientMilestones: Array<{ key: DeliveryStatus; label: string }> = [
@@ -673,34 +646,10 @@ export function LiveTrackingWindow({
                         </div>
                       )}
 
-                      {/* Actions & Privacy Footer */}
-                      <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-neutral-100">
-                        <div className="flex items-center gap-1.5 text-[11px] text-neutral-500">
-                          <ShieldCheck className="w-3.5 h-3.5 shrink-0 text-neutral-700" />
-                          <span>{t('Suivi isolé et protégé ROVA', 'Isolated protected ROVA tracking')}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => void handleShareRecipientLink()}
-                            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full border border-neutral-200 hover:border-neutral-950 text-xs font-medium text-neutral-800 transition-colors cursor-pointer"
-                          >
-                            <Share2 className="w-3.5 h-3.5" />
-                            <span>{t('Partager', 'Share')}</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const url = `${window.location.origin}${window.location.pathname}?track=${encodeURIComponent(trackingToken.trim())}`;
-                              if (navigator.clipboard) navigator.clipboard.writeText(url).catch(() => {});
-                              showToast(t('Lien copié.', 'Link copied.'), 'success');
-                            }}
-                            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-neutral-100 hover:bg-neutral-200 text-xs font-medium text-neutral-900 transition-colors cursor-pointer"
-                          >
-                            <Copy className="w-3.5 h-3.5" />
-                            <span>{t('Copier', 'Copy')}</span>
-                          </button>
-                        </div>
+                      {/* Privacy Footer */}
+                      <div className="flex items-center gap-1.5 pt-2 border-t border-neutral-100 text-[11px] text-neutral-500">
+                        <ShieldCheck className="w-3.5 h-3.5 shrink-0 text-neutral-700" />
+                        <span>{t('Suivi isolé et protégé ROVA · Notifications automatiques activées', 'Isolated protected ROVA tracking · Automatic updates enabled')}</span>
                       </div>
                     </div>
                   )}
