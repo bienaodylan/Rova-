@@ -10,6 +10,8 @@ interface BottomSheetProps {
   size?: 'sm' | 'md' | 'lg' | 'full';
   headerExtra?: React.ReactNode;
   footer?: React.ReactNode;
+  /** Disable vertical scrolling for fixed, app-like multi-step flows. */
+  scrollable?: boolean;
   children: React.ReactNode;
 }
 
@@ -28,6 +30,7 @@ export function BottomSheet({
   size = 'md',
   headerExtra,
   footer,
+  scrollable = true,
   children,
 }: BottomSheetProps) {
   useEffect(() => {
@@ -69,7 +72,7 @@ export function BottomSheet({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 28, scale: 0.99 }}
             transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
-            className={`relative z-10 w-full ${SIZE_CLASSES[size]} max-h-[92dvh] sm:max-h-[88dvh] bg-white rounded-t-[28px] sm:rounded-3xl shadow-2xl border border-neutral-200/80 flex flex-col overflow-hidden`}
+            className={`relative z-10 w-full ${SIZE_CLASSES[size]} ${scrollable ? 'max-h-[92dvh] sm:max-h-[88dvh]' : 'h-[100dvh] max-h-[100dvh] sm:h-[min(900px,92dvh)] sm:max-h-[92dvh]'} bg-white rounded-t-[28px] sm:rounded-3xl shadow-2xl border border-neutral-200/80 flex flex-col overflow-hidden`}
           >
             {/* Mobile Drag Handle */}
             <div className="sm:hidden pt-2.5 pb-1 flex justify-center shrink-0">
@@ -103,8 +106,8 @@ export function BottomSheet({
               </div>
             )}
 
-            {/* Scrollable Body */}
-            <div className="flex-1 overflow-y-auto overscroll-contain px-5 sm:px-6 py-5">
+            {/* Body: scrolling can be disabled for native-like, fixed-step experiences. */}
+            <div className={`min-h-0 flex-1 px-5 sm:px-6 py-5 ${scrollable ? 'overflow-y-auto overscroll-contain' : 'overflow-hidden overscroll-none touch-pan-x'}`}>
               {children}
             </div>
 
