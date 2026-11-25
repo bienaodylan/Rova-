@@ -27,26 +27,67 @@ function isValidSupabaseUrl(url: string): boolean {
   }
 }
 
-const SUPABASE_URL = sanitizePublicValue(
+let runtimeSupabaseUrl = sanitizePublicValue(
   import.meta.env.VITE_SUPABASE_URL as string | undefined
 );
-const SUPABASE_ANON_KEY = sanitizePublicValue(
+let runtimeSupabaseAnonKey = sanitizePublicValue(
   import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
 );
 
-const HAS_VALID_SUPABASE =
-  isValidSupabaseUrl(SUPABASE_URL) && SUPABASE_ANON_KEY.length >= 20;
-
 let browserClient: SupabaseClient | null = null;
+let hydrationPromise: Promise<boolean> | null = null;
 
 export function isSupabaseConfigured(): boolean {
-  return HAS_VALID_SUPABASE;
+  return isValidSupabaseUrl(runtimeSupabaseUrl) && runtimeSupabaseAnonKey.length >= 20;
+}
+
+/**
+ * Hydrates public Supabase URL & anon key from Vercel's runtime endpoint (/api/config/runtime)
+ * when build-time VITE_SUPABASE_* variables were not baked into the static bundle.
+ * Never exposes or fetches any private server secrets.
+ */
+export async function hydrateSupabaseConfig(): Promise<boolean> {
+  if (isSupabaseConfigured()) return true;
+  if (hydrationPromise) return hydrationPromise;
+
+  hydrationPromise = (async () => {
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => controller.abort(), 2000);
+    try {
+      const res = await fetch('/api/config/runtime', {
+        method: 'GET',
+        headers: { Accept: 'application/json' },
+        cache: 'no-store',
+        signal: controller.signal,
+      });
+      if (!res.ok) return false;
+      const data = (await res.json()) as {
+        supabaseUrl?: string;
+        supabaseAnonKey?: string;
+      };
+      const url = sanitizePublicValue(data?.supabaseUrl);
+      const anon = sanitizePublicValue(data?.supabaseAnonKey);
+      if (isValidSupabaseUrl(url) && anon.length >= 20) {
+        runtimeSupabaseUrl = url;
+        runtimeSupabaseAnonKey = anon;
+        browserClient = null;
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
+    } finally {
+      window.clearTimeout(timer);
+    }
+  })();
+
+  return hydrationPromise;
 }
 
 export function getSupabaseClient(): SupabaseClient | null {
-  if (!HAS_VALID_SUPABASE) return null;
+  if (!isSupabaseConfigured()) return null;
   if (!browserClient) {
-    browserClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    browserClient = createClient(runtimeSupabaseUrl, runtimeSupabaseAnonKey, {
       auth: {
         persistSession: true,
         autoRefreshToken: true,

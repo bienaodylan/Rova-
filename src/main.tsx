@@ -2,6 +2,7 @@ import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
 import { markGoogleMapsAuthFailed } from './lib/mapsConfig';
+import { hydrateSupabaseConfig } from './lib/supabase';
 
 // Google Maps Platform auth & quota failure listeners.
 // Separates quota warnings from invalid/restricted API keys so mobile & preview domains
@@ -29,4 +30,9 @@ console.error = (...args: unknown[]) => {
   }
 };
 
-createRoot(document.getElementById('root')!).render(<App />);
+async function bootstrap() {
+  await hydrateSupabaseConfig();
+  createRoot(document.getElementById('root')!).render(<App />);
+}
+
+void bootstrap();
