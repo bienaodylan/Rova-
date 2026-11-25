@@ -400,8 +400,8 @@ export function DriverWorkspace({
       await batch.commit();
       flash(
         t(
-          'Dossier chauffeur envoyé au Centre d’Opérations ROVA pour validation.',
-          'Driver onboarding submitted to ROVA Operations for approval.'
+          'Dossier chauffeur envoyé au Centre d’Opérations Rovia pour validation.',
+          'Driver onboarding submitted to Rovia Operations for approval.'
         )
       );
     } catch (error) {
@@ -815,7 +815,7 @@ export function DriverWorkspace({
       {/* Unified Main Content Area */}
       <main className="flex-1 pb-28">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-0 sm:pt-7 pb-8 space-y-6">
-          {/* Minimal Auto-Hide Mobile Header matching main ROVA app */}
+          {/* Minimal Auto-Hide Mobile Header matching main Rovia app */}
           <header
             className={`sticky top-0 z-30 -mx-4 px-4 py-3 flex items-center justify-between gap-3 transition-transform duration-200 ease-out will-change-transform motion-reduce:transition-none sm:static sm:mx-0 sm:px-0 sm:py-0 sm:translate-y-0 sm:pointer-events-auto sm:bg-transparent sm:backdrop-blur-none sm:border-none ${
               headerHidden ? '-translate-y-full pointer-events-none' : 'translate-y-0'
@@ -910,7 +910,7 @@ export function DriverWorkspace({
                         <h1 className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-neutral-950">
                           {firstName
                             ? t(`Bonjour, ${firstName}`, `Hello, ${firstName}`)
-                            : t('Prêt à livrer avec ROVA', 'Ready to deliver with ROVA')}
+                            : t('Prêt à livrer avec Rovia', 'Ready to deliver with Rovia')}
                         </h1>
                         <p className="text-sm text-neutral-500 max-w-lg">
                           {driver?.isOnline
@@ -1336,8 +1336,8 @@ export function DriverWorkspace({
                       </h1>
                       <p className="text-xs text-neutral-500 mt-0.5">
                         {t(
-                          'Suivi net de vos courses livrées et performances sur le réseau ROVA.',
-                          'Net earnings summary and completed runs on the ROVA network.'
+                          'Suivi net de vos courses livrées et performances sur le réseau Rovia.',
+                          'Net earnings summary and completed runs on the Rovia network.'
                         )}
                       </p>
                     </div>
@@ -1425,8 +1425,8 @@ export function DriverWorkspace({
                         </h1>
                         <p className="text-xs text-neutral-500 mt-0.5">
                           {t(
-                            'Dossier chauffeur, véhicule, équipements ROVA et préférences.',
-                            'Driver dossier, vehicle details, ROVA gear, and preferences.'
+                            'Dossier chauffeur, véhicule, équipements Rovia et préférences.',
+                            'Driver dossier, vehicle details, Rovia gear, and preferences.'
                           )}
                         </p>
                       </div>
@@ -1444,8 +1444,8 @@ export function DriverWorkspace({
                           </h2>
                           <p className="text-xs text-neutral-500">
                             {t(
-                              'Soumettez votre dossier au Centre d’Opérations ROVA pour activer le radar GPS.',
-                              'Submit your dossier to ROVA Operations to activate the live GPS radar.'
+                              'Soumettez votre dossier au Centre d’Opérations Rovia pour activer le radar GPS.',
+                              'Submit your dossier to Rovia Operations to activate the live GPS radar.'
                             )}
                           </p>
                         </div>
@@ -1559,7 +1559,7 @@ export function DriverWorkspace({
                     {/* Assigned Equipment */}
                     <div className="space-y-2.5">
                       <h2 className="font-display text-sm font-bold text-neutral-950">
-                        {t('Équipements ROVA attribués', 'Assigned ROVA equipment')}
+                        {t('Équipements Rovia attribués', 'Assigned Rovia equipment')}
                       </h2>
                       {equipmentList.length === 0 ? (
                         <div className="rounded-2xl bg-white border border-neutral-200/80 p-5 text-xs text-neutral-500">
@@ -1644,7 +1644,7 @@ export function DriverWorkspace({
         </div>
       </main>
 
-      {/* Unified Floating 4-Tab Bottom Navigation Bar matching main ROVA app */}
+      {/* Unified Floating 4-Tab Bottom Navigation Bar matching main Rovia app */}
       <div className="fixed bottom-3.5 left-1/2 -translate-x-1/2 z-50 w-auto max-w-[calc(100vw-1.5rem)] pointer-events-none pb-[env(safe-area-inset-bottom,0px)]">
         <nav
           aria-label={t('Navigation livreur', 'Driver navigation')}
@@ -1787,8 +1787,8 @@ export function DriverWorkspace({
         size="sm"
         title={t('Signaler un incident', 'Report an incident')}
         subtitle={t(
-          'Transmission directe au Centre d’Opérations ROVA.',
-          'Direct report to ROVA Operations Center.'
+          'Transmission directe au Centre d’Opérations Rovia.',
+          'Direct report to Rovia Operations Center.'
         )}
       >
         <form onSubmit={handleSubmitIncident} className="space-y-4">

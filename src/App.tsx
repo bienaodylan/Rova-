@@ -196,7 +196,7 @@ function RovaApplicationShell({
               className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-[#F3F3F3] hover:bg-[#171717] hover:text-white text-xs font-semibold text-[#171717] transition-colors cursor-pointer"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
-              {t('Retour à ROVA', 'Back to ROVA')}
+              {t('Retour à Rovia', 'Back to Rovia')}
             </button>
             <span className="text-xs font-medium text-[#777777]">
               {t('Centre d’Opérations', 'Operations Center')}
@@ -241,7 +241,7 @@ function RovaApplicationShell({
 
   return (
     <div className="min-h-screen bg-white text-[#171717] flex flex-col">
-      {/* Branded Splash Screen with current ROVA. logo */}
+      {/* Branded Splash Screen with current Rovia. logo */}
       <RovaSplashScreen ready={!loading} />
 
       {/* Interactive Live Notification Banner — tapping opens the fixed tracking window */}

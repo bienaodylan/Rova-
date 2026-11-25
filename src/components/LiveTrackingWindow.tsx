@@ -213,7 +213,7 @@ export function LiveTrackingWindow({
               `Arrivée estimée à ${eta.clock} (${eta.relative}).`,
               `Estimated arrival at ${eta.clock} (${eta.relative}).`
             )
-          : t('Votre livreur ROVA progresse vers votre adresse.', 'Your ROVA courier is on the way.');
+          : t('Votre livreur Rovia progresse vers votre adresse.', 'Your Rovia courier is on the way.');
 
       setLiveUpdateBanner({
         id: Date.now(),
@@ -279,7 +279,7 @@ export function LiveTrackingWindow({
         lat: record.driverLat,
         lng: record.driverLng,
         kind: 'driver',
-        label: record.driverFirstName || t('Livreur ROVA', 'ROVA Driver'),
+        label: record.driverFirstName || t('Livreur Rovia', 'Rovia Driver'),
       });
     }
     return list;
@@ -516,7 +516,7 @@ export function LiveTrackingWindow({
                       <h2 className="font-display text-base font-bold text-[#171717]">
                         {notFound
                           ? t('Aucun colis trouvé pour ce code', 'No parcel found for this code')
-                          : t('Suivi en direct ROVA', 'ROVA Live Tracking')}
+                          : t('Suivi en direct Rovia', 'Rovia Live Tracking')}
                       </h2>
                       <p className="text-xs text-[#777777] max-w-sm mx-auto leading-relaxed">
                         {t(
@@ -644,8 +644,8 @@ export function LiveTrackingWindow({
                         <ShieldCheck className="w-3.5 h-3.5 shrink-0 text-[#171717]" />
                         <span>
                           {t(
-                            'Suivi isolé et protégé ROVA · Mises à jour automatiques',
-                            'Isolated protected ROVA tracking · Automatic updates'
+                            'Suivi isolé et protégé Rovia · Mises à jour automatiques',
+                            'Isolated protected Rovia tracking · Automatic updates'
                           )}
                         </span>
                       </div>
