@@ -144,7 +144,7 @@ export function RovaMap({
         : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
       {
         attribution: geoapifyKey
-          ? 'Powered by <a href="https://www.geoapify.com/">Geoapify</a> | &copy; OpenStreetMap contributors'
+          ? 'Powered by <a href="https://www.geoapify.com/">Geoapify</a> | &copy; <a href="https://openmaptiles.org/">OpenMapTiles</a> | &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>'
           : '&copy; OpenStreetMap contributors &copy; CARTO',
         subdomains: geoapifyKey ? undefined : 'abcd',
         maxZoom: 19,
