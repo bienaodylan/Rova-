@@ -16,7 +16,7 @@ interface RovaShipmentsViewProps {
 }
 
 export function RovaShipmentsView({ onOpenPublicTracking }: RovaShipmentsViewProps) {
-  const { lang, t } = useLanguage();
+  const { lang, t, formatLocalMoney } = useLanguage();
   const {
     loadingData,
     deliveries,
@@ -280,7 +280,7 @@ export function RovaShipmentsView({ onOpenPublicTracking }: RovaShipmentsViewPro
 
                         <div className="text-right shrink-0 flex flex-col items-end gap-1">
                           <span className="font-mono text-xs font-semibold text-neutral-950 tabular-nums">
-                            {formatMoney(del.quotedPrice, del.currency)}
+                            {formatLocalMoney(del.quotedPrice, del.currency)}
                           </span>
                           <ChevronRight className="w-4 h-4 text-neutral-400 xl:hidden" />
                         </div>
