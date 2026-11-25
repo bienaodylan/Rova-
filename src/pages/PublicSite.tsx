@@ -21,6 +21,7 @@ import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { PAYMENT_METHODS_EN, VEHICLE_CATALOG } from '../lib/logistics';
 import { RovaMap } from '../components/RovaMap';
+import { RovaWordmark } from '../components/RovaSplashScreen';
 import { GeoPlace } from '../types/rova';
 import { LanguageSelector, useLanguage } from '../context/LanguageContext';
 import type { ActiveInterface } from '../components/InterfaceExplorerBar';
@@ -172,8 +173,8 @@ export function PublicSite({
       title: t('Centre d’Opérations', 'Operations Center'),
       subtitle: t('Dispatch, Flotte & Contrôle', 'Dispatch, Fleet & Control'),
       description: t(
-        'Carte opérationnelle en direct, validation des livreurs, gestion de la flotte ROVA, équipements de marque, partenaires et moteur tarifaire.',
-        'Live operations map, driver verification queue, ROVA Fleet management, branded equipment inventory, partners, and pricing engine.'
+        'Carte opérationnelle en direct, validation des livreurs, gestion de la flotte Rovia, équipements de marque, partenaires et moteur tarifaire.',
+        'Live operations map, driver verification queue, Rovia Fleet management, branded equipment inventory, partners, and pricing engine.'
       ),
       icon: Shield,
     },
@@ -194,13 +195,7 @@ export function PublicSite({
       {/* Top Bar — 3-zone contract */}
       <header className="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-neutral-200">
         <div className="max-w-7xl mx-auto px-5 sm:px-8 h-16 flex items-center justify-between gap-8">
-          <button
-            type="button"
-            onClick={() => navigate('home')}
-            className="font-display text-lg font-extrabold tracking-[0.2em] text-neutral-950 whitespace-nowrap shrink-0"
-          >
-            ROVA
-          </button>
+          <button type="button" onClick={() => navigate('home')} aria-label="Rovia" className="whitespace-nowrap shrink-0"><RovaWordmark size="md" /></button>
 
           <nav className="hidden md:flex items-center gap-7 text-sm font-medium text-neutral-600">
             {navItems.map((item) => (
@@ -293,8 +288,8 @@ export function PublicSite({
                     </h1>
                     <p className="text-base sm:text-lg text-neutral-600 leading-relaxed max-w-xl">
                       {t(
-                        'Expédiez instantanément, planifiez vos tournées multi-arrêts, réservez la flotte ROVA et offrez un suivi GPS précis à chaque destinataire depuis une plateforme unifiée.',
-                        'Dispatch instantly, schedule multi-stop routes, reserve ROVA fleet vehicles, and deliver live GPS tracking to every recipient from one unified platform.'
+                        'Expédiez instantanément, planifiez vos tournées multi-arrêts, réservez la flotte Rovia et offrez un suivi GPS précis à chaque destinataire depuis une plateforme unifiée.',
+                        'Dispatch instantly, schedule multi-stop routes, reserve Rovia fleet vehicles, and deliver live GPS tracking to every recipient from one unified platform.'
                       )}
                     </p>
 
@@ -434,7 +429,7 @@ export function PublicSite({
               </div>
             </section>
 
-            {/* 3. HOW ROVA WORKS */}
+            {/* 3. HOW Rovia WORKS */}
             <section className="max-w-7xl mx-auto px-5 sm:px-8 py-16 lg:py-24 space-y-12">
               <div className="max-w-2xl space-y-3">
                 <p className="text-xs font-medium text-neutral-500">
@@ -519,8 +514,8 @@ export function PublicSite({
                   </h3>
                   <p className="text-sm text-neutral-600 leading-relaxed">
                     {t(
-                      'Importez vos commandes en CSV ou ajoutez vos arrêts manuellement. ROVA optimise l’ordre du trajet et isole le suivi pour chaque client.',
-                      'Import orders via CSV or add stops manually. ROVA optimizes stop sequence and isolates tracking per recipient.'
+                      'Importez vos commandes en CSV ou ajoutez vos arrêts manuellement. Rovia optimise l’ordre du trajet et isole le suivi pour chaque client.',
+                      'Import orders via CSV or add stops manually. Rovia optimizes stop sequence and isolates tracking per recipient.'
                     )}
                   </p>
                 </div>
@@ -530,7 +525,7 @@ export function PublicSite({
                     <Truck className="w-4 h-4" />
                   </div>
                   <h3 className="font-display text-xl font-bold">
-                    {t('Réservation & Flotte ROVA', 'Scheduled & ROVA Fleet')}
+                    {t('Réservation & Flotte Rovia', 'Scheduled & Rovia Fleet')}
                   </h3>
                   <p className="text-sm text-neutral-600 leading-relaxed">
                     {t(
@@ -623,8 +618,8 @@ export function PublicSite({
                   </p>
                   <h2 className="font-display text-3xl sm:text-4xl font-bold tracking-tight text-balance">
                     {t(
-                      'Rejoignez le réseau ROVA en tant que livreur ou partenaire de flotte.',
-                      'Join the ROVA network as a driver or fleet partner.'
+                      'Rejoignez le réseau Rovia en tant que livreur ou partenaire de flotte.',
+                      'Join the Rovia network as a driver or fleet partner.'
                     )}
                   </h2>
                   <p className="text-sm sm:text-base text-neutral-300 leading-relaxed max-w-xl">
@@ -716,7 +711,7 @@ export function PublicSite({
               <div className="space-y-8">
                 <div className="space-y-3">
                   <h1 className="font-display text-3xl sm:text-4xl font-bold tracking-tight">
-                    {t('ROVA pour les entreprises', 'ROVA for Business')}
+                    {t('Rovia pour les entreprises', 'Rovia for Business')}
                   </h1>
                   <p className="text-base text-neutral-600 max-w-2xl leading-relaxed">
                     {t(
@@ -759,7 +754,7 @@ export function PublicSite({
             {page === 'fleet' && (
               <div className="space-y-8">
                 <h1 className="font-display text-3xl sm:text-4xl font-bold tracking-tight">
-                  {t('Flotte ROVA', 'ROVA Fleet')}
+                  {t('Flotte Rovia', 'Rovia Fleet')}
                 </h1>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                   {VEHICLE_CATALOG.map((v) => (
@@ -785,12 +780,12 @@ export function PublicSite({
             {page === 'drivers' && (
               <div className="space-y-6">
                 <h1 className="font-display text-3xl sm:text-4xl font-bold tracking-tight">
-                  {t('Réseau de livreurs ROVA', 'ROVA Driver Network')}
+                  {t('Réseau de livreurs Rovia', 'Rovia Driver Network')}
                 </h1>
                 <p className="text-base text-neutral-600 max-w-2xl leading-relaxed">
                   {t(
-                    'Inscrivez votre véhicule, faites valider votre dossier par le Centre d’Opérations ROVA et passez en ligne pour accepter des livraisons commerciales.',
-                    'Register your vehicle, get verified by ROVA Operations, and go online to accept commercial deliveries.'
+                    'Inscrivez votre véhicule, faites valider votre dossier par le Centre d’Opérations Rovia et passez en ligne pour accepter des livraisons commerciales.',
+                    'Register your vehicle, get verified by Rovia Operations, and go online to accept commercial deliveries.'
                   )}
                 </p>
                 <div className="flex flex-wrap gap-3">
@@ -822,8 +817,8 @@ export function PublicSite({
                 </h1>
                 <p className="text-base text-neutral-600 max-w-2xl leading-relaxed">
                   {t(
-                    'Déployez vos véhicules, entrepôts ou capacités de transport sur la plateforme ROVA avec des conditions contractuelles transparentes.',
-                    'Deploy your vehicles, warehouses, or transport capacity on ROVA with transparent contract terms.'
+                    'Déployez vos véhicules, entrepôts ou capacités de transport sur la plateforme Rovia avec des conditions contractuelles transparentes.',
+                    'Deploy your vehicles, warehouses, or transport capacity on Rovia with transparent contract terms.'
                   )}
                 </p>
                 <button
@@ -834,7 +829,7 @@ export function PublicSite({
                   }}
                   className="px-6 py-3 rounded-full bg-neutral-950 text-white text-sm font-medium"
                 >
-                  {t('Devenir partenaire ROVA', 'Become a ROVA Partner')}
+                  {t('Devenir partenaire Rovia', 'Become a Rovia Partner')}
                 </button>
               </div>
             )}
@@ -843,7 +838,7 @@ export function PublicSite({
               <div className="space-y-4 max-w-2xl">
                 <h1 className="font-display text-3xl font-bold tracking-tight">
                   {page === 'about'
-                    ? t('À propos de ROVA', 'About ROVA')
+                    ? t('À propos de Rovia', 'About Rovia')
                     : page === 'privacy'
                     ? t('Politique de confidentialité', 'Privacy Policy')
                     : t('Conditions d’utilisation', 'Terms of Service')}
@@ -851,8 +846,8 @@ export function PublicSite({
                 <p className="text-sm sm:text-base text-neutral-600 leading-relaxed">
                   {page === 'about'
                     ? t(
-                        'ROVA construit l’infrastructure logistique moderne dédiée aux commerçants, grossistes et entreprises. Notre plateforme unifie la création de courses, le dispatch temps réel, la gestion de flotte et le suivi destinataire isolé.',
-                        'ROVA builds modern commercial logistics infrastructure for merchants, wholesalers, and enterprises, unifying dispatch, fleet management, and isolated recipient tracking.'
+                        'Rovia construit l’infrastructure logistique moderne dédiée aux commerçants, grossistes et entreprises. Notre plateforme unifie la création de courses, le dispatch temps réel, la gestion de flotte et le suivi destinataire isolé.',
+                        'Rovia builds modern commercial logistics infrastructure for merchants, wholesalers, and enterprises, unifying dispatch, fleet management, and isolated recipient tracking.'
                       )
                     : page === 'privacy'
                     ? t(
@@ -860,8 +855,8 @@ export function PublicSite({
                         'Merchant, driver, and recipient data is strictly isolated. Public tracking links expose only the relevant stop status and location without disclosing other recipients.'
                       )
                     : t(
-                        'L’utilisation des services ROVA est réservée aux livraisons commerciales conformes aux réglementations locales de transport. Les chauffeurs doivent être vérifiés par le Centre d’Opérations avant de passer en ligne.',
-                        'ROVA services are designed for compliant commercial logistics. Drivers must be verified by Operations before going online.'
+                        'L’utilisation des services Rovia est réservée aux livraisons commerciales conformes aux réglementations locales de transport. Les chauffeurs doivent être vérifiés par le Centre d’Opérations avant de passer en ligne.',
+                        'Rovia services are designed for compliant commercial logistics. Drivers must be verified by Operations before going online.'
                       )}
                 </p>
               </div>
@@ -876,7 +871,7 @@ export function PublicSite({
           <section className="max-w-3xl mx-auto px-5 sm:px-8 py-14 lg:py-20 space-y-8">
             <div className="space-y-2">
               <h1 className="font-display text-3xl sm:text-4xl font-bold tracking-tight">
-                {t('Contactez l’équipe ROVA', 'Contact the ROVA Team')}
+                {t('Contactez l’équipe Rovia', 'Contact the Rovia Team')}
               </h1>
               <p className="text-sm sm:text-base text-neutral-600">
                 {t(
@@ -894,8 +889,8 @@ export function PublicSite({
                 </p>
                 <p className="text-sm text-neutral-600">
                   {t(
-                    'Votre demande a été transmise à notre Centre d’Opérations ROVA.',
-                    'Your inquiry has been logged in ROVA Operations.'
+                    'Votre demande a été transmise à notre Centre d’Opérations Rovia.',
+                    'Your inquiry has been logged in Rovia Operations.'
                   )}
                 </p>
               </div>
@@ -982,7 +977,7 @@ export function PublicSite({
       <footer className="border-t border-neutral-200 bg-white">
         <div className="max-w-7xl mx-auto px-5 sm:px-8 py-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
           <div>
-            <span className="font-display text-base font-extrabold tracking-[0.2em]">ROVA</span>
+            <RovaWordmark size="md" />
             <p className="text-xs text-neutral-500 mt-1">
               {t('La logistique commerciale nouvelle génération.', 'Commercial logistics infrastructure.')}
             </p>
@@ -1057,7 +1052,7 @@ export function PublicSite({
                   : waitlistPlatform === 'android'
                   ? t('Accès anticipé Android', 'Android Early Access')
                   : waitlistPlatform === 'driver'
-                  ? t('Candidature livreur ROVA', 'ROVA Driver Application')
+                  ? t('Candidature livreur Rovia', 'Rovia Driver Application')
                   : t('Demande de partenariat', 'Partnership Inquiry')}
               </h3>
               <button
@@ -1073,8 +1068,8 @@ export function PublicSite({
               <div className="space-y-4 py-2">
                 <p className="text-sm text-neutral-700">
                   {t(
-                    'Votre inscription a bien été enregistrée dans notre base ROVA.',
-                    'Your registration has been saved in ROVA.'
+                    'Votre inscription a bien été enregistrée dans notre base Rovia.',
+                    'Your registration has been saved in Rovia.'
                   )}
                 </p>
                 <button
