@@ -1,6 +1,7 @@
 import express from 'express';
 import { createServer as createViteServer } from 'vite';
 import path from 'path';
+import net from 'net';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 
@@ -66,6 +67,248 @@ const GHANA_PREFIX_CENTROIDS: Record<string, { lat: number; lng: number; region:
   WS: { lat: 4.896, lng: -1.756, region: 'Sekondi-Takoradi, Western, Ghana' },
   NT: { lat: 9.4034, lng: -0.8424, region: 'Tamale, Northern, Ghana' },
 };
+
+// ============================================================================
+// 0. INTELLIGENT BACKEND REGIONAL DETECTION (Edge Headers + IP Geo + TZ + Lang)
+// ============================================================================
+interface RegionProfile {
+  countryCode: string;
+  countryName: string;
+  currency: string;
+  city: string;
+  lat: number;
+  lng: number;
+  defaultLang: 'fr' | 'en';
+}
+
+const REGION_PROFILES: Record<string, RegionProfile> = {
+  CI: { countryCode: 'CI', countryName: 'Côte d’Ivoire', currency: 'XOF', city: 'Abidjan', lat: 5.3235, lng: -4.0267, defaultLang: 'fr' },
+  SN: { countryCode: 'SN', countryName: 'Sénégal', currency: 'XOF', city: 'Dakar', lat: 14.7167, lng: -17.4677, defaultLang: 'fr' },
+  BJ: { countryCode: 'BJ', countryName: 'Bénin', currency: 'XOF', city: 'Cotonou', lat: 6.3703, lng: 2.3912, defaultLang: 'fr' },
+  TG: { countryCode: 'TG', countryName: 'Togo', currency: 'XOF', city: 'Lomé', lat: 6.1319, lng: 1.2228, defaultLang: 'fr' },
+  BF: { countryCode: 'BF', countryName: 'Burkina Faso', currency: 'XOF', city: 'Ouagadougou', lat: 12.3714, lng: -1.5197, defaultLang: 'fr' },
+  ML: { countryCode: 'ML', countryName: 'Mali', currency: 'XOF', city: 'Bamako', lat: 12.6392, lng: -8.0029, defaultLang: 'fr' },
+  NE: { countryCode: 'NE', countryName: 'Niger', currency: 'XOF', city: 'Niamey', lat: 13.5116, lng: 2.1254, defaultLang: 'fr' },
+  CM: { countryCode: 'CM', countryName: 'Cameroun', currency: 'XAF', city: 'Douala', lat: 4.0511, lng: 9.7679, defaultLang: 'fr' },
+  GA: { countryCode: 'GA', countryName: 'Gabon', currency: 'XAF', city: 'Libreville', lat: 0.4162, lng: 9.4673, defaultLang: 'fr' },
+  CG: { countryCode: 'CG', countryName: 'Congo', currency: 'XAF', city: 'Brazzaville', lat: -4.2634, lng: 15.2429, defaultLang: 'fr' },
+  CD: { countryCode: 'CD', countryName: 'RD Congo', currency: 'USD', city: 'Kinshasa', lat: -4.4419, lng: 15.2663, defaultLang: 'fr' },
+  GH: { countryCode: 'GH', countryName: 'Ghana', currency: 'GHS', city: 'Accra', lat: 5.6037, lng: -0.187, defaultLang: 'en' },
+  NG: { countryCode: 'NG', countryName: 'Nigeria', currency: 'NGN', city: 'Lagos', lat: 6.5244, lng: 3.3792, defaultLang: 'en' },
+  KE: { countryCode: 'KE', countryName: 'Kenya', currency: 'KES', city: 'Nairobi', lat: -1.2921, lng: 36.8219, defaultLang: 'en' },
+  ZA: { countryCode: 'ZA', countryName: 'Afrique du Sud', currency: 'ZAR', city: 'Johannesburg', lat: -26.2041, lng: 28.0473, defaultLang: 'en' },
+  TZ: { countryCode: 'TZ', countryName: 'Tanzanie', currency: 'TZS', city: 'Dar es Salaam', lat: -6.7924, lng: 39.2083, defaultLang: 'en' },
+  UG: { countryCode: 'UG', countryName: 'Ouganda', currency: 'UGX', city: 'Kampala', lat: 0.3476, lng: 32.5825, defaultLang: 'en' },
+  MA: { countryCode: 'MA', countryName: 'Maroc', currency: 'MAD', city: 'Casablanca', lat: 33.5731, lng: -7.5898, defaultLang: 'fr' },
+  TN: { countryCode: 'TN', countryName: 'Tunisie', currency: 'EUR', city: 'Tunis', lat: 36.8065, lng: 10.1815, defaultLang: 'fr' },
+  FR: { countryCode: 'FR', countryName: 'France', currency: 'EUR', city: 'Paris', lat: 48.8566, lng: 2.3522, defaultLang: 'fr' },
+  BE: { countryCode: 'BE', countryName: 'Belgique', currency: 'EUR', city: 'Bruxelles', lat: 50.8503, lng: 4.3517, defaultLang: 'fr' },
+  CH: { countryCode: 'CH', countryName: 'Suisse', currency: 'CHF', city: 'Genève', lat: 46.2044, lng: 6.1432, defaultLang: 'fr' },
+  GB: { countryCode: 'GB', countryName: 'Royaume-Uni', currency: 'GBP', city: 'Londres', lat: 51.5072, lng: -0.1276, defaultLang: 'en' },
+  DE: { countryCode: 'DE', countryName: 'Allemagne', currency: 'EUR', city: 'Berlin', lat: 52.52, lng: 13.405, defaultLang: 'en' },
+  ES: { countryCode: 'ES', countryName: 'Espagne', currency: 'EUR', city: 'Madrid', lat: 40.4168, lng: -3.7038, defaultLang: 'en' },
+  IT: { countryCode: 'IT', countryName: 'Italie', currency: 'EUR', city: 'Milan', lat: 45.4642, lng: 9.19, defaultLang: 'en' },
+  CA: { countryCode: 'CA', countryName: 'Canada', currency: 'CAD', city: 'Montréal', lat: 45.5017, lng: -73.5673, defaultLang: 'fr' },
+  US: { countryCode: 'US', countryName: 'États-Unis', currency: 'USD', city: 'New York', lat: 40.7128, lng: -74.006, defaultLang: 'en' },
+  AE: { countryCode: 'AE', countryName: 'Émirats arabes unis', currency: 'AED', city: 'Dubaï', lat: 25.2048, lng: 55.2708, defaultLang: 'en' },
+  AU: { countryCode: 'AU', countryName: 'Australie', currency: 'AUD', city: 'Sydney', lat: -33.8688, lng: 151.2093, defaultLang: 'en' },
+  JP: { countryCode: 'JP', countryName: 'Japon', currency: 'JPY', city: 'Tokyo', lat: 35.6762, lng: 139.6503, defaultLang: 'en' },
+  CN: { countryCode: 'CN', countryName: 'Chine', currency: 'CNY', city: 'Shanghai', lat: 31.2304, lng: 121.4737, defaultLang: 'en' },
+  IN: { countryCode: 'IN', countryName: 'Inde', currency: 'INR', city: 'Mumbai', lat: 19.076, lng: 72.8777, defaultLang: 'en' },
+};
+
+const IANA_TZ_TO_COUNTRY: Record<string, string> = {
+  'Africa/Abidjan': 'CI',
+  'Africa/Accra': 'GH',
+  'Africa/Dakar': 'SN',
+  'Africa/Porto-Novo': 'BJ',
+  'Africa/Lome': 'TG',
+  'Africa/Ouagadougou': 'BF',
+  'Africa/Bamako': 'ML',
+  'Africa/Niamey': 'NE',
+  'Africa/Douala': 'CM',
+  'Africa/Libreville': 'GA',
+  'Africa/Brazzaville': 'CG',
+  'Africa/Kinshasa': 'CD',
+  'Africa/Lagos': 'NG',
+  'Africa/Nairobi': 'KE',
+  'Africa/Johannesburg': 'ZA',
+  'Africa/Dar_es_Salaam': 'TZ',
+  'Africa/Kampala': 'UG',
+  'Africa/Casablanca': 'MA',
+  'Africa/Tunis': 'TN',
+  'Europe/Paris': 'FR',
+  'Europe/Brussels': 'BE',
+  'Europe/Zurich': 'CH',
+  'Europe/London': 'GB',
+  'Europe/Berlin': 'DE',
+  'Europe/Madrid': 'ES',
+  'Europe/Rome': 'IT',
+  'America/Toronto': 'CA',
+  'America/Montreal': 'CA',
+  'America/Vancouver': 'CA',
+  'America/New_York': 'US',
+  'America/Chicago': 'US',
+  'America/Denver': 'US',
+  'America/Los_Angeles': 'US',
+  'Asia/Dubai': 'AE',
+  'Australia/Sydney': 'AU',
+  'Asia/Tokyo': 'JP',
+  'Asia/Shanghai': 'CN',
+  'Asia/Kolkata': 'IN',
+};
+
+const ipGeoCache = new Map<string, { countryCode: string; expiresAt: number }>();
+
+function isPublicIp(raw: string): boolean {
+  const ip = raw.trim().replace(/^::ffff:/, '');
+  const version = net.isIP(ip);
+  if (version === 0) return false;
+  if (version === 4) {
+    const parts = ip.split('.').map(Number);
+    if (parts[0] === 10 || parts[0] === 127 || parts[0] === 0) return false;
+    if (parts[0] === 169 && parts[1] === 254) return false;
+    if (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) return false;
+    if (parts[0] === 192 && parts[1] === 168) return false;
+    if (parts[0] === 100 && parts[1] >= 64 && parts[1] <= 127) return false;
+    return true;
+  }
+  const lower = ip.toLowerCase();
+  if (lower === '::1' || lower === '::' || lower.startsWith('fc') || lower.startsWith('fd') || lower.startsWith('fe80')) {
+    return false;
+  }
+  return true;
+}
+
+function extractClientIp(req: express.Request): string | null {
+  const forwarded = req.headers['x-forwarded-for'];
+  const candidates: string[] = [];
+  if (typeof forwarded === 'string') {
+    candidates.push(...forwarded.split(',').map((s) => s.trim()));
+  }
+  if (req.ip) candidates.push(req.ip);
+  for (const raw of candidates) {
+    const clean = raw.replace(/^::ffff:/, '');
+    if (isPublicIp(clean)) return clean;
+  }
+  return null;
+}
+
+function parseAcceptLanguageCountry(header: string | undefined): string | null {
+  if (!header) return null;
+  const parts = header.split(',').map((p) => p.split(';')[0].trim());
+  for (const tag of parts) {
+    const match = tag.match(/^[a-z]{2,3}[-_]([A-Z]{2})$/i);
+    if (match) {
+      const code = match[1].toUpperCase();
+      if (REGION_PROFILES[code]) return code;
+    }
+  }
+  return null;
+}
+
+app.get('/api/region/detect', async (req, res) => {
+  try {
+    let detectedCode: string | null = null;
+    let source: 'edge_header' | 'ip_geo' | 'timezone' | 'accept_language' | 'default' = 'default';
+
+    // 1. Edge / Cloud proxy geo headers (Google Front End, Cloud Run, Cloudflare, Vercel)
+    const headerCandidates = [
+      req.headers['x-appengine-country'],
+      req.headers['cf-ipcountry'],
+      req.headers['x-vercel-ip-country'],
+      req.headers['x-country-code'],
+      req.headers['x-client-region'],
+    ];
+    for (const h of headerCandidates) {
+      if (typeof h === 'string') {
+        const code = h.trim().toUpperCase();
+        if (/^[A-Z]{2}$/.test(code) && code !== 'ZZ' && code !== 'XX' && REGION_PROFILES[code]) {
+          detectedCode = code;
+          source = 'edge_header';
+          break;
+        }
+      }
+    }
+
+    // 2. Public Client IP geolocation lookup (strictly allowlisted HTTPS host + bounded TTL cache)
+    if (!detectedCode) {
+      const clientIp = extractClientIp(req);
+      if (clientIp) {
+        const cached = ipGeoCache.get(clientIp);
+        if (cached && cached.expiresAt > Date.now()) {
+          if (REGION_PROFILES[cached.countryCode]) {
+            detectedCode = cached.countryCode;
+            source = 'ip_geo';
+          }
+        } else {
+          try {
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), 2500);
+            const upstream = await fetch(
+              `https://get.geojs.io/v1/ip/country/${encodeURIComponent(clientIp)}.json`,
+              {
+                headers: { Accept: 'application/json', 'User-Agent': 'ROVA-Logistics-Platform/1.0' },
+                signal: controller.signal,
+              }
+            );
+            clearTimeout(timer);
+            if (upstream.ok) {
+              const payload = (await upstream.json()) as { country?: string };
+              const code = typeof payload.country === 'string' ? payload.country.trim().toUpperCase() : '';
+              if (/^[A-Z]{2}$/.test(code) && REGION_PROFILES[code]) {
+                if (ipGeoCache.size >= 1000) {
+                  const firstKey = ipGeoCache.keys().next().value;
+                  if (firstKey) ipGeoCache.delete(firstKey);
+                }
+                ipGeoCache.set(clientIp, { countryCode: code, expiresAt: Date.now() + 6 * 3600_000 });
+                detectedCode = code;
+                source = 'ip_geo';
+              }
+            }
+          } catch {
+            // Fall through to timezone / Accept-Language signals silently
+          }
+        }
+      }
+    }
+
+    // 3. Validated browser IANA timezone hint (high accuracy even behind proxies)
+    if (!detectedCode && typeof req.query.tz === 'string') {
+      const tz = req.query.tz.trim();
+      if (/^[A-Za-z0-9_/-]{1,64}$/.test(tz) && IANA_TZ_TO_COUNTRY[tz]) {
+        const code = IANA_TZ_TO_COUNTRY[tz];
+        if (REGION_PROFILES[code]) {
+          detectedCode = code;
+          source = 'timezone';
+        }
+      }
+    }
+
+    // 4. Accept-Language regional subtag fallback
+    if (!detectedCode) {
+      const langCode = parseAcceptLanguageCountry(
+        typeof req.headers['accept-language'] === 'string' ? req.headers['accept-language'] : undefined
+      );
+      if (langCode) {
+        detectedCode = langCode;
+        source = 'accept_language';
+      }
+    }
+
+    const profile = REGION_PROFILES[detectedCode || 'CI'] || REGION_PROFILES.CI;
+    return res.json({
+      ...profile,
+      source,
+    });
+  } catch (err) {
+    console.error('Region detect error:', err);
+    return res.json({
+      ...REGION_PROFILES.CI,
+      source: 'default',
+    });
+  }
+});
 
 // ============================================================================
 // 1. REAL GEOCODING SEARCH (OpenStreetMap Nominatim + GPS + GhanaPostGPS)
@@ -283,7 +526,7 @@ function validatePoints(raw: unknown): CoordPoint[] | null {
 
 app.post('/api/geo/route', async (req, res) => {
   try {
-    const points = validatePoints(req.body?.points);
+    const points = validatePoints(req.body?.points ?? req.body?.coordinates);
     if (!points) {
       return res.status(400).json({ error: 'Provide 2 to 40 valid coordinate points' });
     }
@@ -312,11 +555,13 @@ app.post('/api/geo/route', async (req, res) => {
         };
         const route = data.routes?.[0];
         if (route) {
+          const latLngPath = route.geometry.coordinates.map(([lng, lat]) => [lat, lng]);
           return res.json({
             provider: 'osrm',
             distanceKm: Number((route.distance / 1000).toFixed(2)),
             durationMin: Math.max(3, Math.round(route.duration / 60)),
-            coordinates: route.geometry.coordinates.map(([lng, lat]) => [lat, lng]),
+            coordinates: latLngPath,
+            geometry: latLngPath,
           });
         }
       }
@@ -329,11 +574,13 @@ app.post('/api/geo/route', async (req, res) => {
     for (let i = 0; i < points.length - 1; i++) {
       totalKm += haversineKm(points[i].lat, points[i].lng, points[i + 1].lat, points[i + 1].lng) * 1.28;
     }
+    const fallbackPath = points.map((p) => [p.lat, p.lng]);
     return res.json({
       provider: 'haversine_fallback',
       distanceKm: Number(totalKm.toFixed(2)),
       durationMin: Math.max(5, Math.round((totalKm / 26) * 60)),
-      coordinates: points.map((p) => [p.lat, p.lng]),
+      coordinates: fallbackPath,
+      geometry: fallbackPath,
     });
   } catch (err) {
     console.error('Route calculation error:', err);
@@ -343,7 +590,7 @@ app.post('/api/geo/route', async (req, res) => {
 
 app.post('/api/geo/optimize', async (req, res) => {
   try {
-    const pickup = req.body?.pickup as CoordPoint | undefined;
+    const pickup = (req.body?.pickup ?? req.body?.origin) as CoordPoint | undefined;
     const stops = req.body?.stops as Array<{ id: string; lat: number; lng: number }> | undefined;
     if (
       !pickup ||

@@ -14,6 +14,7 @@ import {
   updateDoc,
 } from 'firebase/firestore';
 import {
+  appleProvider,
   auth,
   BOOTSTRAP_ADMIN_EMAIL,
   db,
@@ -28,8 +29,10 @@ interface AuthContextValue {
   profile: RovaUser | null;
   loading: boolean;
   authError: string | null;
+  clearAuthError: () => void;
   isAdmin: boolean;
   signInWithGoogle: () => Promise<void>;
+  signInWithApple: () => Promise<void>;
   logout: () => Promise<void>;
   completeOnboarding: (role: UserRole, displayName: string, phone: string) => Promise<void>;
   updateProfileFields: (fields: Partial<Pick<RovaUser, 'displayName' | 'phone' | 'businessId' | 'role'>>) => Promise<void>;
@@ -107,13 +110,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     profile?.role === 'operations_manager' ||
     profile?.role === 'dispatcher';
 
+  const clearAuthError = () => setAuthError(null);
+
+  const formatAuthError = (err: unknown, providerName: 'Google' | 'Apple'): string => {
+    const code = typeof err === 'object' && err !== null && 'code' in err ? String((err as { code?: string }).code) : '';
+    if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') {
+      return `Connexion ${providerName} annulée.`;
+    }
+    if (code === 'auth/popup-blocked') {
+      return `Votre navigateur a bloqué la fenêtre de connexion ${providerName}. Autorisez les popups pour continuer.`;
+    }
+    if (code === 'auth/operation-not-allowed' || code === 'auth/configuration-not-found') {
+      return providerName === 'Apple'
+        ? 'La connexion Apple doit être activée dans la console Firebase (Authentication → Sign-in method → Apple).'
+        : 'La connexion Google n’est pas activée dans la console Firebase.';
+    }
+    if (code === 'auth/account-exists-with-different-credential') {
+      return 'Un compte existe déjà avec cette adresse e-mail via un autre mode de connexion.';
+    }
+    return err instanceof Error ? err.message : `Impossible de se connecter avec ${providerName}.`;
+  };
+
   const signInWithGoogle = async () => {
     setAuthError(null);
     try {
       await signInWithPopup(auth, googleProvider);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Unable to sign in with Google.';
-      setAuthError(msg);
+      setAuthError(formatAuthError(err, 'Google'));
+      throw err;
+    }
+  };
+
+  const signInWithApple = async () => {
+    setAuthError(null);
+    try {
+      await signInWithPopup(auth, appleProvider);
+    } catch (err) {
+      setAuthError(formatAuthError(err, 'Apple'));
       throw err;
     }
   };
@@ -169,8 +202,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         profile,
         loading,
         authError,
+        clearAuthError,
         isAdmin,
         signInWithGoogle,
+        signInWithApple,
         logout,
         completeOnboarding,
         updateProfileFields,

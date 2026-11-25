@@ -10,7 +10,7 @@ import { getEffectivePricingRule, VEHICLE_CATALOG } from '../lib/logistics';
 import { VehicleCategory } from '../types/rova';
 
 export function ReservationSheet() {
-  const { lang, t, formatLocalMoney } = useLanguage();
+  const { lang, t, formatLocalMoney, region } = useLanguage();
   const {
     reservationSheetOpen,
     closeReservationSheet,
@@ -33,8 +33,8 @@ export function ReservationSheet() {
   const [endTime, setEndTime] = useState('13:00');
   const [pickupAddress, setPickupAddress] = useState(business?.defaultPickupAddress || '');
   const [pickupCoords, setPickupCoords] = useState({
-    lat: business?.defaultPickupLat ?? 5.3235,
-    lng: business?.defaultPickupLng ?? -4.0267,
+    lat: business?.defaultPickupLat ?? region.lat,
+    lng: business?.defaultPickupLng ?? region.lng,
   });
   const [destinationsSummary, setDestinationsSummary] = useState('');
   const [cargoRequirements, setCargoRequirements] = useState('');

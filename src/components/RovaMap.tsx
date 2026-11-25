@@ -131,10 +131,12 @@ function RovaAdvancedMarker({
 }
 
 function GoogleMapCameraAndRoute({
+  center,
   markers,
   routeCoordinates,
   panTarget,
 }: {
+  center: [number, number];
   markers: MapMarkerItem[];
   routeCoordinates: [number, number][];
   panTarget: { lat: number; lng: number; zoom: number; nonce: number } | null;
@@ -144,6 +146,7 @@ function GoogleMapCameraAndRoute({
   const coreLib = useMapsLibrary('core');
   const polylineRef = useRef<google.maps.Polyline | null>(null);
   const lastBoundsKeyRef = useRef<string>('');
+  const lastCenterKeyRef = useRef<string>('');
 
   // Render route polyline cleanly via Maps JS SDK
   useEffect(() => {
@@ -228,6 +231,17 @@ function GoogleMapCameraAndRoute({
       }
     }
   }, [map, coreLib, markers, routeCoordinates]);
+
+  // Pan smoothly when default region center updates and no markers/route pin the camera
+  useEffect(() => {
+    if (!map || markers.length > 0 || routeCoordinates.length >= 2) return;
+    const [lat, lng] = center;
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+    const key = `${lat.toFixed(4)},${lng.toFixed(4)}`;
+    if (key === lastCenterKeyRef.current) return;
+    lastCenterKeyRef.current = key;
+    map.panTo({ lat, lng });
+  }, [map, center, markers.length, routeCoordinates.length]);
 
   // Explicit pan/zoom when user selects an autocomplete place or clicks GPS
   useEffect(() => {
@@ -608,7 +622,13 @@ function GoogleRovaMap({
         </div>
       )}
 
-      <div className={`w-full ${heightClass}`}>
+      <div className={`relative w-full min-h-[220px] touch-none ${heightClass}`}>
+        {loadingStatus === APILoadingStatus.LOADING && (
+          <div className="absolute inset-0 z-[5] flex items-center justify-center bg-neutral-100/90 text-xs text-neutral-500 gap-2">
+            <Loader2 className="w-4 h-4 animate-spin text-neutral-700" />
+            <span>{t('Chargement de Google Maps...', 'Loading Google Maps...')}</span>
+          </div>
+        )}
         <GoogleMap
           mapId="DEMO_MAP_ID"
           defaultCenter={defaultCenter}
@@ -621,9 +641,10 @@ function GoogleRovaMap({
           clickableIcons={false}
           internalUsageAttributionIds={['gmp_mcp_codeassist_v1_aistudio']}
           onClick={handleMapClick}
-          style={{ width: '100%', height: '100%' }}
+          style={{ width: '100%', height: '100%', minHeight: 220 }}
         >
           <GoogleMapCameraAndRoute
+            center={center}
             markers={validMarkers}
             routeCoordinates={routeCoordinates}
             panTarget={panTarget}

@@ -12,6 +12,7 @@ import { DeliveryComposerSheet } from './components/DeliveryComposerSheet';
 import { ReservationSheet } from './components/ReservationSheet';
 import { ShipmentDetailSheet } from './components/ShipmentDetailSheet';
 import { SupportSheet, TrackLookupSheet } from './components/UtilitySheets';
+import { AuthSheet } from './components/AuthSheet';
 import { ToastBanner } from './components/ToastBanner';
 import { RovaHomeView } from './pages/RovaHomeView';
 import { RovaShipmentsView } from './pages/RovaShipmentsView';
@@ -74,8 +75,16 @@ function pushUrlState(tab: PrimaryTab, workspace: SecondaryWorkspace, trackToken
   }
 }
 
-function RovaApplicationShell() {
-  const { firebaseUser, profile, loading, authError, isAdmin, signInWithGoogle, completeOnboarding, logout } =
+function RovaApplicationShell({
+  authSheetOpen,
+  openAuthSheet,
+  closeAuthSheet,
+}: {
+  authSheetOpen: boolean;
+  openAuthSheet: () => void;
+  closeAuthSheet: () => void;
+}) {
+  const { firebaseUser, profile, loading, authError, isAdmin, completeOnboarding, logout } =
     useAuth();
   const { t } = useLanguage();
   const { activeDeliveries, toast, dismissToast } = useRovaApp();
@@ -181,11 +190,11 @@ function RovaApplicationShell() {
             </div>
           }
         >
-          {workspace === 'driver' && <DriverWorkspace onRequestSignIn={signInWithGoogle} />}
+          {workspace === 'driver' && <DriverWorkspace onRequestSignIn={openAuthSheet} />}
           {workspace === 'operations' && (
             <OperationsCenter
               onOpenTracking={openPublicTracking}
-              onRequestSignIn={signInWithGoogle}
+              onRequestSignIn={openAuthSheet}
             />
           )}
           {workspace === 'tracking' && (
@@ -241,6 +250,7 @@ function RovaApplicationShell() {
       <ShipmentDetailSheet onOpenPublicTracking={openPublicTracking} />
       <TrackLookupSheet onOpenTracking={openPublicTracking} />
       <SupportSheet />
+      <AuthSheet open={authSheetOpen} onClose={closeAuthSheet} />
 
       {/* Subtle Floating Toast Feedback */}
       <ToastBanner toast={toast} onDismiss={dismissToast} />
@@ -251,6 +261,8 @@ function RovaApplicationShell() {
 const GOOGLE_MAPS_API_KEY = (import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined)?.trim() || '';
 
 function GoogleMapsProvider({ children }: { children: React.ReactNode }) {
+  const { lang, region } = useLanguage();
+
   if (!GOOGLE_MAPS_API_KEY) {
     return <>{children}</>;
   }
@@ -258,7 +270,8 @@ function GoogleMapsProvider({ children }: { children: React.ReactNode }) {
   return (
     <APIProvider
       apiKey={GOOGLE_MAPS_API_KEY}
-      language="fr"
+      language={lang}
+      region={region.countryCode}
       libraries={['marker', 'places']}
     >
       {children}
@@ -267,10 +280,19 @@ function GoogleMapsProvider({ children }: { children: React.ReactNode }) {
 }
 
 function AppWithStore() {
-  const { signInWithGoogle } = useAuth();
+  const [authSheetOpen, setAuthSheetOpen] = useState(false);
+
+  const openAuthSheet = async () => {
+    setAuthSheetOpen(true);
+  };
+
   return (
-    <RovaAppProvider onSignIn={signInWithGoogle}>
-      <RovaApplicationShell />
+    <RovaAppProvider onSignIn={openAuthSheet}>
+      <RovaApplicationShell
+        authSheetOpen={authSheetOpen}
+        openAuthSheet={() => setAuthSheetOpen(true)}
+        closeAuthSheet={() => setAuthSheetOpen(false)}
+      />
     </RovaAppProvider>
   );
 }

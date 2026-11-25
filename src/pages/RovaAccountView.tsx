@@ -15,9 +15,10 @@ import {
   Trash2,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { LanguageSelector, useLanguage } from '../context/LanguageContext';
+import { AppCurrency, LanguageSelector, useLanguage } from '../context/LanguageContext';
 import { useRovaApp } from '../context/RovaAppContext';
 import { BottomSheet } from '../components/BottomSheet';
+import { AppleLogo, GoogleLogo } from '../components/AuthSheet';
 import { RovaMap } from '../components/RovaMap';
 import { AddressMapIllustration } from '../components/RovaIllustrations';
 import { useHideOnScroll } from '../hooks/useHideOnScroll';
@@ -29,8 +30,8 @@ interface RovaAccountViewProps {
 }
 
 export function RovaAccountView({ onOpenWorkspace }: RovaAccountViewProps) {
-  const { firebaseUser, profile, logout } = useAuth();
-  const { t, formatLocalMoney } = useLanguage();
+  const { firebaseUser, profile, logout, signInWithGoogle, signInWithApple } = useAuth();
+  const { t, formatLocalMoney, region, currency, setCurrency, refreshAutoRegion } = useLanguage();
   const {
     business,
     recipients,
@@ -208,13 +209,24 @@ export function RovaAccountView({ onOpenWorkspace }: RovaAccountViewProps) {
               </button>
             </>
           ) : (
-            <button
-              type="button"
-              onClick={() => void requestSignIn()}
-              className="px-5 py-2.5 rounded-full bg-neutral-950 text-white text-xs font-semibold hover:bg-neutral-800 transition-colors cursor-pointer"
-            >
-              {t('Connexion Google', 'Sign in with Google')}
-            </button>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => void signInWithGoogle().catch(() => {})}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-white border border-neutral-300 hover:border-neutral-950 text-neutral-950 text-xs font-semibold transition-colors cursor-pointer"
+              >
+                <GoogleLogo className="w-3.5 h-3.5" />
+                <span>Google</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => void signInWithApple().catch(() => {})}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-neutral-950 text-white text-xs font-semibold hover:bg-neutral-800 transition-colors cursor-pointer"
+              >
+                <AppleLogo className="w-3.5 h-3.5" />
+                <span>Apple</span>
+              </button>
+            </div>
           )}
         </div>
       </section>
@@ -359,6 +371,41 @@ export function RovaAccountView({ onOpenWorkspace }: RovaAccountViewProps) {
               </p>
             </div>
             <LanguageSelector compact />
+          </div>
+
+          <div className="p-4 flex flex-wrap items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-neutral-950 flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-red-600 shrink-0" aria-hidden="true" />
+                <span>{t('Région & devise automatiques', 'Automatic region & currency')}</span>
+              </p>
+              <p className="text-xs text-neutral-500">
+                {region.city}, {region.countryName} · {t('Détection serveur active', 'Server auto-detection active')}
+              </p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <select
+                aria-label={t('Devise affichée', 'Display currency')}
+                value={currency}
+                onChange={(e) => setCurrency(e.target.value as AppCurrency)}
+                className="rounded-full border border-neutral-200 bg-neutral-50 px-3 py-1.5 text-xs font-mono font-semibold text-neutral-900 focus:outline-none focus:border-neutral-950 cursor-pointer"
+              >
+                {(['XOF', 'XAF', 'EUR', 'GHS', 'USD', 'GBP', 'CAD', 'CHF', 'MAD', 'NGN', 'KES', 'ZAR'] as AppCurrency[]).map(
+                  (c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  )
+                )}
+              </select>
+              <button
+                type="button"
+                onClick={() => void refreshAutoRegion()}
+                className="px-3 py-1.5 rounded-full border border-neutral-200 hover:border-neutral-950 text-xs font-medium text-neutral-700 hover:text-neutral-950 transition-colors cursor-pointer"
+              >
+                {t('Auto', 'Auto')}
+              </button>
+            </div>
           </div>
 
           <label className="p-4 flex items-center justify-between gap-3 cursor-pointer">

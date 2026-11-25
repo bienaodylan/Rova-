@@ -154,7 +154,11 @@ interface RovaAppContextValue {
   setDraft: React.Dispatch<React.SetStateAction<DeliveryDraft>>;
   resetDraft: (mode?: 'single' | 'multi' | 'scheduled') => void;
   composerOpen: boolean;
-  openComposer: (mode?: 'single' | 'multi' | 'scheduled', presetStop?: SavedRecipient) => void;
+  openComposer: (
+    mode?: 'single' | 'multi' | 'scheduled',
+    presetStop?: SavedRecipient,
+    presetPickup?: { address: string; landmark?: string; lat: number; lng: number }
+  ) => void;
   closeComposer: () => void;
 
   reservationSheetOpen: boolean;
@@ -239,7 +243,7 @@ export function RovaAppProvider({
   onSignIn: () => Promise<void>;
 }) {
   const { firebaseUser, profile, updateProfileFields } = useAuth();
-  const { t, currency } = useLanguage();
+  const { t, currency, region } = useLanguage();
   const uid = firebaseUser?.uid || '';
 
   const [loadingData, setLoadingData] = useState(false);
@@ -268,6 +272,27 @@ export function RovaAppProvider({
   const [trackSheetOpen, setTrackSheetOpen] = useState(false);
   const [supportSheetOpen, setSupportSheetOpen] = useState(false);
   const [supportContextDeliveryId, setSupportContextDeliveryId] = useState<string | undefined>(undefined);
+
+  // Keep empty draft pickup anchored to the backend-detected regional center
+  useEffect(() => {
+    if (!region.detected || business?.defaultPickupLat) return;
+    setDraft((prev) => {
+      if (prev.pickup.address.trim()) return prev;
+      return {
+        ...prev,
+        pickup: {
+          ...prev.pickup,
+          lat: region.lat,
+          lng: region.lng,
+        },
+        stops: prev.stops.map((s, idx) =>
+          s.address.trim()
+            ? s
+            : { ...s, lat: region.lat + 0.012 * (idx + 1), lng: region.lng + 0.01 * (idx + 1) }
+        ),
+      };
+    });
+  }, [region.detected, region.lat, region.lng, business?.defaultPickupLat]);
 
   // Toast
   const [toast, setToast] = useState<ToastMessage | null>(null);
@@ -448,6 +473,15 @@ export function RovaAppProvider({
   const resetDraft = useCallback(
     (mode: 'single' | 'multi' | 'scheduled' = 'single') => {
       const next = createInitialDraft(business, preferredPayment);
+      if (!business?.defaultPickupLat && region.detected) {
+        next.pickup.lat = region.lat;
+        next.pickup.lng = region.lng;
+        next.stops = next.stops.map((s, idx) => ({
+          ...s,
+          lat: region.lat + 0.012 * (idx + 1),
+          lng: region.lng + 0.01 * (idx + 1),
+        }));
+      }
       next.mode = mode;
       next.timingType = mode === 'scheduled' ? 'scheduled' : 'instant';
       if (mode === 'multi') {
@@ -465,11 +499,15 @@ export function RovaAppProvider({
       }
       setDraft(next);
     },
-    [business, preferredPayment]
+    [business, preferredPayment, region.detected, region.lat, region.lng]
   );
 
   const openComposer = useCallback(
-    (mode?: 'single' | 'multi' | 'scheduled', presetStop?: SavedRecipient) => {
+    (
+      mode?: 'single' | 'multi' | 'scheduled',
+      presetStop?: SavedRecipient,
+      presetPickup?: { address: string; landmark?: string; lat: number; lng: number }
+    ) => {
       setDraft((prev) => {
         const next = { ...prev };
         if (mode) {
@@ -491,6 +529,16 @@ export function RovaAppProvider({
               },
             ];
           }
+        }
+        if (presetPickup) {
+          next.pickup = {
+            ...next.pickup,
+            address: presetPickup.address,
+            landmark: presetPickup.landmark || next.pickup.landmark,
+            lat: presetPickup.lat,
+            lng: presetPickup.lng,
+          };
+          next.step = presetStop ? 2 : 1;
         }
         if (presetStop) {
           const stopObj: DraftStop = {
@@ -524,7 +572,10 @@ export function RovaAppProvider({
   const requireAuth = useCallback((): boolean => {
     if (!uid) {
       showToast(
-        t('Connectez-vous avec Google pour enregistrer cette action.', 'Sign in with Google to save this action.'),
+        t(
+          'Connectez-vous avec Google ou Apple pour enregistrer cette action.',
+          'Sign in with Google or Apple to save this action.'
+        ),
         'info'
       );
       void onSignIn();
