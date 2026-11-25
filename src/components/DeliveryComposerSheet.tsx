@@ -577,6 +577,65 @@ export function DeliveryComposerSheet() {
         {draft.step === 2 && currentStop && (
           <div className="space-y-4">
             <div className="rounded-2xl bg-neutral-50 border border-neutral-200/80 px-4 py-3 flex items-center justify-between gap-4">
+              <div className="min-w-0 space-y-0.5">
+                <p className="inline-flex items-center gap-1.5 text-xs font-bold text-neutral-950">
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-600 shrink-0" aria-hidden="true" />
+                  <span>{t('Lieu de livraison', 'Delivery location')}</span>
+                </p>
+                <p className="text-xs text-neutral-500 leading-relaxed">
+                  {t(
+                    'Ajoutez un ou plusieurs lieux de livraison et optimisez votre tournée.',
+                    'Add one or more delivery stops and optimize your route.'
+                  )}
+                </p>
+              </div>
+              <DestinationStepIllustration className="w-20 h-13 shrink-0" />
+            </div>
+
+            <LocationSearchField
+              value={currentStop.address}
+              center={[currentStop.lat, currentStop.lng]}
+              placeholder={t(`Rechercher le lieu de livraison #${safeStopIdx + 1}...`, `Search delivery location #${safeStopIdx + 1}...`)}
+              onSelect={(place) => updateStop(safeStopIdx, {
+                address: place.shortName || place.displayName,
+                landmark: place.landmark || currentStop.landmark,
+                lat: place.lat,
+                lng: place.lng,
+              })}
+            />
+
+            {/* Stop Selector Strip + Multi-Stop Controls */}
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+                {draft.stops.map((s, idx) => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => setActiveStopIdx(idx)}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap shrink-0 transition-colors cursor-pointer ${
+                      idx === safeStopIdx
+                        ? 'bg-neutral-950 text-white'
+                        : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
+                    }`}
+                  >
+                    {idx === safeStopIdx && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" aria-hidden="true" />
+                    )}
+                    <span className="font-mono">#{idx + 1}</span>
+                    <span className="max-w-[90px] truncate">
+                      {s.recipientName || s.address || t('Arrêt', 'Stop')}
+                    </span>
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={addStop}
+                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full border border-dashed border-neutral-300 hover:border-neutral-950 text-xs font-medium text-neutral-700 whitespace-nowrap shrink-0 cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  {t('Ajouter un arrêt', 'Add stop')}
+                </button>
+              </div>
 
               <div className="flex items-center gap-2">
                 {draft.stops.length > 1 && (
@@ -641,15 +700,6 @@ export function DeliveryComposerSheet() {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="sm:col-span-2">
-                  <input
-                    type="text"
-                    value={currentStop.address}
-                    onChange={(e) => updateStop(safeStopIdx, { address: e.target.value })}
-                    placeholder={t('Adresse de livraison *', 'Delivery address *')}
-                    className="w-full rounded-xl bg-white border border-neutral-300 px-3.5 py-2.5 text-sm focus:outline-none focus:border-neutral-950"
-                  />
-                </div>
                 <input
                   type="text"
                   value={currentStop.recipientName}
