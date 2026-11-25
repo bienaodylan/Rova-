@@ -21,6 +21,8 @@ export function LocationSearchField({ value, center, placeholder, onSelect }: Lo
   const [resolved, setResolved] = useState<GeoPlace | null>(null);
   const [resolving, setResolving] = useState(false);
   const [gpsLoading, setGpsLoading] = useState(false);
+  const [searchCenter, setSearchCenter] = useState<[number, number]>(center);
+  const [locationMessage, setLocationMessage] = useState('');
   const debounceRef = useRef<number | null>(null);
   const queryRef = useRef(query);
   queryRef.current = query;
@@ -71,9 +73,9 @@ export function LocationSearchField({ value, center, placeholder, onSelect }: Lo
       setSearching(true);
       try {
         const params = new URLSearchParams({ q });
-        if (Number.isFinite(center[0]) && Number.isFinite(center[1])) {
-          params.set('lat', String(center[0]));
-          params.set('lng', String(center[1]));
+        if (Number.isFinite(searchCenter[0]) && Number.isFinite(searchCenter[1])) {
+          params.set('lat', String(searchCenter[0]));
+          params.set('lng', String(searchCenter[1]));
         }
         const response = await fetch(`/api/geo/search?${params.toString()}`);
         const data = await response.json();
@@ -81,9 +83,9 @@ export function LocationSearchField({ value, center, placeholder, onSelect }: Lo
           const places = Array.isArray(data.results) ? data.results as GeoPlace[] : [];
           const distanceKm = (place: GeoPlace) => {
             const toRad = (value: number) => (value * Math.PI) / 180;
-            const dLat = toRad(place.lat - center[0]);
-            const dLng = toRad(place.lng - center[1]);
-            const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(center[0])) * Math.cos(toRad(place.lat)) * Math.sin(dLng / 2) ** 2;
+            const dLat = toRad(place.lat - searchCenter[0]);
+            const dLng = toRad(place.lng - searchCenter[1]);
+            const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(searchCenter[0])) * Math.cos(toRad(place.lat)) * Math.sin(dLng / 2) ** 2;
             return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
           };
           setResults(places.sort((a, b) => distanceKm(a) - distanceKm(b)));
@@ -95,7 +97,7 @@ export function LocationSearchField({ value, center, placeholder, onSelect }: Lo
       }
     }, 320);
     return () => { cancelled = true; window.clearTimeout(timer); };
-  }, [query, center[0], center[1]]);
+  }, [query, searchCenter[0], searchCenter[1]]);
 
   const resolvePoint = async (lat: number, lng: number) => {
     setResolving(true);
@@ -129,17 +131,28 @@ export function LocationSearchField({ value, center, placeholder, onSelect }: Lo
   };
 
   const useGps = () => {
-    if (!navigator.geolocation) return;
+    if (!navigator.geolocation) {
+      setLocationMessage(t('La géolocalisation n’est pas disponible sur cet appareil.', 'Location is not available on this device.'));
+      return;
+    }
     setGpsLoading(true);
+    setLocationMessage('');
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const next: [number, number] = [position.coords.latitude, position.coords.longitude];
         setPickerCenter(next);
+        setSearchCenter(next);
+        setLocationMessage(t('Position actuelle utilisée pour les lieux à proximité.', 'Your current location is being used for nearby places.'));
         void resolvePoint(next[0], next[1]);
         setGpsLoading(false);
       },
-      () => setGpsLoading(false),
-      { enableHighAccuracy: true, timeout: 12000 }
+      (error) => {
+        setGpsLoading(false);
+        setLocationMessage(error.code === error.PERMISSION_DENIED
+          ? t('Autorisez la localisation dans les paramètres du navigateur pour trouver les lieux proches.', 'Allow location in your browser settings to find nearby places.')
+          : t('Position indisponible. Vérifiez le GPS et réessayez.', 'Location unavailable. Check GPS and try again.'));
+      },
+      { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 }
     );
   };
 
@@ -177,6 +190,16 @@ export function LocationSearchField({ value, center, placeholder, onSelect }: Lo
           {searching && <Loader2 className="mr-2 h-4 w-4 animate-spin text-neutral-400" />}
           <button
             type="button"
+            onClick={useGps}
+            disabled={gpsLoading}
+            aria-label={t('Rechercher près de moi', 'Search near me')}
+            title={t('Rechercher près de moi', 'Search near me')}
+            className="mr-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-neutral-600 transition hover:bg-neutral-100 disabled:opacity-50"
+          >
+            {gpsLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Crosshair className="h-4 w-4" />}
+          </button>
+          <button
+            type="button"
             onClick={openPicker}
             aria-label={t('Choisir sur la carte', 'Choose location on map')}
             title={t('Choisir sur la carte', 'Choose on map')}
@@ -185,6 +208,7 @@ export function LocationSearchField({ value, center, placeholder, onSelect }: Lo
             <MapIcon className="h-4 w-4" />
           </button>
         </div>
+        {locationMessage && <p className="mt-1.5 px-1 text-xs text-neutral-500" role="status">{locationMessage}</p>}
         {results.length > 0 && (
           <div className="absolute left-0 right-0 top-full z-[80] mt-1.5 max-h-60 overflow-y-auto rounded-xl border border-neutral-200 bg-white shadow-xl">
             {results.map((place, index) => (
