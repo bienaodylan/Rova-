@@ -966,7 +966,7 @@ export function RovaAppProvider({
         setBusy(false);
       }
     },
-    [requireAuth, business?.id, profile?.displayName, uid, showToast, t]
+    [requireAuth, business?.id, profile?.displayName, uid, showToast, t, currency]
   );
 
   const deleteRecipient = useCallback(
@@ -1048,7 +1048,7 @@ export function RovaAppProvider({
         setBusy(false);
       }
     },
-    [requireAuth, updateProfileFields, business, uid, profile, showToast, t]
+    [requireAuth, updateProfileFields, business, uid, profile, showToast, t, currency]
   );
 
   const submitSupportMessage = useCallback(
