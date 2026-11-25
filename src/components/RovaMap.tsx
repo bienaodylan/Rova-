@@ -158,6 +158,18 @@ function GoogleMapCameraAndRoute({
   const mapsLib = useMapsLibrary('maps');
   const coreLib = useMapsLibrary('core');
   const polylineRef = useRef<google.maps.Polyline | null>(null);
+  const lastReportedCenterRef = useRef<string>('');
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const key = `${center[0].toFixed(6)},${center[1].toFixed(6)}`;
+    const current = map.getCenter();
+    if (Math.abs(current.lat - center[0]) > 0.00001 || Math.abs(current.lng - center[1]) > 0.00001) {
+      map.setView(center, map.getZoom(), { animate: false });
+    }
+    lastReportedCenterRef.current = key;
+  }, [center[0], center[1]]);
+
   const lastBoundsKeyRef = useRef<string>('');
   const lastCenterKeyRef = useRef<string>('');
   const lastDriverKeyRef = useRef<string>('');
