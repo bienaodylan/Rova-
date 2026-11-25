@@ -1,0 +1,6 @@
+{
+  "name": "ColiGo - Suivi de Colis & Livraison",
+  "description": "Application moderne de suivi et d'expédition de colis en temps réel avec carte interactive, calcul de tarifs et messagerie livreur.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,490 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "Authenticated user account with role and business linkage",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "email": { "type": "string", "format": "email", "maxLength": 200 },
+        "displayName": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "phone": { "type": "string", "maxLength": 40 },
+        "role": {
+          "type": "string",
+          "enum": [
+            "merchant",
+            "business_owner",
+            "business_employee",
+            "independent_driver",
+            "rova_driver",
+            "fleet_partner",
+            "fleet_manager",
+            "recipient",
+            "dispatcher",
+            "operations_manager",
+            "admin",
+            "super_admin"
+          ]
+        },
+        "businessId": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "displayName", "role", "createdAt", "updatedAt"]
+    },
+    "Admin": {
+      "title": "Admin",
+      "description": "Trusted administrator record for RBAC verification",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "email": { "type": "string", "format": "email", "maxLength": 200 },
+        "level": { "type": "string", "enum": ["dispatcher", "operations_manager", "admin", "super_admin"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "level", "createdAt"]
+    },
+    "Business": {
+      "title": "Business",
+      "description": "Merchant or corporate business workspace",
+      "type": "object",
+      "properties": {
+        "ownerId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "name": { "type": "string", "minLength": 1, "maxLength": 160 },
+        "industry": { "type": "string", "maxLength": 80 },
+        "city": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "country": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "currency": { "type": "string", "minLength": 3, "maxLength": 8 },
+        "verificationStatus": { "type": "string", "enum": ["pending", "verified", "suspended"] },
+        "walletBalance": { "type": "number" },
+        "defaultPickupAddress": { "type": "string", "maxLength": 300 },
+        "defaultPickupLandmark": { "type": "string", "maxLength": 200 },
+        "defaultPickupDigitalAddress": { "type": "string", "maxLength": 60 },
+        "defaultPickupLat": { "type": "number" },
+        "defaultPickupLng": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["ownerId", "name", "city", "country", "currency", "verificationStatus", "walletBalance", "createdAt", "updatedAt"]
+    },
+    "BusinessMember": {
+      "title": "BusinessMember",
+      "description": "Team member invited to a business workspace",
+      "type": "object",
+      "properties": {
+        "ownerId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "email": { "type": "string", "format": "email", "maxLength": 200 },
+        "name": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "memberRole": { "type": "string", "enum": ["owner", "manager", "employee"] },
+        "status": { "type": "string", "enum": ["invited", "active", "revoked"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["ownerId", "email", "name", "memberRole", "status", "createdAt"]
+    },
+    "SavedRecipient": {
+      "title": "SavedRecipient",
+      "description": "Saved recipient in a merchant address book",
+      "type": "object",
+      "properties": {
+        "ownerId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "name": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "phone": { "type": "string", "minLength": 3, "maxLength": 40 },
+        "address": { "type": "string", "minLength": 1, "maxLength": 300 },
+        "landmark": { "type": "string", "maxLength": 200 },
+        "digitalAddress": { "type": "string", "maxLength": 60 },
+        "instructions": { "type": "string", "maxLength": 300 },
+        "lat": { "type": "number" },
+        "lng": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["ownerId", "name", "phone", "address", "lat", "lng", "createdAt"]
+    },
+    "Driver": {
+      "title": "Driver",
+      "description": "Private driver profile, verification documents, and earnings",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "fullName": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "phone": { "type": "string", "minLength": 3, "maxLength": 40 },
+        "partnerType": { "type": "string", "enum": ["independent", "rova_fleet", "fleet_partner", "commercial_partner"] },
+        "vehicleCategory": { "type": "string", "enum": ["motorcycle", "cargo_motorcycle", "tricycle", "cargo_van", "commercial_van", "truck"] },
+        "vehiclePlate": { "type": "string", "minLength": 2, "maxLength": 40 },
+        "licenseNumber": { "type": "string", "minLength": 2, "maxLength": 80 },
+        "insuranceRef": { "type": "string", "maxLength": 120 },
+        "serviceArea": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "approvalStatus": { "type": "string", "enum": ["pending", "under_review", "approved", "suspended"] },
+        "isOnline": { "type": "boolean" },
+        "currentLat": { "type": "number" },
+        "currentLng": { "type": "number" },
+        "rating": { "type": "number" },
+        "completedDeliveries": { "type": "number" },
+        "acceptanceRate": { "type": "number" },
+        "earningsTotal": { "type": "number" },
+        "activeDeliveryCount": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "fullName", "phone", "partnerType", "vehicleCategory", "vehiclePlate", "licenseNumber", "serviceArea", "approvalStatus", "isOnline", "rating", "completedDeliveries", "acceptanceRate", "earningsTotal", "activeDeliveryCount", "createdAt", "updatedAt"]
+    },
+    "DriverDispatch": {
+      "title": "DriverDispatch",
+      "description": "PII-free online driver dispatch index for real-time nearby driver matching",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "firstName": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "partnerType": { "type": "string", "enum": ["independent", "rova_fleet", "fleet_partner", "commercial_partner"] },
+        "vehicleCategory": { "type": "string", "enum": ["motorcycle", "cargo_motorcycle", "tricycle", "cargo_van", "commercial_van", "truck"] },
+        "serviceArea": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "approvalStatus": { "type": "string", "enum": ["pending", "under_review", "approved", "suspended"] },
+        "isOnline": { "type": "boolean" },
+        "currentLat": { "type": "number" },
+        "currentLng": { "type": "number" },
+        "rating": { "type": "number" },
+        "completedDeliveries": { "type": "number" },
+        "acceptanceRate": { "type": "number" },
+        "activeDeliveryCount": { "type": "number" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "firstName", "partnerType", "vehicleCategory", "serviceArea", "approvalStatus", "isOnline", "currentLat", "currentLng", "rating", "completedDeliveries", "acceptanceRate", "activeDeliveryCount", "updatedAt"]
+    },
+    "Vehicle": {
+      "title": "Vehicle",
+      "description": "ROVA fleet or partner vehicle record",
+      "type": "object",
+      "properties": {
+        "fleetNumber": { "type": "string", "minLength": 1, "maxLength": 40 },
+        "registration": { "type": "string", "minLength": 2, "maxLength": 40 },
+        "category": { "type": "string", "enum": ["motorcycle", "cargo_motorcycle", "tricycle", "cargo_van", "commercial_van", "truck"] },
+        "ownerType": { "type": "string", "enum": ["rova", "partner", "driver"] },
+        "partnerName": { "type": "string", "maxLength": 120 },
+        "assignedDriverId": { "type": "string", "maxLength": 128 },
+        "capacityKg": { "type": "number" },
+        "status": { "type": "string", "enum": ["available", "assigned", "in_operation", "reserved", "maintenance", "inactive", "suspended"] },
+        "serviceArea": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "maintenanceStatus": { "type": "string", "enum": ["nominal", "due_soon", "in_service"] },
+        "insuranceExpiry": { "type": "string", "maxLength": 40 },
+        "brandingStatus": { "type": "string", "enum": ["branded", "pending", "unbranded"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["fleetNumber", "registration", "category", "ownerType", "capacityKg", "status", "serviceArea", "maintenanceStatus", "brandingStatus", "createdAt", "updatedAt"]
+    },
+    "Equipment": {
+      "title": "Equipment",
+      "description": "Physical ROVA brand equipment inventory",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "category": { "type": "string", "enum": ["uniform", "jacket", "shirt", "helmet", "bag", "delivery_box", "reflective_vest", "phone_holder", "id_card", "sticker", "vehicle_branding", "accessory"] },
+        "size": { "type": "string", "maxLength": 20 },
+        "totalStock": { "type": "number" },
+        "assignedCount": { "type": "number" },
+        "availableStock": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "category", "totalStock", "assignedCount", "availableStock", "createdAt", "updatedAt"]
+    },
+    "EquipmentAssignment": {
+      "title": "EquipmentAssignment",
+      "description": "Driver equipment assignment ledger",
+      "type": "object",
+      "properties": {
+        "equipmentId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "equipmentName": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "driverId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "driverName": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "quantity": { "type": "number" },
+        "size": { "type": "string", "maxLength": 20 },
+        "status": { "type": "string", "enum": ["assigned", "returned", "replaced"] },
+        "assignedBy": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["equipmentId", "equipmentName", "driverId", "driverName", "quantity", "status", "assignedBy", "createdAt", "updatedAt"]
+    },
+    "Partner": {
+      "title": "Partner",
+      "description": "Fleet, warehouse, fulfillment, or corporate partner",
+      "type": "object",
+      "properties": {
+        "companyName": { "type": "string", "minLength": 1, "maxLength": 160 },
+        "contactName": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "contactEmail": { "type": "string", "format": "email", "maxLength": 200 },
+        "contactPhone": { "type": "string", "minLength": 3, "maxLength": 40 },
+        "partnerType": { "type": "string", "enum": ["fleet_partner", "transport_provider", "delivery_partner", "corporate_client", "warehouse", "fulfillment"] },
+        "status": { "type": "string", "enum": ["pending", "active", "suspended", "terminated"] },
+        "serviceArea": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "commissionRate": { "type": "number" },
+        "paymentTerms": { "type": "string", "maxLength": 80 },
+        "vehicleCount": { "type": "number" },
+        "driverCount": { "type": "number" },
+        "contractRef": { "type": "string", "maxLength": 80 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["companyName", "contactName", "contactEmail", "contactPhone", "partnerType", "status", "serviceArea", "commissionRate", "vehicleCount", "driverCount", "createdAt", "updatedAt"]
+    },
+    "Delivery": {
+      "title": "Delivery",
+      "description": "Commercial delivery request or multi-stop route",
+      "type": "object",
+      "properties": {
+        "reference": { "type": "string", "minLength": 4, "maxLength": 40 },
+        "businessId": { "type": "string", "maxLength": 128 },
+        "merchantUid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "merchantName": { "type": "string", "minLength": 1, "maxLength": 160 },
+        "driverUid": { "type": "string", "maxLength": 128 },
+        "driverName": { "type": "string", "maxLength": 120 },
+        "vehicleCategory": { "type": "string", "enum": ["motorcycle", "cargo_motorcycle", "tricycle", "cargo_van", "commercial_van", "truck"] },
+        "timingType": { "type": "string", "enum": ["instant", "scheduled", "driver_reservation", "vehicle_reservation", "full_day"] },
+        "scheduledFor": { "type": "string", "maxLength": 60 },
+        "pickupAddress": { "type": "string", "minLength": 1, "maxLength": 300 },
+        "pickupLandmark": { "type": "string", "maxLength": 200 },
+        "pickupDigitalAddress": { "type": "string", "maxLength": 60 },
+        "pickupInstructions": { "type": "string", "maxLength": 300 },
+        "pickupLat": { "type": "number" },
+        "pickupLng": { "type": "number" },
+        "packageType": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "packageSize": { "type": "string", "enum": ["small", "medium", "large", "bulk"] },
+        "weightKg": { "type": "number" },
+        "quantity": { "type": "number" },
+        "fragile": { "type": "boolean" },
+        "specialHandling": { "type": "string", "maxLength": 240 },
+        "proofRequired": { "type": "string", "enum": ["otp", "pin", "signature", "photo", "recipient_confirm"] },
+        "status": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "scheduled",
+            "driver_assigned",
+            "driver_approaching_pickup",
+            "at_pickup",
+            "package_collected",
+            "in_transit",
+            "approaching_recipient",
+            "arrived",
+            "delivered",
+            "failed",
+            "rescheduled",
+            "cancelled"
+          ]
+        },
+        "isMultiStop": { "type": "boolean" },
+        "stopCount": { "type": "number" },
+        "completedStopCount": { "type": "number" },
+        "primaryDestinationLabel": { "type": "string", "maxLength": 240 },
+        "stopIds": { "type": "array", "description": "Bounded list of stop document IDs (max 50)" },
+        "totalDistanceKm": { "type": "number" },
+        "estimatedDurationMin": { "type": "number" },
+        "quotedPrice": { "type": "number" },
+        "currency": { "type": "string", "minLength": 3, "maxLength": 8 },
+        "paymentMethod": { "type": "string", "enum": ["mobile_money", "card", "invoice", "wallet"] },
+        "paymentStatus": { "type": "string", "enum": ["pending", "authorized", "paid", "invoiced", "refunded"] },
+        "driverLat": { "type": "number" },
+        "driverLng": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["reference", "merchantUid", "merchantName", "driverUid", "vehicleCategory", "timingType", "pickupAddress", "pickupLat", "pickupLng", "packageType", "packageSize", "weightKg", "quantity", "fragile", "proofRequired", "status", "isMultiStop", "stopCount", "completedStopCount", "totalDistanceKm", "estimatedDurationMin", "quotedPrice", "currency", "paymentMethod", "paymentStatus", "createdAt", "updatedAt"]
+    },
+    "DeliveryStop": {
+      "title": "DeliveryStop",
+      "description": "Individual recipient stop within a single or multi-stop delivery route",
+      "type": "object",
+      "properties": {
+        "deliveryId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "merchantUid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "driverUid": { "type": "string", "maxLength": 128 },
+        "sequence": { "type": "number" },
+        "recipientName": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "recipientPhone": { "type": "string", "minLength": 3, "maxLength": 40 },
+        "address": { "type": "string", "minLength": 1, "maxLength": 300 },
+        "landmark": { "type": "string", "maxLength": 200 },
+        "digitalAddress": { "type": "string", "maxLength": 60 },
+        "instructions": { "type": "string", "maxLength": 300 },
+        "lat": { "type": "number" },
+        "lng": { "type": "number" },
+        "packageRef": { "type": "string", "maxLength": 80 },
+        "status": {
+          "type": "string",
+          "enum": ["pending", "scheduled", "driver_assigned", "driver_approaching_pickup", "at_pickup", "package_collected", "in_transit", "approaching_recipient", "arrived", "delivered", "failed", "rescheduled", "cancelled"]
+        },
+        "otpCode": { "type": "string", "minLength": 4, "maxLength": 10 },
+        "proofType": { "type": "string", "maxLength": 40 },
+        "proofValue": { "type": "string", "maxLength": 120000 },
+        "proofNotes": { "type": "string", "maxLength": 300 },
+        "trackingToken": { "type": "string", "minLength": 8, "maxLength": 128 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["deliveryId", "merchantUid", "driverUid", "sequence", "recipientName", "recipientPhone", "address", "lat", "lng", "status", "otpCode", "trackingToken", "createdAt", "updatedAt"]
+    },
+    "PublicTracking": {
+      "title": "PublicTracking",
+      "description": "Privacy-isolated recipient tracking document accessed only by secure token",
+      "type": "object",
+      "properties": {
+        "trackingToken": { "type": "string", "minLength": 8, "maxLength": 128 },
+        "deliveryId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "stopId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "merchantUid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "driverUid": { "type": "string", "maxLength": 128 },
+        "reference": { "type": "string", "minLength": 4, "maxLength": 40 },
+        "recipientFirstName": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "destinationLabel": { "type": "string", "minLength": 1, "maxLength": 300 },
+        "destinationLat": { "type": "number" },
+        "destinationLng": { "type": "number" },
+        "status": { "type": "string", "maxLength": 40 },
+        "driverFirstName": { "type": "string", "maxLength": 80 },
+        "vehicleCategory": { "type": "string", "maxLength": 40 },
+        "driverLat": { "type": "number" },
+        "driverLng": { "type": "number" },
+        "etaMinutes": { "type": "number" },
+        "showLiveDriver": { "type": "boolean" },
+        "otpHint": { "type": "string", "maxLength": 10 },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["trackingToken", "deliveryId", "stopId", "merchantUid", "driverUid", "reference", "recipientFirstName", "destinationLabel", "destinationLat", "destinationLng", "status", "vehicleCategory", "showLiveDriver", "updatedAt"]
+    },
+    "Reservation": {
+      "title": "Reservation",
+      "description": "Scheduled vehicle or full-day delivery operation reservation",
+      "type": "object",
+      "properties": {
+        "businessId": { "type": "string", "maxLength": 128 },
+        "merchantUid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "merchantName": { "type": "string", "minLength": 1, "maxLength": 160 },
+        "vehicleId": { "type": "string", "maxLength": 128 },
+        "vehicleCategory": { "type": "string", "enum": ["motorcycle", "cargo_motorcycle", "tricycle", "cargo_van", "commercial_van", "truck"] },
+        "driverUid": { "type": "string", "maxLength": 128 },
+        "reservationDate": { "type": "string", "minLength": 8, "maxLength": 20 },
+        "startTime": { "type": "string", "minLength": 4, "maxLength": 12 },
+        "endTime": { "type": "string", "minLength": 4, "maxLength": 12 },
+        "durationType": { "type": "string", "enum": ["window", "hours", "full_day"] },
+        "pickupAddress": { "type": "string", "minLength": 1, "maxLength": 300 },
+        "pickupLat": { "type": "number" },
+        "pickupLng": { "type": "number" },
+        "destinationsSummary": { "type": "string", "maxLength": 400 },
+        "cargoRequirements": { "type": "string", "maxLength": 300 },
+        "quotedPrice": { "type": "number" },
+        "currency": { "type": "string", "minLength": 3, "maxLength": 8 },
+        "status": { "type": "string", "enum": ["pending_approval", "confirmed", "in_progress", "completed", "cancelled"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["merchantUid", "merchantName", "vehicleCategory", "driverUid", "reservationDate", "startTime", "endTime", "durationType", "pickupAddress", "pickupLat", "pickupLng", "quotedPrice", "currency", "status", "createdAt", "updatedAt"]
+    },
+    "PricingRule": {
+      "title": "PricingRule",
+      "description": "Configurable zone and vehicle pricing rule",
+      "type": "object",
+      "properties": {
+        "zoneName": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "city": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "country": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "currency": { "type": "string", "minLength": 3, "maxLength": 8 },
+        "vehicleCategory": { "type": "string", "enum": ["motorcycle", "cargo_motorcycle", "tricycle", "cargo_van", "commercial_van", "truck"] },
+        "baseFee": { "type": "number" },
+        "perKmRate": { "type": "number" },
+        "minimumFare": { "type": "number" },
+        "waitingFeePerMin": { "type": "number" },
+        "scheduledFee": { "type": "number" },
+        "cargoSurcharge": { "type": "number" },
+        "multiStopFee": { "type": "number" },
+        "priorityMultiplier": { "type": "number" },
+        "peakMultiplier": { "type": "number" },
+        "fullDayRate": { "type": "number" },
+        "active": { "type": "boolean" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["zoneName", "city", "country", "currency", "vehicleCategory", "baseFee", "perKmRate", "minimumFare", "scheduledFee", "cargoSurcharge", "multiStopFee", "priorityMultiplier", "peakMultiplier", "fullDayRate", "active", "updatedAt"]
+    },
+    "Incident": {
+      "title": "Incident",
+      "description": "Operational incident, dispute, or support report",
+      "type": "object",
+      "properties": {
+        "deliveryId": { "type": "string", "maxLength": 128 },
+        "reportedByUid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "reporterRole": { "type": "string", "minLength": 1, "maxLength": 40 },
+        "category": { "type": "string", "enum": ["failed_delivery", "damage", "delay", "dispute", "refund", "driver_report"] },
+        "description": { "type": "string", "minLength": 5, "maxLength": 1000 },
+        "status": { "type": "string", "enum": ["open", "investigating", "resolved"] },
+        "resolutionNotes": { "type": "string", "maxLength": 1000 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["reportedByUid", "reporterRole", "category", "description", "status", "createdAt", "updatedAt"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "Role-scoped user notification",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "title": { "type": "string", "minLength": 1, "maxLength": 140 },
+        "message": { "type": "string", "minLength": 1, "maxLength": 400 },
+        "eventType": { "type": "string", "minLength": 1, "maxLength": 60 },
+        "deliveryId": { "type": "string", "maxLength": 128 },
+        "read": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "title", "message", "eventType", "read", "createdAt"]
+    },
+    "WaitlistEntry": {
+      "title": "WaitlistEntry",
+      "description": "Public early-access mobile app, partner, or contact inquiry",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "email": { "type": "string", "format": "email", "maxLength": 200 },
+        "company": { "type": "string", "maxLength": 160 },
+        "city": { "type": "string", "maxLength": 100 },
+        "platform": { "type": "string", "enum": ["ios", "android", "partner", "driver", "contact"] },
+        "message": { "type": "string", "maxLength": 1000 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "email", "platform", "createdAt"]
+    },
+    "AuditLog": {
+      "title": "AuditLog",
+      "description": "Immutable operational audit trail",
+      "type": "object",
+      "properties": {
+        "actorUid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "actorEmail": { "type": "string", "maxLength": 200 },
+        "action": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "entityType": { "type": "string", "minLength": 1, "maxLength": 60 },
+        "entityId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "summary": { "type": "string", "minLength": 1, "maxLength": 400 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["actorUid", "actorEmail", "action", "entityType", "entityId", "summary", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": { "schema": { "$ref": "#/entities/User" }, "description": "Private user account profiles" },
+    "/admins/{userId}": { "schema": { "$ref": "#/entities/Admin" }, "description": "Trusted administrator records" },
+    "/businesses/{businessId}": { "schema": { "$ref": "#/entities/Business" }, "description": "Merchant business workspaces" },
+    "/businesses/{businessId}/members/{memberId}": { "schema": { "$ref": "#/entities/BusinessMember" }, "description": "Team members for a business" },
+    "/businesses/{businessId}/recipients/{recipientId}": { "schema": { "$ref": "#/entities/SavedRecipient" }, "description": "Merchant saved recipients address book" },
+    "/drivers/{driverId}": { "schema": { "$ref": "#/entities/Driver" }, "description": "Private driver profiles, verification documents, and earnings" },
+    "/driverDispatch/{driverId}": { "schema": { "$ref": "#/entities/DriverDispatch" }, "description": "PII-free online driver dispatch index" },
+    "/vehicles/{vehicleId}": { "schema": { "$ref": "#/entities/Vehicle" }, "description": "ROVA and partner fleet vehicles" },
+    "/equipment/{itemId}": { "schema": { "$ref": "#/entities/Equipment" }, "description": "Physical brand equipment inventory" },
+    "/equipmentAssignments/{assignmentId}": { "schema": { "$ref": "#/entities/EquipmentAssignment" }, "description": "Driver equipment assignment history" },
+    "/partners/{partnerId}": { "schema": { "$ref": "#/entities/Partner" }, "description": "Fleet, warehouse, and corporate partnerships" },
+    "/deliveries/{deliveryId}": { "schema": { "$ref": "#/entities/Delivery" }, "description": "Instant, scheduled, and multi-stop deliveries" },
+    "/deliveries/{deliveryId}/stops/{stopId}": { "schema": { "$ref": "#/entities/DeliveryStop" }, "description": "Individual stops within a delivery route" },
+    "/publicTracking/{trackingToken}": { "schema": { "$ref": "#/entities/PublicTracking" }, "description": "Isolated recipient tracking view keyed by unguessable token" },
+    "/reservations/{reservationId}": { "schema": { "$ref": "#/entities/Reservation" }, "description": "Scheduled vehicle and full-day reservations" },
+    "/pricingRules/{ruleId}": { "schema": { "$ref": "#/entities/PricingRule" }, "description": "Dynamic configurable pricing engine rules" },
+    "/incidents/{incidentId}": { "schema": { "$ref": "#/entities/Incident" }, "description": "Operational incidents, disputes, and reports" },
+    "/notifications/{notificationId}": { "schema": { "$ref": "#/entities/Notification" }, "description": "Role-scoped user notifications" },
+    "/waitlist/{entryId}": { "schema": { "$ref": "#/entities/WaitlistEntry" }, "description": "Public early-access waitlist and partner inquiries" },
+    "/auditLogs/{logId}": { "schema": { "$ref": "#/entities/AuditLog" }, "description": "Immutable operational audit logs" }
+  }
+}

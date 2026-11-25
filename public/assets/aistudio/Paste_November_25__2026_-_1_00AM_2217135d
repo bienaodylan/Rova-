@@ -1,0 +1,1302 @@
+ROVA — PRODUCT BUILD MASTER PROMPT
+
+Build a complete, production-oriented logistics and delivery platform named ROVA.
+
+Brand positioning:
+
+ROVA is a modern delivery and logistics network designed primarily for merchants, retailers, entrepreneurs, businesses, brands and professional sellers.
+
+ROVA connects businesses with nearby delivery drivers, motorcycles, cargo vehicles, vans and partner fleets, enabling instant deliveries, scheduled deliveries, multi-stop routes, fleet reservations and real-time shipment tracking.
+
+ROVA must be designed as a scalable logistics company and technology ecosystem, not simply a courier marketplace.
+
+Tagline:
+
+MOVING BUSINESS FORWARD.
+
+Secondary positioning:
+
+Delivery designed for business.
+
+⸻
+
+01 — PRODUCT VISION
+
+ROVA must provide a seamless logistics ecosystem connecting:
+
+* Merchants and businesses
+* Independent delivery drivers
+* ROVA-owned drivers and vehicles
+* Fleet partners
+* Cargo and van operators
+* Delivery recipients
+* ROVA operational teams
+* Administrators
+
+The platform must support both immediate delivery requests and planned commercial delivery operations.
+
+Businesses must be able to request a single delivery, schedule deliveries in advance, organize multiple recipients into one route, reserve vehicles for a full day and manage their delivery activity from one account.
+
+The long-term architecture must support multiple cities, multiple countries, multiple fleet partners, thousands of drivers and high volumes of deliveries.
+
+⸻
+
+02 — BRAND & DESIGN SYSTEM
+
+Create a premium, minimalist and highly recognizable identity.
+
+Visual direction
+
+* Pure white backgrounds
+* Deep black typography
+* Black primary buttons
+* Neutral gray secondary elements
+* Minimal borders
+* Strong typography hierarchy
+* Generous spacing
+* Clean layouts
+* Premium editorial composition
+* Subtle transitions
+* Functional animations
+* No unnecessary gradients
+* No colorful dashboard templates
+* No excessive rounded cards
+* No visual clutter
+
+ROVA should feel like a combination of modern mobility technology, premium ecommerce and professional logistics.
+
+The interface must prioritize clarity, speed, confidence and usability.
+
+Typography should be modern, neutral and highly readable.
+
+Use black and white as the primary brand colors. Maps, traffic information and status indicators may use necessary functional colors.
+
+Create a consistent design system covering:
+
+* Typography
+* Buttons
+* Inputs
+* Navigation
+* Location selectors
+* Maps
+* Delivery cards
+* Status indicators
+* Tables
+* Dialogs
+* Bottom sheets
+* Notifications
+* Tracking interfaces
+
+⸻
+
+03 — MULTI-PLATFORM ECOSYSTEM
+
+ROVA must be developed as a multi-platform product.
+
+The same backend and business logic must power several different experiences.
+
+A. ROVA Mobile App
+
+Develop a mobile-first application experience suitable for iOS and Android.
+
+The mobile app must feel like a real native application.
+
+Requirements:
+
+* Mobile-native navigation patterns
+* Bottom navigation
+* Safe-area support
+* Touch-friendly controls
+* Gesture interactions
+* Smooth animations
+* Native-feeling transitions
+* Push notifications
+* GPS permissions
+* Background location functionality for active drivers
+* Camera access for delivery proof
+* Mobile payment integration readiness
+* Persistent sessions
+* Fast loading
+* Responsive map interface
+
+The mobile app must not simply be a responsive desktop website squeezed into a phone.
+
+B. ROVA Web Platform
+
+Build a complete desktop and mobile web experience.
+
+The web version is primarily designed for merchants and businesses that manage multiple deliveries.
+
+Features:
+
+* Business dashboard
+* Delivery creation
+* Multiple delivery management
+* Recipient management
+* Scheduled deliveries
+* Multi-stop route planning
+* Vehicle reservations
+* Live delivery tracking
+* History
+* Payments
+* Invoices
+* Business settings
+* Team management
+
+The web experience must take advantage of larger screens with a professional workspace layout.
+
+C. ROVA Driver App
+
+Create a dedicated driver experience optimized for delivery operations.
+
+Drivers must be able to:
+
+* Register
+* Submit verification documents
+* Choose vehicle type
+* Manage their profile
+* Set availability
+* Go online or offline
+* Receive delivery requests
+* Accept or reject requests
+* View pickup details
+* Navigate to pickup locations
+* Confirm arrival
+* Confirm parcel collection
+* Navigate to recipients
+* Update delivery statuses
+* Confirm deliveries
+* Submit proof of delivery
+* Report incidents
+* View earnings
+* Review completed deliveries
+
+⸻
+
+04 — PUBLIC WEBSITE / LANDING PAGE
+
+Create a premium public website for ROVA.
+
+The landing page must exist independently of the authenticated application.
+
+The first impression should be highly visual, minimalist, professional and confident.
+
+Landing page structure
+
+Hero
+
+Headline:
+
+MOVING BUSINESS FORWARD.
+
+Supporting text:
+
+Reliable delivery and logistics for businesses that move every day.
+
+Primary CTA:
+
+Organize a delivery.
+
+Secondary CTA:
+
+Explore ROVA Business.
+
+Download links:
+
+* Download on the App Store
+* Get it on Google Play
+
+Use a premium logistics photograph, branded motorcycle, cargo vehicle or driver in a modern urban environment.
+
+Sections
+
+1. Hero
+2. How ROVA works
+3. Instant delivery
+4. Scheduled delivery
+5. Multi-stop deliveries
+6. Business logistics
+7. ROVA Fleet
+8. Driver network
+9. Become a ROVA partner
+10. Download the app
+11. Contact
+12. Footer
+
+Create dedicated pages for:
+
+* About ROVA
+* ROVA Business
+* ROVA Drivers
+* Fleet & Logistics
+* Become a Partner
+* Contact
+* Privacy Policy
+* Terms and Conditions
+
+App Store and Google Play buttons must be ready to receive official store URLs.
+
+Before app publication, allow these CTAs to lead to an early-access registration page or waitlist.
+
+⸻
+
+05 — AUTHENTICATION & USER TYPES
+
+Create a unified authentication system with role-based experiences.
+
+User types:
+
+* Merchant
+* Business owner
+* Business employee
+* Independent driver
+* ROVA driver
+* Fleet partner
+* Fleet manager
+* Recipient
+* Dispatcher
+* Operations manager
+* Administrator
+* Super administrator
+
+Users must be redirected to the appropriate experience after authentication.
+
+Businesses must be able to invite team members and assign permissions.
+
+Drivers and fleet partners must go through a verification and approval workflow before receiving active delivery assignments.
+
+⸻
+
+06 — LOCATION SYSTEM & INTERACTIVE MAP
+
+The map must be a central part of ROVA’s delivery experience.
+
+Do not limit the map to the administration dashboard.
+
+The map must be available throughout the relevant customer, merchant, driver and recipient experiences.
+
+Location interface
+
+Create a clean interactive map with a connected search bar.
+
+The user must be able to:
+
+* Search an address
+* Search a neighborhood
+* Search a street
+* Search a business
+* Search a landmark
+* Search a building
+* Select a location directly on the map
+* Drag and zoom the map
+* Tap the map to select a location
+* Use their current GPS position
+* Adjust the selected pin manually
+* Confirm the location
+
+The search bar and map must remain synchronized.
+
+When a search result is selected, the map must move to the location and update the marker.
+
+When the user selects a location directly on the map, the search field must update with the nearest identifiable address or location.
+
+Store accurate geographic coordinates for every pickup and delivery destination.
+
+The location interface must be particularly adapted to African urban environments, where conventional street addresses may not always be sufficient.
+
+Support, where available:
+
+* Landmarks
+* Neighborhoods
+* Local directions
+* GPS coordinates
+* GhanaPostGPS addresses
+* Informal address descriptions
+* Nearby identifiable places
+
+Allow users to add additional instructions such as:
+
+“Behind the filling station.”
+
+“Next to the pharmacy.”
+
+“Enter through the second gate.”
+
+“Call when you arrive.”
+
+The map must support pickup selection, destination selection, multi-stop route planning, driver location and delivery tracking.
+
+Do not create a fake map or decorative map image. Implement a genuinely interactive map connected to a real mapping service.
+
+⸻
+
+07 — DELIVERY CREATION
+
+Create an extremely simple delivery creation flow.
+
+The user should not have to navigate through complicated forms.
+
+Step 1 — Pickup
+
+Select:
+
+* Current location
+* Saved business address
+* Search address
+* Select location on map
+
+Allow additional pickup instructions.
+
+Step 2 — Destination
+
+Select:
+
+* Recipient address
+* Search
+* Map selection
+* Saved recipient
+
+Step 3 — Package details
+
+Information:
+
+* Package type
+* Package size
+* Estimated weight
+* Quantity
+* Fragile
+* Special handling
+* Additional instructions
+
+Step 4 — Delivery method
+
+Available options:
+
+* Motorcycle
+* Tricycle
+* Cargo
+* Van
+* Other available vehicle categories
+
+Show the appropriate vehicle options based on package size, capacity, distance and availability.
+
+Step 5 — Delivery timing
+
+Options:
+
+* Deliver now
+* Schedule delivery
+* Reserve a driver
+* Reserve a vehicle
+* Plan a full-day delivery operation
+
+Step 6 — Price
+
+Display:
+
+* Estimated price
+* Distance
+* Delivery type
+* Vehicle type
+* Estimated arrival time
+* Additional charges, if applicable
+
+Step 7 — Confirmation
+
+Confirm the request and initiate driver matching.
+
+⸻
+
+08 — INSTANT DRIVER MATCHING
+
+Implement a real driver discovery and assignment system.
+
+When a delivery is requested:
+
+1. Identify the pickup location.
+2. Identify the destination.
+3. Calculate the route and estimated distance.
+4. Identify nearby online drivers.
+5. Filter drivers by vehicle type.
+6. Filter by cargo capacity.
+7. Filter by operational eligibility.
+8. Evaluate distance from pickup.
+9. Estimate driver arrival time.
+10. Rank suitable drivers.
+11. Send the delivery request to selected drivers.
+12. Handle acceptance and rejection.
+13. Assign the delivery to the selected driver.
+14. Notify the merchant.
+15. Begin tracking.
+
+Do not rely on hardcoded drivers or fake availability.
+
+Driver availability must be based on actual database status and active location updates.
+
+Implement a configurable dispatch algorithm.
+
+The algorithm may consider:
+
+* Distance
+* Estimated arrival
+* Driver availability
+* Vehicle suitability
+* Current workload
+* Driver rating
+* Driver acceptance rate
+* Service zone
+* Delivery capacity
+
+The merchant should receive a clear confirmation when a driver has been assigned.
+
+⸻
+
+09 — SCHEDULED DELIVERY & VEHICLE RESERVATION
+
+This is a major ROVA feature.
+
+Businesses must be able to schedule deliveries in advance.
+
+Allow reservations for:
+
+* Tomorrow
+* A specific date
+* A specific time
+* A time window
+* Several hours
+* A full day
+
+Vehicle reservation options:
+
+* Motorcycle
+* Cargo motorcycle
+* Tricycle
+* Cargo van
+* Commercial van
+* Truck
+* Other configurable vehicles
+
+Businesses must be able to reserve a vehicle and driver for a planned delivery operation.
+
+Create a scheduling system with:
+
+* Reservation calendar
+* Vehicle availability
+* Driver availability
+* Reservation duration
+* Pickup time
+* Pickup location
+* Delivery destinations
+* Cargo requirements
+* Pricing
+* Reservation status
+* Confirmation
+
+The system must prevent conflicting vehicle and driver reservations.
+
+Support reservation requests that require manual operational approval.
+
+⸻
+
+10 — MULTI-STOP DELIVERY & ROUTE MANAGEMENT
+
+Businesses must be able to create one delivery route containing multiple recipients.
+
+Example:
+
+A clothing store has 15 customers to deliver to tomorrow.
+
+Instead of creating 15 separate delivery requests, the business creates one delivery tour.
+
+The route contains:
+
+* Pickup point
+* Recipient 1
+* Recipient 2
+* Recipient 3
+* Recipient 4
+* Additional destinations
+
+Each recipient must have:
+
+* Name
+* Phone number
+* Delivery address
+* Geographic coordinates
+* Package reference
+* Delivery instructions
+* Delivery status
+
+Implement route planning.
+
+The system should be able to:
+
+* Calculate routes between destinations
+* Estimate total distance
+* Estimate total time
+* Suggest destination order
+* Optimize stop order
+* Allow manual reorder
+* Recalculate routes
+* Track completed stops
+* Track pending stops
+* Handle failed deliveries
+* Handle rescheduling
+
+The merchant must be able to see the complete route.
+
+Each delivery recipient must only be able to see information related to their own delivery.
+
+⸻
+
+11 — LIVE TRACKING SYSTEM
+
+Implement genuine real-time tracking.
+
+Drivers must be able to share their location while on an active delivery.
+
+Tracking must be based on actual GPS data.
+
+Implement:
+
+* GPS collection
+* Driver location updates
+* Real-time backend synchronization
+* Live map marker updates
+* Route display
+* Distance remaining
+* Estimated arrival time
+* Driver status
+* Pickup status
+* Delivery status
+* Stop progression
+
+Use appropriate location update frequency and battery optimization.
+
+Location tracking must respect user permissions, operational requirements and privacy rules.
+
+Tracking must not remain unnecessarily active when drivers are offline or when delivery operations are completed.
+
+⸻
+
+12 — RECIPIENT TRACKING EXPERIENCE
+
+Create a lightweight tracking experience for recipients.
+
+Recipients must not be required to install the app to track their delivery.
+
+Provide a secure tracking link.
+
+The recipient must be able to see:
+
+* Delivery status
+* Delivery reference
+* Driver information
+* Vehicle type
+* Driver identification
+* Driver location when relevant
+* Estimated arrival
+* Delivery destination
+* Contact options
+
+The tracking interface must be mobile-first.
+
+When a driver is assigned, the recipient should receive appropriate notifications.
+
+When the driver approaches the recipient’s location, update the delivery status and notify the recipient.
+
+Do not expose other recipients, other stops or unrelated customer information.
+
+⸻
+
+13 — MULTI-RECIPIENT DELIVERY FLOW
+
+Implement the following delivery lifecycle.
+
+Global route
+
+1. Business creates the route.
+2. Business enters multiple recipients.
+3. Business defines packages.
+4. Business chooses a vehicle.
+5. Business schedules the route or requests immediate dispatch.
+6. Driver is assigned.
+7. Driver arrives at pickup point.
+8. Business confirms parcel handover.
+9. Driver starts route.
+10. Route tracking becomes active.
+11. Driver navigates to the next recipient.
+
+Individual delivery lifecycle
+
+Each recipient has an independent delivery status.
+
+Statuses:
+
+* Pending
+* Scheduled
+* Driver assigned
+* Driver approaching pickup
+* At pickup
+* Package collected
+* In transit
+* Approaching recipient
+* Arrived
+* Delivered
+* Failed
+* Rescheduled
+* Cancelled
+
+When the driver begins moving toward Recipient A:
+
+* Recipient A receives a notification.
+* Recipient A receives access to their tracking page.
+* Recipient A sees the driver location.
+* Recipient A sees an estimated arrival time.
+
+When Recipient A’s delivery is confirmed:
+
+* Recipient A’s delivery is completed.
+* The recipient’s tracking link reflects completion.
+* The driver proceeds to Recipient B.
+* Recipient B becomes the active delivery.
+* Recipient B receives the appropriate notification.
+* Recipient B gains access to the live tracking experience.
+
+Continue this process automatically for each recipient.
+
+The merchant sees the complete route and all delivery statuses.
+
+Recipients see only their own delivery.
+
+⸻
+
+14 — DELIVERY CONFIRMATION & PROOF OF DELIVERY
+
+Implement secure delivery confirmation.
+
+Supported methods may include:
+
+* Recipient OTP
+* Delivery PIN
+* Signature
+* Photograph
+* Recipient confirmation
+* Driver confirmation with verification
+
+The business must be able to configure required proof types depending on the delivery.
+
+Store:
+
+* Delivery time
+* Driver
+* Recipient
+* Confirmation method
+* Delivery evidence
+* Status
+* Relevant notes
+
+Provide an audit trail for completed deliveries.
+
+⸻
+
+15 — DRIVER NETWORK
+
+Create a complete driver management and onboarding system.
+
+Driver profile:
+
+* Full name
+* Profile photo
+* Phone number
+* Verification status
+* Vehicle
+* Vehicle registration
+* Vehicle photos
+* License information
+* Insurance documents, where applicable
+* Service areas
+* Availability
+* Rating
+* Completed deliveries
+* Earnings
+* Partner type
+
+Partner types:
+
+* Independent driver
+* ROVA fleet driver
+* Fleet partner driver
+* Commercial transport partner
+
+Implement a driver onboarding workflow:
+
+1. Registration
+2. Personal information
+3. Document submission
+4. Vehicle registration
+5. Verification
+6. Approval
+7. Training or onboarding
+8. Equipment assignment
+9. Activation
+
+Drivers must not become operational before approval.
+
+⸻
+
+16 — ROVA FLEET & PHYSICAL BRAND MANAGEMENT
+
+ROVA must be designed as a real logistics brand.
+
+The company may own vehicles or operate through partners.
+
+Create a Fleet Management system.
+
+Vehicle categories
+
+* Motorcycles
+* Cargo motorcycles
+* Tricycles
+* Cargo vans
+* Commercial vans
+* Trucks
+* Custom vehicle types
+
+Vehicle management
+
+Store:
+
+* Vehicle ID
+* Fleet number
+* Registration
+* Vehicle type
+* Owner
+* Driver
+* Partner
+* Capacity
+* Status
+* Service area
+* Maintenance status
+* Insurance
+* Documents
+* Photos
+* Branding status
+
+Vehicle status:
+
+* Available
+* Assigned
+* In operation
+* Reserved
+* Maintenance
+* Inactive
+* Suspended
+
+Physical brand assets
+
+Create a Brand & Equipment management module for:
+
+* Uniforms
+* Jackets
+* Shirts
+* Helmets
+* Bags
+* Delivery boxes
+* Reflective vests
+* Phone holders
+* Identification cards
+* Stickers
+* Vehicle branding
+* Accessories
+
+Track stock, quantities, sizes, assignments, distribution and replacements.
+
+Create an equipment assignment history for each driver.
+
+⸻
+
+17 — PARTNERSHIP MANAGEMENT
+
+Create a Partnerships module.
+
+Manage:
+
+* Fleet partners
+* Independent transport providers
+* Delivery partners
+* Commercial businesses
+* Corporate clients
+* Warehouses
+* Fulfillment partners
+
+Each partner must have:
+
+* Company information
+* Contact information
+* Agreement
+* Contract
+* Status
+* Partner type
+* Vehicles
+* Drivers
+* Service areas
+* Pricing terms
+* Commission
+* Payment terms
+* Performance metrics
+
+Allow administrators to activate, suspend or terminate partnerships.
+
+⸻
+
+18 — MERCHANT EXPERIENCE
+
+Create a professional business workspace.
+
+Merchant features:
+
+* Business profile
+* Business verification
+* Saved pickup locations
+* Saved recipients
+* Address book
+* Delivery creation
+* Bulk delivery creation
+* CSV import readiness
+* Multi-stop routes
+* Scheduled delivery
+* Vehicle reservation
+* Driver selection when permitted
+* Delivery tracking
+* Delivery history
+* Payment history
+* Business wallet readiness
+* Invoices
+* Team members
+* Role management
+* Business settings
+
+Businesses must be able to manage many deliveries without repeating unnecessary information.
+
+⸻
+
+19 — ROVA OPERATIONS CENTER
+
+Create an operational management platform.
+
+This is the internal administration system used by ROVA teams.
+
+Dashboard
+
+Display:
+
+* Deliveries today
+* Active deliveries
+* Pending assignments
+* Available drivers
+* Online drivers
+* Reserved vehicles
+* Active fleet
+* Failed deliveries
+* Revenue
+* Pending payments
+* Operational alerts
+
+Live Operations
+
+Create an operational map displaying:
+
+* Drivers
+* Vehicles
+* Active deliveries
+* Pickup points
+* Delivery destinations
+* Active routes
+* Driver availability
+* Current route status
+
+This map must be genuinely connected to live data.
+
+Dispatch
+
+Allow operational staff to:
+
+* Assign drivers
+* Reassign drivers
+* Assign vehicles
+* Manage requests
+* Review driver availability
+* Handle failed assignments
+* Override dispatch when authorized
+* Manage reservations
+
+Deliveries
+
+Manage all delivery records.
+
+Drivers
+
+Manage onboarding, verification, status, performance and documentation.
+
+Fleet
+
+Manage vehicles, ownership, availability, reservations, maintenance and branding.
+
+Partners
+
+Manage contracts, fleets, drivers, commissions and performance.
+
+Brand & Equipment
+
+Manage uniforms, bags, helmets, IDs and physical brand inventory.
+
+Finance
+
+Manage:
+
+* Revenue
+* Delivery fees
+* Driver earnings
+* Commissions
+* Partner payments
+* Merchant invoices
+* Refunds
+* Expenses
+* Reconciliation
+
+Support & Incidents
+
+Manage:
+
+* Delivery incidents
+* Customer complaints
+* Failed deliveries
+* Driver reports
+* Refund requests
+* Disputes
+* Support conversations
+
+Analytics
+
+Create reports for:
+
+* Delivery volume
+* Revenue
+* Average delivery time
+* Driver utilization
+* Vehicle utilization
+* Failed deliveries
+* Route performance
+* Merchant activity
+* City performance
+* Partner performance
+
+⸻
+
+20 — PRICING & DELIVERY QUOTATIONS
+
+Create a flexible pricing engine.
+
+Pricing must not be hardcoded.
+
+Administrators must be able to configure:
+
+* Base delivery fee
+* Distance rate
+* Vehicle rate
+* Minimum fare
+* Waiting fee
+* Scheduled delivery fee
+* Cargo surcharge
+* Multi-stop pricing
+* Priority delivery
+* Peak-hour pricing
+* Zone pricing
+* Merchant pricing
+* Corporate contract pricing
+* Partner pricing
+
+Generate a quote before confirmation.
+
+Explain the price clearly to the user.
+
+The pricing engine must be extensible for new countries, cities, currencies and business models.
+
+⸻
+
+21 — NOTIFICATIONS
+
+Create a notification system.
+
+Support readiness for:
+
+* Push notifications
+* SMS
+* Email
+* In-app notifications
+
+Notification events:
+
+* Delivery created
+* Driver search started
+* Driver assigned
+* Driver approaching pickup
+* Driver arrived
+* Package collected
+* Delivery started
+* Driver approaching recipient
+* Driver arrived
+* Delivery completed
+* Delivery failed
+* Delivery rescheduled
+* Driver changed
+* Reservation confirmed
+* Reservation reminder
+
+Notifications must be personalized according to user role.
+
+⸻
+
+22 — DATABASE & BACKEND
+
+Build a scalable and properly structured backend.
+
+Use:
+
+* PostgreSQL
+* Supabase
+* Supabase Auth
+* Supabase Realtime
+* Row Level Security
+* Supabase Storage
+* Edge Functions where appropriate
+* PostGIS for geospatial queries where supported
+
+Design relational tables for:
+
+* Users
+* Profiles
+* Businesses
+* Business memberships
+* Roles
+* Drivers
+* Driver documents
+* Vehicles
+* Fleet partners
+* Partner contracts
+* Equipment
+* Equipment inventory
+* Equipment assignments
+* Deliveries
+* Delivery stops
+* Packages
+* Recipients
+* Routes
+* Driver assignments
+* Reservations
+* Driver location history
+* Active driver locations
+* Delivery events
+* Proof of delivery
+* Payments
+* Pricing rules
+* Invoices
+* Notifications
+* Support tickets
+* Incidents
+* Service areas
+* Audit logs
+
+Use proper foreign keys, indexes, validation, timestamps and database constraints.
+
+Use geospatial indexing for efficient nearby-driver queries.
+
+Implement Row Level Security to protect sensitive data.
+
+⸻
+
+23 — REALTIME INFRASTRUCTURE
+
+Use realtime events for:
+
+* Driver availability
+* Driver location
+* Delivery assignment
+* Delivery status
+* Route progression
+* Reservation status
+* Recipient tracking
+* Operational alerts
+
+The system must not rely on periodic page reloads.
+
+Implement secure subscriptions and access control.
+
+Location data must be visible only to authorized users and only when relevant to an active operation.
+
+⸻
+
+24 — SECURITY & PRIVACY
+
+Implement:
+
+* Authentication
+* Role-based access control
+* Row Level Security
+* Secure API endpoints
+* Server-side validation
+* Rate limiting
+* Secure storage
+* Protected documents
+* Audit logs
+* Secure tracking tokens
+* Expiring access links where appropriate
+* Privacy-conscious GPS retention
+
+Drivers must not be able to access unrelated deliveries.
+
+Recipients must not see other recipients.
+
+Merchants must not access another merchant’s data.
+
+Administrators must have permissions appropriate to their role.
+
+⸻
+
+25 — RESPONSIVE EXPERIENCE
+
+The platform must adapt intelligently to:
+
+* iPhone
+* Android
+* Tablets
+* Laptops
+* Desktop computers
+
+Do not use one identical layout everywhere.
+
+Mobile:
+
+* Compact
+* Touch-friendly
+* Bottom navigation
+* Full-screen map where relevant
+* Bottom sheets
+* Minimal forms
+* Quick actions
+
+Desktop:
+
+* Professional workspace
+* Sidebar navigation
+* Multi-column layout
+* Tables
+* Route planning
+* Larger maps
+* Bulk operations
+* Analytics
+
+⸻
+
+26 — TECHNICAL ARCHITECTURE
+
+Use a scalable architecture appropriate for the platform.
+
+Recommended direction:
+
+Web:
+
+* Next.js
+* TypeScript
+* Tailwind CSS
+
+Mobile:
+
+* React Native with Expo, or another appropriate native-compatible framework
+* Native GPS
+* Push notifications
+* Background location capabilities for active delivery operations
+
+Backend:
+
+* Supabase
+* PostgreSQL
+* PostGIS
+* Supabase Auth
+* Realtime
+* Storage
+* Edge Functions
+
+Maps:
+
+* MapLibre-compatible mapping architecture
+* OpenStreetMap-compatible data providers
+* Geocoding
+* Reverse geocoding
+* Routing
+* GPS tracking
+* Route optimization readiness
+
+Payments:
+Build a payment abstraction layer capable of supporting mobile money, card payments and business invoicing.
+
+Architecture must support deployments across multiple countries.
+
+⸻
+
+27 — DEVELOPMENT REQUIREMENTS
+
+Do not build a superficial prototype with static dashboards and fake buttons.
+
+Every primary action must have a real functional implementation or a clearly documented integration requirement.
+
+Do not create fake live tracking.
+
+Do not hardcode drivers, deliveries, locations or operational statuses as if they were real data.
+
+Use realistic empty states when the database is empty.
+
+Implement loading states, error states, success states, validation and responsive behavior.
+
+Build reusable components.
+
+Keep the design consistent.
+
+Make the product operationally realistic.
+
+Prioritize:
+
+1. Architecture
+2. Authentication
+3. Merchant experience
+4. Location and map system
+5. Delivery creation
+6. Driver onboarding
+7. Driver assignment
+8. Realtime tracking
+9. Multi-stop routes
+10. Scheduled delivery
+11. Fleet
+12. Operations center
+13. Finance
+14. Partnerships
+15. Analytics
+
+Do not try to simulate features that are not connected.
+
+If an external integration requires API credentials, build the integration structure, clearly identify the required configuration and keep the feature in a properly documented setup state.
+
+⸻
+
+FINAL PRODUCT OBJECTIVE
+
+ROVA must become a complete business logistics platform.
+
+A merchant must be able to open ROVA, enter a pickup location, search or select a destination on the map, request a nearby driver, schedule a cargo vehicle for tomorrow, organize deliveries to multiple recipients, follow the driver in real time and confirm every delivery.
+
+ROVA must also operate its own physical logistics network, manage drivers, partner fleets, vehicles, branded equipment, commercial contracts and delivery operations from a centralized platform.
+
+Build ROVA as a premium, minimalist, scalable, technology-driven logistics company.
+
+ROVA — MOVING BUSINESS FORWARD.
