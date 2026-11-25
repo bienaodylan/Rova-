@@ -3,7 +3,6 @@ import { Calendar, ChevronRight, CreditCard, Package, RefreshCw } from 'lucide-r
 import { useLanguage } from '../context/LanguageContext';
 import { ActivityFilter, useRovaApp } from '../context/RovaAppContext';
 import {
-  formatMoney,
   getPaymentMethodLabelEn,
   getStatusLabel,
   getVehicleLabel,
