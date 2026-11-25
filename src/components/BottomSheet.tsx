@@ -38,11 +38,29 @@ export function BottomSheet({
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
     };
-    const prevOverflow = document.body.style.overflow;
+    // Lock the page behind the sheet on mobile Safari as well as desktop.
+    // overflow:hidden alone can still allow the document to rubber-band on iOS.
+    const scrollY = window.scrollY;
+    const previous = {
+      htmlOverflow: document.documentElement.style.overflow,
+      bodyOverflow: document.body.style.overflow,
+      bodyPosition: document.body.style.position,
+      bodyTop: document.body.style.top,
+      bodyWidth: document.body.style.width,
+    };
+    document.documentElement.style.overflow = 'hidden';
     document.body.style.overflow = 'hidden';
+    document.body.style.position = 'fixed';
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.width = '100%';
     window.addEventListener('keydown', onKeyDown);
     return () => {
-      document.body.style.overflow = prevOverflow;
+      document.documentElement.style.overflow = previous.htmlOverflow;
+      document.body.style.overflow = previous.bodyOverflow;
+      document.body.style.position = previous.bodyPosition;
+      document.body.style.top = previous.bodyTop;
+      document.body.style.width = previous.bodyWidth;
+      window.scrollTo(0, scrollY);
       window.removeEventListener('keydown', onKeyDown);
     };
   }, [open, onClose]);
