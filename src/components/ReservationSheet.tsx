@@ -219,6 +219,8 @@ export function ReservationSheet() {
         </>
         )}
 
+        {reservationStep === 3 && (
+        <>
         {/* Pickup address: map is available on demand from the address field. */}
         <div className="space-y-2.5">
           <label className="block text-xs font-medium text-[#171717]">{t('Point de départ du véhicule', 'Vehicle pickup location')}</label>
