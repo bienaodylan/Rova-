@@ -8,17 +8,18 @@ import { RovaAppProvider, useRovaApp } from './context/RovaAppContext';
 import { AccountSectionId } from './components/account/accountTypes';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { RoleOnboarding } from './components/RoleOnboardingModal';
-import { FloatingBottomNav, PrimaryTab } from './components/InterfaceExplorerBar';
+import { FloatingBottomNav } from './components/InterfaceExplorerBar';
+import type { PrimaryTab } from './components/InterfaceExplorerBar';
 import { DeliveryComposerSheet } from './components/DeliveryComposerSheet';
 import { ReservationSheet } from './components/ReservationSheet';
 import { ShipmentDetailSheet } from './components/ShipmentDetailSheet';
 import { SupportSheet, TrackLookupSheet } from './components/UtilitySheets';
 import { AuthSheet } from './components/AuthSheet';
 import { ToastBanner } from './components/ToastBanner';
-import { RovaHomeView } from './pages/RovaHomeView';
-import { RovaShipmentsView } from './pages/RovaShipmentsView';
-import { RovaActivityView } from './pages/RovaActivityView';
-import { RovaAccountView } from './pages/RovaAccountView';
+const RovaHomeView = lazy(() => import('./pages/RovaHomeView').then((m) => ({ default: m.RovaHomeView })));
+const RovaShipmentsView = lazy(() => import('./pages/RovaShipmentsView').then((m) => ({ default: m.RovaShipmentsView })));
+const RovaActivityView = lazy(() => import('./pages/RovaActivityView').then((m) => ({ default: m.RovaActivityView })));
+const RovaAccountView = lazy(() => import('./pages/RovaAccountView').then((m) => ({ default: m.RovaAccountView })));
 import { RecipientTrackingPage } from './pages/RecipientTrackingPage';
 
 const DriverWorkspace = lazy(() =>
@@ -224,6 +225,13 @@ function RovaApplicationShell({
 
       {/* Continuous Animated Main Content Area */}
       <main className="flex-1 pb-28">
+        <Suspense
+          fallback={
+            <div className="min-h-[50vh] flex items-center justify-center text-xs text-neutral-500">
+              {t('Chargement de votre espace...', 'Loading your workspace...')}
+            </div>
+          }
+        >
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={activeTab}
@@ -246,6 +254,7 @@ function RovaApplicationShell({
             )}
           </motion.div>
         </AnimatePresence>
+        </Suspense>
       </main>
 
       {/* Floating Glassmorphism 4-Tab Bottom Navigation Bar */}
