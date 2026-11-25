@@ -1027,7 +1027,7 @@ export function DriverWorkspace({ workspaceSwitcher, onRequestSignIn }: DriverWo
                       {t('Gains cumulés (85% net)', 'Total net earnings (85%)')}
                     </p>
                     <p className="font-mono text-3xl font-bold tabular-nums">
-                      {formatMoney(driver?.earningsTotal || 0, 'GHS')}
+                      {formatLocalMoney(driver?.earningsTotal || 0, 'GHS')}
                     </p>
                     <div className="flex items-center gap-4 pt-3 text-xs text-neutral-300 font-mono">
                       <span>{driver?.completedDeliveries || 0} {t('courses', 'trips')}</span>
@@ -1055,7 +1055,7 @@ export function DriverWorkspace({ workspaceSwitcher, onRequestSignIn }: DriverWo
                             <p className="text-neutral-500">{d.merchantName}</p>
                           </div>
                           <span className="font-mono font-semibold tabular-nums">
-                            +{formatMoney(d.quotedPrice * 0.85, d.currency)}
+                            +{formatLocalMoney(d.quotedPrice * 0.85, d.currency)}
                           </span>
                         </div>
                       ))
