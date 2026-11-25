@@ -110,3 +110,14 @@
   background: rgba(255, 255, 255, 0.85) !important;
   color: #525252 !important;
 }
+
+
+/* Prevent iOS Safari from auto-zooming the page when a form field receives focus.
+   Keep this limited to form controls: map pinch-zoom remains available. */
+@media screen and (max-width: 767px) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
