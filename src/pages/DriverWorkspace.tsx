@@ -30,7 +30,7 @@ import {
 } from 'lucide-react';
 import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { useAuth } from '../context/AuthContext';
-import { useLanguage } from '../context/LanguageContext';
+import { LanguageSelector, useLanguage } from '../context/LanguageContext';
 import {
   DeliveryRecord,
   DeliveryStatus,
@@ -701,6 +701,7 @@ export function DriverWorkspace({ workspaceSwitcher, onRequestSignIn }: DriverWo
             </p>
           </div>
           <div className="flex items-center gap-2">
+            <LanguageSelector compact />
             {workspaceSwitcher}
             {uid ? (
               <button
@@ -753,6 +754,37 @@ export function DriverWorkspace({ workspaceSwitcher, onRequestSignIn }: DriverWo
             {driver?.isOnline ? t('Passer hors ligne', 'Go offline') : t('Passer en ligne', 'Go online')}
           </button>
         </div>
+
+        {/* Driver Sub-Navigation Segmented Pill Bar */}
+        <nav
+          aria-label={t('Sections livreur', 'Driver sections')}
+          className="px-4 py-2.5 bg-white border-b border-neutral-200 grid grid-cols-4 gap-1.5"
+        >
+          {[
+            { id: 'radar', label: t('Radar', 'Radar'), icon: Radio },
+            { id: 'active', label: t('Course', 'Active'), icon: Navigation },
+            { id: 'earnings', label: t('Revenus', 'Earnings'), icon: DollarSign },
+            { id: 'profile', label: t('Profil', 'Profile'), icon: User },
+          ].map((item) => {
+            const Icon = item.icon;
+            const isActive = tab === item.id;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => setTab(item.id as DriverTab)}
+                className={`flex items-center justify-center gap-1.5 py-2 px-2 rounded-full text-[11px] font-medium transition-colors ${
+                  isActive
+                    ? 'bg-neutral-950 text-white'
+                    : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200/70 hover:text-neutral-950'
+                }`}
+              >
+                <Icon className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">{item.label}</span>
+              </button>
+            );
+          })}
+        </nav>
 
         {(banner || gpsNotice) && (
           <div className="bg-neutral-950 text-white px-5 py-2.5 text-xs flex items-center justify-between gap-2">
@@ -1161,32 +1193,6 @@ export function DriverWorkspace({ workspaceSwitcher, onRequestSignIn }: DriverWo
             </>
           )}
         </div>
-
-        {/* Bottom Mobile Tab Navigation */}
-        <nav className="border-t border-neutral-200 bg-white px-3 py-2 grid grid-cols-4 gap-1 sticky bottom-0 z-20">
-          {[
-            { id: 'radar', label: t('Radar', 'Radar'), icon: Radio },
-            { id: 'active', label: t('Course', 'Active'), icon: Navigation },
-            { id: 'earnings', label: t('Revenus', 'Earnings'), icon: DollarSign },
-            { id: 'profile', label: t('Profil', 'Profile'), icon: User },
-          ].map((item) => {
-            const Icon = item.icon;
-            const isActive = tab === item.id;
-            return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => setTab(item.id as DriverTab)}
-                className={`flex flex-col items-center justify-center py-2 rounded-2xl gap-1 text-[11px] font-medium transition-colors ${
-                  isActive ? 'bg-neutral-950 text-white' : 'text-neutral-600 hover:bg-neutral-100'
-                }`}
-              >
-                <Icon className="w-4 h-4" />
-                <span>{item.label}</span>
-              </button>
-            );
-          })}
-        </nav>
       </div>
 
       {/* Proof of Delivery Modal */}

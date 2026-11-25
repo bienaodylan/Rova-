@@ -35,7 +35,7 @@ import {
 } from 'lucide-react';
 import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { useAuth } from '../context/AuthContext';
-import { useLanguage } from '../context/LanguageContext';
+import { LanguageSelector, useLanguage } from '../context/LanguageContext';
 import {
   AuditLogRecord,
   DeliveryRecord,
@@ -1004,6 +1004,7 @@ export function OperationsCenter({
               {navItems.find((n) => n.id === section)?.label}
             </h1>
             <div className="flex items-center gap-3 text-xs font-mono text-neutral-600">
+              <LanguageSelector compact />
               <span className="hidden sm:inline">
                 {t('EN LIGNE', 'ONLINE')}: {kpis.onlineDriversCount}
               </span>

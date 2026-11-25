@@ -176,7 +176,9 @@ export function RovaMap({
     };
   }, [interactivePick]);
 
-  // Synchronize markers & route polyline
+  const lastBoundsKeyRef = useRef<string>('');
+
+  // Synchronize markers & route polyline smoothly without unnecessary resets
   useEffect(() => {
     const map = mapRef.current;
     const layer = markersLayerRef.current;
@@ -184,6 +186,7 @@ export function RovaMap({
 
     layer.clearLayers();
     const boundsPoints: [number, number][] = [];
+    const staticKeyParts: string[] = [];
 
     for (const m of markers) {
       if (!Number.isFinite(m.lat) || !Number.isFinite(m.lng)) continue;
@@ -203,6 +206,11 @@ export function RovaMap({
       }
       leafletMarker.addTo(layer);
       boundsPoints.push([m.lat, m.lng]);
+      if (m.kind !== 'driver') {
+        staticKeyParts.push(`${m.id}:${m.lat.toFixed(4)},${m.lng.toFixed(4)}`);
+      } else {
+        staticKeyParts.push(`${m.id}:driver`);
+      }
     }
 
     if (routeLayerRef.current) {
@@ -219,12 +227,19 @@ export function RovaMap({
       for (const pt of routeCoordinates) {
         boundsPoints.push(pt);
       }
+      const first = routeCoordinates[0];
+      const last = routeCoordinates[routeCoordinates.length - 1];
+      staticKeyParts.push(`route:${routeCoordinates.length}:${first[0].toFixed(3)},${last[0].toFixed(3)}`);
     }
 
-    if (boundsPoints.length >= 2) {
-      map.fitBounds(L.latLngBounds(boundsPoints), { padding: [44, 44], maxZoom: 15 });
-    } else if (boundsPoints.length === 1) {
-      map.setView(boundsPoints[0], Math.max(map.getZoom(), 14), { animate: true });
+    const nextKey = staticKeyParts.join('|');
+    if (nextKey !== lastBoundsKeyRef.current) {
+      lastBoundsKeyRef.current = nextKey;
+      if (boundsPoints.length >= 2) {
+        map.fitBounds(L.latLngBounds(boundsPoints), { padding: [44, 44], maxZoom: 15, animate: true });
+      } else if (boundsPoints.length === 1) {
+        map.setView(boundsPoints[0], Math.max(map.getZoom(), 14), { animate: true });
+      }
     }
   }, [markers, routeCoordinates, interactivePick]);
 

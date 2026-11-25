@@ -1,0 +1,1138 @@
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import {
+  addDoc,
+  collection,
+  deleteDoc,
+  doc,
+  getDocs,
+  onSnapshot,
+  orderBy,
+  query,
+  serverTimestamp,
+  setDoc,
+  updateDoc,
+  where,
+  writeBatch,
+} from 'firebase/firestore';
+import { db, handleFirestoreError, OperationType } from '../lib/firebase';
+import { useAuth } from './AuthContext';
+import { useLanguage } from './LanguageContext';
+import {
+  BusinessRecord,
+  DeliveryRecord,
+  DeliveryStopRecord,
+  DriverDispatchRecord,
+  NotificationRecord,
+  PaymentMethod,
+  PricingRuleRecord,
+  ProofType,
+  ReservationRecord,
+  SavedRecipient,
+  TimingType,
+  VehicleCategory,
+} from '../types/rova';
+import {
+  generateOtp,
+  generateReference,
+  generateTrackingToken,
+  getEffectivePricingRule,
+  haversineDistanceKm,
+  rankSuitableDrivers,
+} from '../lib/logistics';
+import { ToastMessage } from '../components/ToastBanner';
+
+export type ShipmentFilter = 'all' | 'active' | 'upcoming' | 'completed' | 'cancelled';
+export type ActivityFilter = 'all' | 'deliveries' | 'reservations' | 'payments';
+
+export interface DraftStop {
+  id: string;
+  recipientName: string;
+  recipientPhone: string;
+  address: string;
+  landmark: string;
+  instructions: string;
+  packageRef: string;
+  lat: number;
+  lng: number;
+}
+
+export interface DeliveryDraft {
+  step: 1 | 2 | 3 | 4 | 5;
+  mode: 'single' | 'multi' | 'scheduled';
+  pickup: {
+    address: string;
+    landmark: string;
+    instructions: string;
+    lat: number;
+    lng: number;
+  };
+  stops: DraftStop[];
+  vehicleCategory: VehicleCategory;
+  timingType: TimingType;
+  scheduledFor: string;
+  packageType: string;
+  packageSize: 'small' | 'medium' | 'large' | 'bulk';
+  weightKg: number;
+  quantity: number;
+  fragile: boolean;
+  specialHandling: string;
+  proofRequired: ProofType;
+  paymentMethod: PaymentMethod;
+  selectedDriverUid: string;
+}
+
+const DEFAULT_COORDS = { lat: 5.3235, lng: -4.0267 };
+
+export function createInitialDraft(
+  business?: BusinessRecord | null,
+  preferredPayment: PaymentMethod = 'mobile_money'
+): DeliveryDraft {
+  return {
+    step: 1,
+    mode: 'single',
+    pickup: {
+      address: business?.defaultPickupAddress || '',
+      landmark: business?.defaultPickupLandmark || '',
+      instructions: '',
+      lat: business?.defaultPickupLat ?? DEFAULT_COORDS.lat,
+      lng: business?.defaultPickupLng ?? DEFAULT_COORDS.lng,
+    },
+    stops: [
+      {
+        id: `stop_${Date.now()}`,
+        recipientName: '',
+        recipientPhone: '',
+        address: '',
+        landmark: '',
+        instructions: '',
+        packageRef: '',
+        lat: (business?.defaultPickupLat ?? DEFAULT_COORDS.lat) + 0.012,
+        lng: (business?.defaultPickupLng ?? DEFAULT_COORDS.lng) + 0.01,
+      },
+    ],
+    vehicleCategory: 'motorcycle',
+    timingType: 'instant',
+    scheduledFor: '',
+    packageType: '',
+    packageSize: 'small',
+    weightKg: 3,
+    quantity: 1,
+    fragile: false,
+    specialHandling: '',
+    proofRequired: 'otp',
+    paymentMethod: preferredPayment,
+    selectedDriverUid: '',
+  };
+}
+
+interface RovaAppContextValue {
+  // Live data
+  loadingData: boolean;
+  business: BusinessRecord | null;
+  deliveries: DeliveryRecord[];
+  reservations: ReservationRecord[];
+  recipients: SavedRecipient[];
+  onlineDrivers: DriverDispatchRecord[];
+  pricingRules: PricingRuleRecord[];
+  notifications: NotificationRecord[];
+  activeDeliveries: DeliveryRecord[];
+  upcomingReservations: ReservationRecord[];
+  unreadNotifCount: number;
+
+  // Persistent UI filters & preferences
+  shipmentFilter: ShipmentFilter;
+  setShipmentFilter: (f: ShipmentFilter) => void;
+  activityFilter: ActivityFilter;
+  setActivityFilter: (f: ActivityFilter) => void;
+  preferredPayment: PaymentMethod;
+  setPreferredPayment: (m: PaymentMethod) => void;
+  notificationsEnabled: boolean;
+  setNotificationsEnabled: (v: boolean) => void;
+
+  // Persistent Delivery Draft & Sheets
+  draft: DeliveryDraft;
+  setDraft: React.Dispatch<React.SetStateAction<DeliveryDraft>>;
+  resetDraft: (mode?: 'single' | 'multi' | 'scheduled') => void;
+  composerOpen: boolean;
+  openComposer: (mode?: 'single' | 'multi' | 'scheduled', presetStop?: SavedRecipient) => void;
+  closeComposer: () => void;
+
+  reservationSheetOpen: boolean;
+  openReservationSheet: () => void;
+  closeReservationSheet: () => void;
+
+  selectedDeliveryId: string | null;
+  selectedDelivery: DeliveryRecord | null;
+  openShipmentDetail: (deliveryId: string) => void;
+  closeShipmentDetail: () => void;
+
+  trackSheetOpen: boolean;
+  openTrackSheet: () => void;
+  closeTrackSheet: () => void;
+
+  supportSheetOpen: boolean;
+  openSupportSheet: (deliveryId?: string) => void;
+  closeSupportSheet: () => void;
+  supportContextDeliveryId?: string;
+
+  // Toast feedback
+  toast: ToastMessage | null;
+  showToast: (text: string, kind?: ToastMessage['kind']) => void;
+  dismissToast: () => void;
+
+  // Real Firestore actions
+  busy: boolean;
+  requestSignIn: () => Promise<void>;
+  submitDelivery: (routeDistanceKm: number, routeDurationMin: number, quotedTotal: number) => Promise<DeliveryRecord | null>;
+  cancelDelivery: (deliveryId: string) => Promise<boolean>;
+  repeatDelivery: (delivery: DeliveryRecord) => Promise<void>;
+  submitReservation: (payload: {
+    vehicleCategory: VehicleCategory;
+    reservationDate: string;
+    startTime: string;
+    endTime: string;
+    durationType: 'window' | 'hours' | 'full_day';
+    pickupAddress: string;
+    pickupLat: number;
+    pickupLng: number;
+    destinationsSummary?: string;
+    cargoRequirements?: string;
+    quotedPrice: number;
+  }) => Promise<boolean>;
+  cancelReservation: (reservationId: string) => Promise<boolean>;
+  saveRecipient: (input: {
+    id?: string;
+    name: string;
+    phone: string;
+    address: string;
+    landmark?: string;
+    instructions?: string;
+    lat: number;
+    lng: number;
+  }) => Promise<boolean>;
+  deleteRecipient: (id: string) => Promise<boolean>;
+  saveBusinessProfile: (input: {
+    name: string;
+    city: string;
+    country: string;
+    phone?: string;
+    displayName?: string;
+    defaultPickupAddress?: string;
+    defaultPickupLat?: number;
+    defaultPickupLng?: number;
+  }) => Promise<boolean>;
+  submitSupportMessage: (input: {
+    category: 'failed_delivery' | 'damage' | 'delay' | 'dispute' | 'refund' | 'driver_report';
+    description: string;
+    deliveryId?: string;
+  }) => Promise<boolean>;
+  markAllNotificationsRead: () => Promise<void>;
+}
+
+const RovaAppContext = createContext<RovaAppContextValue | null>(null);
+
+export function RovaAppProvider({
+  children,
+  onSignIn,
+}: {
+  children: React.ReactNode;
+  onSignIn: () => Promise<void>;
+}) {
+  const { firebaseUser, profile, updateProfileFields } = useAuth();
+  const { t } = useLanguage();
+  const uid = firebaseUser?.uid || '';
+
+  const [loadingData, setLoadingData] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  // Live Firestore state
+  const [business, setBusiness] = useState<BusinessRecord | null>(null);
+  const [deliveries, setDeliveries] = useState<DeliveryRecord[]>([]);
+  const [reservations, setReservations] = useState<ReservationRecord[]>([]);
+  const [recipients, setRecipients] = useState<SavedRecipient[]>([]);
+  const [onlineDrivers, setOnlineDrivers] = useState<DriverDispatchRecord[]>([]);
+  const [pricingRules, setPricingRules] = useState<PricingRuleRecord[]>([]);
+  const [notifications, setNotifications] = useState<NotificationRecord[]>([]);
+
+  // Persistent client preferences & filters
+  const [shipmentFilter, setShipmentFilter] = useState<ShipmentFilter>('all');
+  const [activityFilter, setActivityFilter] = useState<ActivityFilter>('all');
+  const [preferredPayment, setPreferredPayment] = useState<PaymentMethod>('mobile_money');
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+
+  // Persistent draft & overlays
+  const [draft, setDraft] = useState<DeliveryDraft>(() => createInitialDraft(null, 'mobile_money'));
+  const [composerOpen, setComposerOpen] = useState(false);
+  const [reservationSheetOpen, setReservationSheetOpen] = useState(false);
+  const [selectedDeliveryId, setSelectedDeliveryId] = useState<string | null>(null);
+  const [trackSheetOpen, setTrackSheetOpen] = useState(false);
+  const [supportSheetOpen, setSupportSheetOpen] = useState(false);
+  const [supportContextDeliveryId, setSupportContextDeliveryId] = useState<string | undefined>(undefined);
+
+  // Toast
+  const [toast, setToast] = useState<ToastMessage | null>(null);
+  const showToast = useCallback((text: string, kind: ToastMessage['kind'] = 'success') => {
+    const id = Date.now();
+    setToast({ id, kind, text });
+    window.setTimeout(() => {
+      setToast((prev) => (prev && prev.id === id ? null : prev));
+    }, 3800);
+  }, []);
+  const dismissToast = useCallback(() => setToast(null), []);
+
+  // Firestore real-time subscriptions when authenticated
+  useEffect(() => {
+    if (!uid) {
+      setBusiness(null);
+      setDeliveries([]);
+      setReservations([]);
+      setRecipients([]);
+      setOnlineDrivers([]);
+      setPricingRules([]);
+      setNotifications([]);
+      setLoadingData(false);
+      return;
+    }
+
+    setLoadingData(true);
+    let readyCount = 0;
+    const markReady = () => {
+      readyCount += 1;
+      if (readyCount >= 2) setLoadingData(false);
+    };
+
+    const unsubs: Array<() => void> = [];
+
+    unsubs.push(
+      onSnapshot(
+        query(collection(db, 'businesses'), where('ownerId', '==', uid)),
+        (snap) => {
+          if (!snap.empty) {
+            const d = snap.docs[0];
+            const b = { id: d.id, ...(d.data() as Omit<BusinessRecord, 'id'>) };
+            setBusiness(b);
+            setDraft((prev) =>
+              !prev.pickup.address && b.defaultPickupAddress
+                ? {
+                    ...prev,
+                    pickup: {
+                      ...prev.pickup,
+                      address: b.defaultPickupAddress,
+                      landmark: b.defaultPickupLandmark || '',
+                      lat: b.defaultPickupLat ?? prev.pickup.lat,
+                      lng: b.defaultPickupLng ?? prev.pickup.lng,
+                    },
+                  }
+                : prev
+            );
+          } else {
+            setBusiness(null);
+          }
+          markReady();
+        },
+        (err) => {
+          markReady();
+          handleFirestoreError(err, OperationType.LIST, 'businesses');
+        }
+      )
+    );
+
+    unsubs.push(
+      onSnapshot(
+        query(collection(db, 'deliveries'), where('merchantUid', '==', uid), orderBy('createdAt', 'desc')),
+        (snap) => {
+          setDeliveries(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<DeliveryRecord, 'id'>) })));
+          markReady();
+        },
+        (err) => {
+          markReady();
+          handleFirestoreError(err, OperationType.LIST, 'deliveries');
+        }
+      )
+    );
+
+    unsubs.push(
+      onSnapshot(
+        query(collection(db, 'reservations'), where('merchantUid', '==', uid), orderBy('createdAt', 'desc')),
+        (snap) => {
+          setReservations(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<ReservationRecord, 'id'>) })));
+        },
+        (err) => handleFirestoreError(err, OperationType.LIST, 'reservations')
+      )
+    );
+
+    unsubs.push(
+      onSnapshot(
+        query(collection(db, 'savedRecipients'), where('ownerId', '==', uid), orderBy('createdAt', 'desc')),
+        (snap) => {
+          setRecipients(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<SavedRecipient, 'id'>) })));
+        },
+        (err) => handleFirestoreError(err, OperationType.LIST, 'savedRecipients')
+      )
+    );
+
+    unsubs.push(
+      onSnapshot(
+        query(collection(db, 'driverDispatch'), where('isOnline', '==', true)),
+        (snap) => {
+          setOnlineDrivers(
+            snap.docs
+              .map((d) => ({ id: d.id, ...(d.data() as Omit<DriverDispatchRecord, 'id'>) }))
+              .filter((d) => d.approvalStatus === 'approved')
+          );
+        },
+        (err) => handleFirestoreError(err, OperationType.LIST, 'driverDispatch')
+      )
+    );
+
+    unsubs.push(
+      onSnapshot(
+        query(collection(db, 'pricingRules'), where('active', '==', true)),
+        (snap) => {
+          setPricingRules(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<PricingRuleRecord, 'id'>) })));
+        },
+        (err) => handleFirestoreError(err, OperationType.LIST, 'pricingRules')
+      )
+    );
+
+    unsubs.push(
+      onSnapshot(
+        query(collection(db, 'notifications'), where('userId', '==', uid), orderBy('createdAt', 'desc')),
+        (snap) => {
+          setNotifications(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<NotificationRecord, 'id'>) })));
+        },
+        (err) => handleFirestoreError(err, OperationType.LIST, 'notifications')
+      )
+    );
+
+    return () => unsubs.forEach((u) => u());
+  }, [uid]);
+
+  const activeDeliveries = useMemo(
+    () =>
+      deliveries.filter(
+        (d) => !['delivered', 'failed', 'cancelled'].includes(d.status)
+      ),
+    [deliveries]
+  );
+
+  const upcomingReservations = useMemo(
+    () => reservations.filter((r) => ['pending_approval', 'confirmed', 'in_progress'].includes(r.status)),
+    [reservations]
+  );
+
+  const unreadNotifCount = useMemo(
+    () => notifications.filter((n) => !n.read).length,
+    [notifications]
+  );
+
+  const selectedDelivery = useMemo(
+    () => deliveries.find((d) => d.id === selectedDeliveryId) || null,
+    [deliveries, selectedDeliveryId]
+  );
+
+  const resetDraft = useCallback(
+    (mode: 'single' | 'multi' | 'scheduled' = 'single') => {
+      const next = createInitialDraft(business, preferredPayment);
+      next.mode = mode;
+      next.timingType = mode === 'scheduled' ? 'scheduled' : 'instant';
+      if (mode === 'multi') {
+        next.stops.push({
+          id: `stop_${Date.now()}_2`,
+          recipientName: '',
+          recipientPhone: '',
+          address: '',
+          landmark: '',
+          instructions: '',
+          packageRef: '',
+          lat: next.pickup.lat + 0.022,
+          lng: next.pickup.lng + 0.018,
+        });
+      }
+      setDraft(next);
+    },
+    [business, preferredPayment]
+  );
+
+  const openComposer = useCallback(
+    (mode?: 'single' | 'multi' | 'scheduled', presetStop?: SavedRecipient) => {
+      setDraft((prev) => {
+        const next = { ...prev };
+        if (mode) {
+          next.mode = mode;
+          next.timingType = mode === 'scheduled' ? 'scheduled' : 'instant';
+          if (mode === 'multi' && next.stops.length < 2) {
+            next.stops = [
+              ...next.stops,
+              {
+                id: `stop_${Date.now()}_2`,
+                recipientName: '',
+                recipientPhone: '',
+                address: '',
+                landmark: '',
+                instructions: '',
+                packageRef: '',
+                lat: prev.pickup.lat + 0.02,
+                lng: prev.pickup.lng + 0.015,
+              },
+            ];
+          }
+        }
+        if (presetStop) {
+          const stopObj: DraftStop = {
+            id: `stop_${Date.now()}`,
+            recipientName: presetStop.name,
+            recipientPhone: presetStop.phone,
+            address: presetStop.address,
+            landmark: presetStop.landmark || '',
+            instructions: presetStop.instructions || '',
+            packageRef: '',
+            lat: presetStop.lat,
+            lng: presetStop.lng,
+          };
+          const firstEmpty = next.stops.findIndex((s) => !s.address.trim());
+          if (firstEmpty >= 0) {
+            const copy = [...next.stops];
+            copy[firstEmpty] = stopObj;
+            next.stops = copy;
+          } else {
+            next.stops = [...next.stops, stopObj];
+          }
+          next.step = next.pickup.address.trim() ? 2 : 1;
+        }
+        return next;
+      });
+      setComposerOpen(true);
+    },
+    []
+  );
+
+  const requireAuth = useCallback((): boolean => {
+    if (!uid) {
+      showToast(
+        t('Connectez-vous avec Google pour enregistrer cette action.', 'Sign in with Google to save this action.'),
+        'info'
+      );
+      void onSignIn();
+      return false;
+    }
+    return true;
+  }, [uid, showToast, t, onSignIn]);
+
+  const submitDelivery = useCallback(
+    async (
+      routeDistanceKm: number,
+      routeDurationMin: number,
+      quotedTotal: number
+    ): Promise<DeliveryRecord | null> => {
+      if (!requireAuth()) return null;
+
+      const validStops = draft.stops.filter((s) => s.address.trim().length > 0);
+      if (!draft.pickup.address.trim() || validStops.length === 0) {
+        showToast(
+          t('Indiquez une adresse de collecte et au moins une destination.', 'Enter a pickup address and at least one destination.'),
+          'error'
+        );
+        return null;
+      }
+
+      setBusy(true);
+      try {
+        const deliveryRef = doc(collection(db, 'deliveries'));
+        const reference = generateReference('RV');
+        const ranked = rankSuitableDrivers(
+          onlineDrivers,
+          draft.pickup.lat,
+          draft.pickup.lng,
+          draft.vehicleCategory,
+          draft.weightKg
+        );
+        const matched =
+          ranked.find((m) => m.driver.uid === draft.selectedDriverUid)?.driver ||
+          (draft.timingType === 'instant' && ranked[0]?.driver) ||
+          null;
+
+        const initialStatus: DeliveryRecord['status'] = matched
+          ? 'driver_assigned'
+          : draft.timingType === 'scheduled'
+          ? 'scheduled'
+          : 'pending';
+
+        const preparedStops = validStops.slice(0, 50).map((s, idx) => {
+          const stopRef = doc(collection(db, 'deliveries', deliveryRef.id, 'stops'));
+          return {
+            stopRef,
+            stopId: stopRef.id,
+            sequence: idx + 1,
+            otpCode: generateOtp(),
+            trackingToken: generateTrackingToken(),
+            data: s,
+          };
+        });
+
+        const rule = getEffectivePricingRule(pricingRules, draft.vehicleCategory);
+        const computedDistance =
+          routeDistanceKm > 0
+            ? routeDistanceKm
+            : Number(
+                haversineDistanceKm(
+                  draft.pickup.lat,
+                  draft.pickup.lng,
+                  preparedStops[0].data.lat,
+                  preparedStops[0].data.lng
+                ).toFixed(2)
+              );
+
+        const deliveryPayload: Record<string, unknown> = {
+          reference,
+          ...(business?.id ? { businessId: business.id } : {}),
+          merchantUid: uid,
+          merchantName: (business?.name || profile?.displayName || 'Marchand ROVA').slice(0, 160),
+          driverUid: matched ? matched.uid : '',
+          ...(matched ? { driverName: matched.firstName.slice(0, 120) } : {}),
+          vehicleCategory: draft.vehicleCategory,
+          timingType: draft.timingType,
+          ...(draft.scheduledFor.trim() ? { scheduledFor: draft.scheduledFor.trim().slice(0, 60) } : {}),
+          pickupAddress: draft.pickup.address.trim().slice(0, 300),
+          ...(draft.pickup.landmark.trim() ? { pickupLandmark: draft.pickup.landmark.trim().slice(0, 200) } : {}),
+          ...(draft.pickup.instructions.trim()
+            ? { pickupInstructions: draft.pickup.instructions.trim().slice(0, 300) }
+            : {}),
+          pickupLat: draft.pickup.lat,
+          pickupLng: draft.pickup.lng,
+          primaryDestinationLabel: preparedStops[0].data.address.trim().slice(0, 240),
+          stopIds: preparedStops.map((p) => p.stopId),
+          packageType: draft.packageType.trim().slice(0, 80) || t('Colis commercial', 'Commercial parcel'),
+          packageSize: draft.packageSize,
+          weightKg: Math.max(0.5, Number(draft.weightKg) || 1),
+          quantity: Math.max(1, Math.floor(Number(draft.quantity) || 1)),
+          fragile: Boolean(draft.fragile),
+          ...(draft.specialHandling.trim() ? { specialHandling: draft.specialHandling.trim().slice(0, 240) } : {}),
+          proofRequired: draft.proofRequired,
+          status: initialStatus,
+          isMultiStop: preparedStops.length > 1,
+          stopCount: preparedStops.length,
+          completedStopCount: 0,
+          totalDistanceKm: Math.max(0.5, computedDistance),
+          estimatedDurationMin: Math.max(8, routeDurationMin || Math.round(computedDistance * 3)),
+          quotedPrice: Math.max(0, Number(quotedTotal) || rule.minimumFare),
+          currency: rule.currency || 'GHS',
+          paymentMethod: draft.paymentMethod,
+          paymentStatus: draft.paymentMethod === 'invoice' ? 'invoiced' : 'authorized',
+          ...(matched ? { driverLat: matched.currentLat, driverLng: matched.currentLng } : {}),
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        };
+
+        const batch = writeBatch(db);
+        batch.set(deliveryRef, deliveryPayload);
+
+        for (const p of preparedStops) {
+          const cleanName = p.data.recipientName.trim().slice(0, 120) || t('Destinataire', 'Recipient');
+          const cleanPhone = p.data.recipientPhone.trim().slice(0, 40) || '+225 00 00 00 00';
+          const cleanAddr = p.data.address.trim().slice(0, 300);
+
+          batch.set(p.stopRef, {
+            deliveryId: deliveryRef.id,
+            merchantUid: uid,
+            driverUid: matched ? matched.uid : '',
+            sequence: p.sequence,
+            recipientName: cleanName,
+            recipientPhone: cleanPhone,
+            address: cleanAddr,
+            ...(p.data.landmark.trim() ? { landmark: p.data.landmark.trim().slice(0, 200) } : {}),
+            ...(p.data.instructions.trim() ? { instructions: p.data.instructions.trim().slice(0, 300) } : {}),
+            ...(p.data.packageRef.trim() ? { packageRef: p.data.packageRef.trim().slice(0, 80) } : {}),
+            lat: p.data.lat,
+            lng: p.data.lng,
+            status: initialStatus,
+            otpCode: p.otpCode,
+            trackingToken: p.trackingToken,
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+          });
+
+          const firstName = cleanName.split(' ')[0] || 'Client';
+          batch.set(doc(db, 'publicTracking', p.trackingToken), {
+            trackingToken: p.trackingToken,
+            deliveryId: deliveryRef.id,
+            stopId: p.stopId,
+            merchantUid: uid,
+            driverUid: matched ? matched.uid : '',
+            reference,
+            recipientFirstName: firstName.slice(0, 80),
+            destinationLabel: cleanAddr,
+            destinationLat: p.data.lat,
+            destinationLng: p.data.lng,
+            status: initialStatus,
+            ...(matched ? { driverFirstName: matched.firstName.slice(0, 80) } : {}),
+            vehicleCategory: draft.vehicleCategory,
+            ...(matched ? { driverLat: matched.currentLat, driverLng: matched.currentLng } : {}),
+            etaMinutes: Math.max(8, routeDurationMin || 20),
+            showLiveDriver: p.sequence === 1 && Boolean(matched),
+            otpHint: `••${p.otpCode.slice(-2)}`,
+            updatedAt: serverTimestamp(),
+          });
+        }
+
+        await batch.commit();
+
+        await addDoc(collection(db, 'notifications'), {
+          userId: uid,
+          title: t(`Livraison ${reference} confirmée`, `Delivery ${reference} confirmed`),
+          message: matched
+            ? t(`Assignée à ${matched.firstName}.`, `Assigned to ${matched.firstName}.`)
+            : t('Votre demande est en cours d’affectation.', 'Your request is being dispatched.'),
+          eventType: 'delivery_created',
+          deliveryId: deliveryRef.id,
+          read: false,
+          createdAt: serverTimestamp(),
+        }).catch(() => {});
+
+        const createdRecord = { id: deliveryRef.id, ...(deliveryPayload as Omit<DeliveryRecord, 'id'>) };
+        setComposerOpen(false);
+        resetDraft('single');
+        setSelectedDeliveryId(deliveryRef.id);
+        showToast(
+          t(`Livraison ${reference} créée avec succès.`, `Delivery ${reference} created successfully.`),
+          'success'
+        );
+        return createdRecord;
+      } catch (err) {
+        showToast(
+          t('Impossible de créer la livraison. Vérifiez les champs saisis.', 'Could not create delivery. Please review fields.'),
+          'error'
+        );
+        handleFirestoreError(err, OperationType.CREATE, 'deliveries');
+        return null;
+      } finally {
+        setBusy(false);
+      }
+    },
+    [requireAuth, draft, onlineDrivers, pricingRules, business, profile, uid, t, showToast, resetDraft]
+  );
+
+  const cancelDelivery = useCallback(
+    async (deliveryId: string): Promise<boolean> => {
+      if (!requireAuth()) return false;
+      setBusy(true);
+      try {
+        await updateDoc(doc(db, 'deliveries', deliveryId), {
+          status: 'cancelled',
+          updatedAt: serverTimestamp(),
+        });
+        showToast(t('Livraison annulée.', 'Delivery cancelled.'), 'info');
+        return true;
+      } catch (err) {
+        showToast(t('Annulation impossible pour ce statut.', 'Cannot cancel delivery at this status.'), 'error');
+        handleFirestoreError(err, OperationType.UPDATE, `deliveries/${deliveryId}`);
+        return false;
+      } finally {
+        setBusy(false);
+      }
+    },
+    [requireAuth, showToast, t]
+  );
+
+  const repeatDelivery = useCallback(
+    async (delivery: DeliveryRecord) => {
+      try {
+        const stopsSnap = await getDocs(
+          query(collection(db, 'deliveries', delivery.id, 'stops'), orderBy('sequence', 'asc'))
+        );
+        const loadedStops: DraftStop[] = stopsSnap.docs.map((d) => {
+          const s = d.data() as DeliveryStopRecord;
+          return {
+            id: `repeat_${d.id}_${Date.now()}`,
+            recipientName: s.recipientName,
+            recipientPhone: s.recipientPhone,
+            address: s.address,
+            landmark: s.landmark || '',
+            instructions: s.instructions || '',
+            packageRef: s.packageRef || '',
+            lat: s.lat,
+            lng: s.lng,
+          };
+        });
+
+        setDraft({
+          step: 5,
+          mode: loadedStops.length > 1 ? 'multi' : 'single',
+          pickup: {
+            address: delivery.pickupAddress,
+            landmark: delivery.pickupLandmark || '',
+            instructions: delivery.pickupInstructions || '',
+            lat: delivery.pickupLat,
+            lng: delivery.pickupLng,
+          },
+          stops:
+            loadedStops.length > 0
+              ? loadedStops
+              : [
+                  {
+                    id: `repeat_0_${Date.now()}`,
+                    recipientName: '',
+                    recipientPhone: '',
+                    address: delivery.primaryDestinationLabel || '',
+                    landmark: '',
+                    instructions: '',
+                    packageRef: '',
+                    lat: delivery.pickupLat + 0.01,
+                    lng: delivery.pickupLng + 0.01,
+                  },
+                ],
+          vehicleCategory: delivery.vehicleCategory,
+          timingType: 'instant',
+          scheduledFor: '',
+          packageType: delivery.packageType,
+          packageSize: delivery.packageSize,
+          weightKg: delivery.weightKg,
+          quantity: delivery.quantity,
+          fragile: delivery.fragile,
+          specialHandling: delivery.specialHandling || '',
+          proofRequired: delivery.proofRequired,
+          paymentMethod: delivery.paymentMethod,
+          selectedDriverUid: '',
+        });
+        setSelectedDeliveryId(null);
+        setComposerOpen(true);
+        showToast(
+          t('Expédition pré-remplie. Vérifiez puis confirmez.', 'Shipment pre-filled. Review and confirm.'),
+          'info'
+        );
+      } catch {
+        showToast(t('Impossible de dupliquer cette livraison.', 'Could not duplicate this delivery.'), 'error');
+      }
+    },
+    [showToast, t]
+  );
+
+  const submitReservation = useCallback(
+    async (payload: {
+      vehicleCategory: VehicleCategory;
+      reservationDate: string;
+      startTime: string;
+      endTime: string;
+      durationType: 'window' | 'hours' | 'full_day';
+      pickupAddress: string;
+      pickupLat: number;
+      pickupLng: number;
+      destinationsSummary?: string;
+      cargoRequirements?: string;
+      quotedPrice: number;
+    }): Promise<boolean> => {
+      if (!requireAuth()) return false;
+      setBusy(true);
+      try {
+        const rule = getEffectivePricingRule(pricingRules, payload.vehicleCategory);
+        await addDoc(collection(db, 'reservations'), {
+          ...(business?.id ? { businessId: business.id } : {}),
+          merchantUid: uid,
+          merchantName: (business?.name || profile?.displayName || 'Marchand ROVA').slice(0, 160),
+          vehicleCategory: payload.vehicleCategory,
+          driverUid: '',
+          reservationDate: payload.reservationDate.slice(0, 20),
+          startTime: payload.startTime.slice(0, 12),
+          endTime: payload.endTime.slice(0, 12),
+          durationType: payload.durationType,
+          pickupAddress: payload.pickupAddress.trim().slice(0, 300),
+          pickupLat: payload.pickupLat,
+          pickupLng: payload.pickupLng,
+          ...(payload.destinationsSummary?.trim()
+            ? { destinationsSummary: payload.destinationsSummary.trim().slice(0, 400) }
+            : {}),
+          ...(payload.cargoRequirements?.trim()
+            ? { cargoRequirements: payload.cargoRequirements.trim().slice(0, 300) }
+            : {}),
+          quotedPrice: Math.max(0, Number(payload.quotedPrice) || rule.fullDayRate),
+          currency: rule.currency || 'GHS',
+          status: 'pending_approval',
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
+        setReservationSheetOpen(false);
+        showToast(t('Réservation véhicule enregistrée.', 'Vehicle reservation submitted.'), 'success');
+        return true;
+      } catch (err) {
+        showToast(t('Impossible de créer la réservation.', 'Could not create reservation.'), 'error');
+        handleFirestoreError(err, OperationType.CREATE, 'reservations');
+        return false;
+      } finally {
+        setBusy(false);
+      }
+    },
+    [requireAuth, pricingRules, business, profile, uid, showToast, t]
+  );
+
+  const cancelReservation = useCallback(
+    async (reservationId: string): Promise<boolean> => {
+      if (!requireAuth()) return false;
+      setBusy(true);
+      try {
+        await updateDoc(doc(db, 'reservations', reservationId), {
+          status: 'cancelled',
+          updatedAt: serverTimestamp(),
+        });
+        showToast(t('Réservation annulée.', 'Reservation cancelled.'), 'info');
+        return true;
+      } catch (err) {
+        showToast(t('Impossible d’annuler cette réservation.', 'Could not cancel reservation.'), 'error');
+        handleFirestoreError(err, OperationType.UPDATE, `reservations/${reservationId}`);
+        return false;
+      } finally {
+        setBusy(false);
+      }
+    },
+    [requireAuth, showToast, t]
+  );
+
+  const saveRecipient = useCallback(
+    async (input: {
+      id?: string;
+      name: string;
+      phone: string;
+      address: string;
+      landmark?: string;
+      instructions?: string;
+      lat: number;
+      lng: number;
+    }): Promise<boolean> => {
+      if (!requireAuth()) return false;
+      setBusy(true);
+      try {
+        const data = {
+          ownerId: uid,
+          name: input.name.trim().slice(0, 120),
+          phone: input.phone.trim().slice(0, 40),
+          address: input.address.trim().slice(0, 300),
+          ...(input.landmark?.trim() ? { landmark: input.landmark.trim().slice(0, 200) } : {}),
+          ...(input.instructions?.trim() ? { instructions: input.instructions.trim().slice(0, 300) } : {}),
+          lat: input.lat,
+          lng: input.lng,
+          createdAt: serverTimestamp(),
+        };
+        if (input.id) {
+          await setDoc(doc(db, 'savedRecipients', input.id), data);
+        } else {
+          await addDoc(collection(db, 'savedRecipients'), data);
+        }
+        showToast(t('Adresse enregistrée.', 'Address saved.'), 'success');
+        return true;
+      } catch (err) {
+        showToast(t('Impossible d’enregistrer l’adresse.', 'Could not save address.'), 'error');
+        handleFirestoreError(err, OperationType.WRITE, 'savedRecipients');
+        return false;
+      } finally {
+        setBusy(false);
+      }
+    },
+    [requireAuth, uid, showToast, t]
+  );
+
+  const deleteRecipient = useCallback(
+    async (id: string): Promise<boolean> => {
+      if (!requireAuth()) return false;
+      setBusy(true);
+      try {
+        await deleteDoc(doc(db, 'savedRecipients', id));
+        showToast(t('Adresse supprimée.', 'Address removed.'), 'info');
+        return true;
+      } catch (err) {
+        showToast(t('Suppression impossible.', 'Could not remove address.'), 'error');
+        handleFirestoreError(err, OperationType.DELETE, `savedRecipients/${id}`);
+        return false;
+      } finally {
+        setBusy(false);
+      }
+    },
+    [requireAuth, showToast, t]
+  );
+
+  const saveBusinessProfile = useCallback(
+    async (input: {
+      name: string;
+      city: string;
+      country: string;
+      phone?: string;
+      displayName?: string;
+      defaultPickupAddress?: string;
+      defaultPickupLat?: number;
+      defaultPickupLng?: number;
+    }): Promise<boolean> => {
+      if (!requireAuth()) return false;
+      setBusy(true);
+      try {
+        if (input.displayName || input.phone) {
+          await updateProfileFields({
+            ...(input.displayName ? { displayName: input.displayName.trim().slice(0, 120) } : {}),
+            ...(input.phone ? { phone: input.phone.trim().slice(0, 40) } : {}),
+          });
+        }
+        const businessRef = business?.id ? doc(db, 'businesses', business.id) : doc(db, 'businesses', uid);
+        await setDoc(
+          businessRef,
+          {
+            ownerId: uid,
+            name: input.name.trim().slice(0, 160) || profile?.displayName || 'Entreprise ROVA',
+            city: input.city.trim().slice(0, 100) || 'Abidjan',
+            country: input.country.trim().slice(0, 80) || 'Côte d’Ivoire',
+            currency: business?.currency || 'GHS',
+            verificationStatus: business?.verificationStatus || 'pending',
+            walletBalance: business?.walletBalance ?? 0,
+            ...(input.defaultPickupAddress?.trim()
+              ? { defaultPickupAddress: input.defaultPickupAddress.trim().slice(0, 300) }
+              : {}),
+            ...(typeof input.defaultPickupLat === 'number' ? { defaultPickupLat: input.defaultPickupLat } : {}),
+            ...(typeof input.defaultPickupLng === 'number' ? { defaultPickupLng: input.defaultPickupLng } : {}),
+            createdAt: business?.createdAt || serverTimestamp(),
+            updatedAt: serverTimestamp(),
+          },
+          { merge: false }
+        );
+        showToast(t('Profil mis à jour.', 'Profile updated.'), 'success');
+        return true;
+      } catch (err) {
+        showToast(t('Impossible de mettre à jour le profil.', 'Could not update profile.'), 'error');
+        handleFirestoreError(err, OperationType.WRITE, 'businesses');
+        return false;
+      } finally {
+        setBusy(false);
+      }
+    },
+    [requireAuth, updateProfileFields, business, uid, profile, showToast, t]
+  );
+
+  const submitSupportMessage = useCallback(
+    async (input: {
+      category: 'failed_delivery' | 'damage' | 'delay' | 'dispute' | 'refund' | 'driver_report';
+      description: string;
+      deliveryId?: string;
+    }): Promise<boolean> => {
+      if (!input.description.trim()) return false;
+      setBusy(true);
+      try {
+        if (uid) {
+          await addDoc(collection(db, 'incidents'), {
+            ...(input.deliveryId ? { deliveryId: input.deliveryId } : {}),
+            reportedByUid: uid,
+            reporterRole: profile?.role || 'merchant',
+            category: input.category,
+            description: input.description.trim().slice(0, 1000),
+            status: 'open',
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+          });
+        } else {
+          await addDoc(collection(db, 'waitlist'), {
+            name: 'Support ROVA',
+            email: 'support@rova.app',
+            message: input.description.trim().slice(0, 1000),
+            platform: 'contact',
+            createdAt: serverTimestamp(),
+          });
+        }
+        setSupportSheetOpen(false);
+        setSupportContextDeliveryId(undefined);
+        showToast(t('Votre message a bien été transmis au support ROVA.', 'Your message has been sent to ROVA Support.'), 'success');
+        return true;
+      } catch (err) {
+        showToast(t('Envoi impossible. Réessayez dans un instant.', 'Could not send message. Please retry.'), 'error');
+        handleFirestoreError(err, OperationType.CREATE, 'incidents');
+        return false;
+      } finally {
+        setBusy(false);
+      }
+    },
+    [uid, profile, showToast, t]
+  );
+
+  const markAllNotificationsRead = useCallback(async () => {
+    if (!uid) return;
+    const unread = notifications.filter((n) => !n.read);
+    if (unread.length === 0) return;
+    try {
+      const batch = writeBatch(db);
+      unread.slice(0, 25).forEach((n) => {
+        batch.update(doc(db, 'notifications', n.id), { read: true });
+      });
+      await batch.commit();
+    } catch {
+      // Non-blocking
+    }
+  }, [uid, notifications]);
+
+  return (
+    <RovaAppContext.Provider
+      value={{
+        loadingData,
+        business,
+        deliveries,
+        reservations,
+        recipients,
+        onlineDrivers,
+        pricingRules,
+        notifications,
+        activeDeliveries,
+        upcomingReservations,
+        unreadNotifCount,
+        shipmentFilter,
+        setShipmentFilter,
+        activityFilter,
+        setActivityFilter,
+        preferredPayment,
+        setPreferredPayment,
+        notificationsEnabled,
+        setNotificationsEnabled,
+        draft,
+        setDraft,
+        resetDraft,
+        composerOpen,
+        openComposer,
+        closeComposer: () => setComposerOpen(false),
+        reservationSheetOpen,
+        openReservationSheet: () => setReservationSheetOpen(true),
+        closeReservationSheet: () => setReservationSheetOpen(false),
+        selectedDeliveryId,
+        selectedDelivery,
+        openShipmentDetail: (id: string) => setSelectedDeliveryId(id),
+        closeShipmentDetail: () => setSelectedDeliveryId(null),
+        trackSheetOpen,
+        openTrackSheet: () => setTrackSheetOpen(true),
+        closeTrackSheet: () => setTrackSheetOpen(false),
+        supportSheetOpen,
+        openSupportSheet: (deliveryId?: string) => {
+          setSupportContextDeliveryId(deliveryId);
+          setSupportSheetOpen(true);
+        },
+        closeSupportSheet: () => {
+          setSupportSheetOpen(false);
+          setSupportContextDeliveryId(undefined);
+        },
+        supportContextDeliveryId,
+        toast,
+        showToast,
+        dismissToast,
+        busy,
+        requestSignIn: onSignIn,
+        submitDelivery,
+        cancelDelivery,
+        repeatDelivery,
+        submitReservation,
+        cancelReservation,
+        saveRecipient,
+        deleteRecipient,
+        saveBusinessProfile,
+        submitSupportMessage,
+        markAllNotificationsRead,
+      }}
+    >
+      {children}
+    </RovaAppContext.Provider>
+  );
+}
+
+export function useRovaApp() {
+  const ctx = useContext(RovaAppContext);
+  if (!ctx) throw new Error('useRovaApp must be used inside RovaAppProvider');
+  return ctx;
+}

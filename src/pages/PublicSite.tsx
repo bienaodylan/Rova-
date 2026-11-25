@@ -22,7 +22,7 @@ import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { PAYMENT_METHODS_EN, VEHICLE_CATALOG } from '../lib/logistics';
 import { RovaMap } from '../components/RovaMap';
 import { GeoPlace } from '../types/rova';
-import { useLanguage } from '../context/LanguageContext';
+import { LanguageSelector, useLanguage } from '../context/LanguageContext';
 import type { ActiveInterface } from '../components/InterfaceExplorerBar';
 
 export type PublicPageId =
@@ -264,6 +264,9 @@ export function PublicSite({
             >
               {t('Suivre un colis', 'Track a delivery')}
             </button>
+            <div className="pt-2 px-3">
+              <LanguageSelector />
+            </div>
           </div>
         )}
       </header>
@@ -997,6 +1000,7 @@ export function PublicSite({
             <button type="button" onClick={() => navigate('contact')} className="hover:text-neutral-950">
               {t('Contact', 'Contact')}
             </button>
+            <LanguageSelector compact />
           </div>
         </div>
       </footer>

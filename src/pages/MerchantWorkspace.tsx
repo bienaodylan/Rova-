@@ -36,7 +36,7 @@ import {
 } from 'lucide-react';
 import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { useAuth } from '../context/AuthContext';
-import { useLanguage } from '../context/LanguageContext';
+import { LanguageSelector, useLanguage } from '../context/LanguageContext';
 import {
   BusinessMember,
   BusinessRecord,
@@ -967,6 +967,7 @@ export function MerchantWorkspace({
               {navItems.find((n) => n.id === section)?.label}
             </h1>
             <div className="flex items-center gap-2.5">
+              <LanguageSelector compact />
               <button
                 type="button"
                 onClick={() => setSection('create')}

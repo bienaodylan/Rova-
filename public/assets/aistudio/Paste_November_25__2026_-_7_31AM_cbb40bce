@@ -1,0 +1,1294 @@
+ROVA — COMPLETE UX/UI & PRODUCT EXPERIENCE REDESIGN
+
+PROJECT OBJECTIVE
+
+Perform a complete UX/UI and product experience redesign of the existing ROVA application.
+
+The current application already has a foundation, features, functionality, and structure. Do not treat this as a new application and do not unnecessarily rebuild the entire project from scratch.
+
+The goal is to significantly improve how the application feels, behaves, navigates, and communicates with users.
+
+The application must become:
+
+* Extremely simple to understand.
+* Fast and fluid to navigate.
+* Minimal, elegant, and premium.
+* Mobile-first and naturally adapted to mobile devices.
+* Functional without excessive menus or unnecessary screens.
+* Consistent across every section.
+* Easy to use without instructions or tutorials.
+* More like a modern native mobile application than a traditional website.
+
+This is not simply a visual redesign.
+
+This is a complete experience redesign covering:
+
+1. Product architecture.
+2. UX and user journeys.
+3. Navigation.
+4. Screen structure.
+5. UI design.
+6. Interaction behavior.
+7. Transitions and animations.
+8. Forms and workflows.
+9. Map interactions.
+10. Shipment management.
+11. Responsive behavior.
+12. Accessibility.
+13. Performance and technical consistency.
+
+Analyze the existing application first, then improve it intelligently.
+
+Do not remove existing features simply because their current implementation or design is inconvenient.
+
+⸻
+
+01 — PRODUCT DESIGN PHILOSOPHY
+
+ROVA must feel like one continuous application, not a collection of disconnected pages.
+
+The user should never feel lost, overwhelmed, or forced to understand the application’s internal structure.
+
+Every screen must have a clear purpose.
+
+Every interaction must feel intentional.
+
+Every action must lead naturally to the next step.
+
+The experience should follow these principles:
+
+SIMPLICITY
+
+Reduce cognitive load.
+
+Show only the information and actions that are relevant to the current context.
+
+Do not expose unnecessary technical information to the customer.
+
+CLARITY
+
+Every screen must communicate immediately:
+
+* Where the user is.
+* What they can do.
+* What information matters.
+* What the next step is.
+
+CONTINUITY
+
+Moving between sections must feel fluid.
+
+Do not unnecessarily reset screens, forms, selections, map positions, filters, or entered information.
+
+CONTEXTUAL EXPERIENCE
+
+Actions and features should appear where they are needed.
+
+Do not force users to navigate to separate settings or menus to perform simple actions.
+
+EFFICIENCY
+
+A user should be able to create, manage, and track a delivery using the fewest reasonable interactions.
+
+PREMIUM EXPERIENCE
+
+The application must feel modern, professional, reliable, and carefully designed.
+
+Avoid excessive decoration, unnecessary cards, oversized interfaces, visual clutter, and meaningless animations.
+
+⸻
+
+02 — COMPLETE UX ARCHITECTURE REDESIGN
+
+Review the current navigation architecture and simplify it.
+
+The application must have a clear primary navigation system.
+
+Use a maximum of four primary destinations where appropriate:
+
+HOME
+
+The main action center.
+
+SHIPMENTS
+
+All deliveries, active shipments, upcoming reservations, completed deliveries, and shipment details.
+
+ACTIVITY
+
+History, past activity, transactions, completed operations, and related records.
+
+ACCOUNT
+
+Profile, saved addresses, payment methods, preferences, support, and account-related settings.
+
+The exact names can be adapted to the existing application’s language, but the navigation must remain simple and understandable.
+
+Do not add unnecessary navigation items.
+
+Do not turn the bottom navigation into a feature directory.
+
+Primary navigation should contain only the essential destinations.
+
+Secondary features must be integrated contextually into the relevant sections.
+
+⸻
+
+03 — NAVIGATION BEHAVIOR
+
+Completely improve the navigation behavior.
+
+The application currently feels too much like a traditional website when clicking buttons causes abrupt page changes and unnecessary navigation.
+
+Correct this behavior.
+
+The user should feel that they are interacting with one continuous application.
+
+Implement a coherent navigation system using appropriate client-side routing and persistent application layouts.
+
+REQUIRED BEHAVIOR
+
+* Navigation must not unnecessarily reload the entire application.
+* Avoid full-page reloads when navigating between application sections.
+* Avoid abrupt transitions.
+* Preserve the user’s context.
+* Preserve entered information whenever appropriate.
+* Maintain the previous screen state when the user returns.
+* Maintain relevant filters and selections.
+* Use smooth and subtle transitions.
+* Make the back action predictable.
+* Avoid nested navigation that becomes difficult to understand.
+* Prevent duplicate navigation systems from appearing simultaneously.
+* Ensure navigation works correctly on mobile and desktop.
+
+The URL may change when necessary for deep linking, direct access, browser history, and application routing.
+
+However, URL changes must not make the user feel as though they are leaving the application or entering an entirely different website.
+
+Use proper SPA navigation and application-level layouts.
+
+Do not sacrifice accessibility, direct links, browser history, or security merely to hide URL changes.
+
+⸻
+
+04 — TRANSITIONS & MOTION DESIGN
+
+Create a consistent motion system for the entire application.
+
+Animations must be subtle, fast, smooth, and useful.
+
+Do not use exaggerated animations.
+
+Do not animate every element unnecessarily.
+
+PAGE TRANSITIONS
+
+Use smooth transitions when entering or leaving major application sections.
+
+Recommended duration:
+
+* 160–220ms for small UI transitions.
+* 200–280ms for section transitions.
+* 250–350ms for modal and bottom-sheet animations.
+
+Use subtle opacity transitions, slight movement, and carefully controlled easing.
+
+BOTTOM SHEETS
+
+Use bottom sheets for contextual actions, selections, filters, and short forms whenever they improve the experience.
+
+Examples:
+
+* Vehicle selection.
+* Delivery details.
+* Address selection.
+* Shipment actions.
+* Filters.
+* Payment method selection.
+* Confirmation details.
+
+Bottom sheets must:
+
+* Open smoothly.
+* Have clear visual hierarchy.
+* Be dismissible when appropriate.
+* Adapt to screen height.
+* Support scrolling when content exceeds available space.
+* Preserve the underlying context.
+* Avoid unnecessary full-page navigation.
+
+BUTTON INTERACTIONS
+
+Buttons must provide immediate feedback.
+
+Use:
+
+* Press states.
+* Subtle scale or opacity changes.
+* Loading states.
+* Disabled states.
+* Success feedback.
+* Error feedback.
+
+Do not allow users to repeatedly submit the same action while it is processing.
+
+LIST INTERACTIONS
+
+Lists should feel responsive.
+
+Use subtle appearance transitions, smooth filtering, and clear selection states.
+
+MAP INTERACTIONS
+
+Map movements must feel natural.
+
+Avoid unnecessarily resetting the map when switching between related delivery steps.
+
+REDUCED MOTION
+
+Respect operating system accessibility preferences for reduced motion.
+
+⸻
+
+05 — HOME SCREEN REDESIGN
+
+Redesign the home screen as the user’s main operational center.
+
+The home screen must answer immediately:
+
+“What can I do with ROVA right now?”
+
+The user should not have to explore menus to understand the application’s main services.
+
+HOME SCREEN STRUCTURE
+
+1. Minimal header.
+2. Welcome message.
+3. Main delivery actions.
+4. Active shipments.
+5. Upcoming reservations.
+6. Useful shortcuts.
+7. Optional contextual information.
+
+MAIN ACTIONS
+
+Make the most important actions immediately accessible:
+
+* New delivery.
+* Schedule a vehicle.
+* Multi-stop delivery.
+
+These actions must be visually prioritized.
+
+Do not make every card equally prominent.
+
+ACTIVE SHIPMENTS
+
+Show active shipments directly on the home screen when applicable.
+
+Display:
+
+* Shipment number.
+* Current status.
+* Pickup and destination.
+* Driver information when assigned.
+* Estimated arrival when available.
+* A direct tracking action.
+
+If the user has no active shipment, do not show empty cards.
+
+Instead, show a clean and useful empty state with a direct action to create their first delivery.
+
+SHORTCUTS
+
+Provide useful shortcuts only when they genuinely improve usability.
+
+Examples:
+
+* Saved addresses.
+* Payment methods.
+* Shipment history.
+* Support.
+
+Do not overcrowd the home screen.
+
+The home screen must remain visually calm and easy to scan.
+
+⸻
+
+06 — NEW DELIVERY EXPERIENCE
+
+Redesign the delivery creation experience from beginning to end.
+
+This is one of the most important user journeys in ROVA.
+
+Creating a delivery must feel easy, guided, and natural.
+
+Do not create an unnecessarily complicated multi-page wizard.
+
+Use a contextual and continuous interface.
+
+The user must be able to see progress without feeling trapped inside a long form.
+
+STEP 1 — PICKUP LOCATION
+
+Allow users to:
+
+* Search for an address.
+* Search for a business or landmark.
+* Use current GPS location.
+* Select a location directly on the map.
+* Move the map and select a precise point.
+* Adjust the location manually.
+* Add relevant pickup instructions.
+
+The search field and map must work together.
+
+STEP 2 — DESTINATION
+
+Allow users to:
+
+* Search for the destination.
+* Select a destination on the map.
+* Use a saved address.
+* Add recipient details.
+* Add delivery instructions.
+
+STEP 3 — VEHICLE SELECTION
+
+Display available vehicles in a clear and understandable format.
+
+Each vehicle option should include:
+
+* Vehicle image or illustration.
+* Vehicle name.
+* Capacity or useful cargo information.
+* Relevant size or load description.
+* Price when available.
+* Estimated arrival or availability.
+* Selection state.
+
+Do not present technical specifications that customers do not need.
+
+Make vehicle selection easy.
+
+STEP 4 — DELIVERY DETAILS
+
+Collect only the necessary information.
+
+Examples:
+
+* Package description.
+* Cargo type.
+* Quantity when required.
+* Sender contact.
+* Recipient contact.
+* Pickup instructions.
+* Delivery instructions.
+* Optional notes.
+
+Use conditional fields.
+
+Do not display irrelevant fields for every delivery.
+
+STEP 5 — PRICE & CONFIRMATION
+
+Display a clear summary before confirmation.
+
+Include:
+
+* Pickup.
+* Destination.
+* Additional stops.
+* Vehicle.
+* Delivery details.
+* Estimated price.
+* Payment method.
+* Important conditions.
+
+Make the final confirmation action obvious.
+
+⸻
+
+07 — MAP-FIRST EXPERIENCE
+
+The map must be a real and integrated part of the application.
+
+Do not treat the map as a decorative background or an isolated feature.
+
+The map must be used throughout relevant journeys.
+
+MAP USE CASES
+
+* Selecting pickup locations.
+* Selecting delivery destinations.
+* Adding stops.
+* Viewing available drivers.
+* Tracking drivers.
+* Viewing delivery routes.
+* Viewing scheduled vehicle operations.
+
+MAP INTERACTION
+
+Users must be able to:
+
+* Search locations.
+* Use GPS.
+* Zoom in and out.
+* Move the map.
+* Select points directly.
+* Confirm precise locations.
+* See pickup and destination markers.
+* See routes.
+* See relevant drivers.
+* See estimated travel information when supported.
+
+Search and map must remain synchronized.
+
+When a user selects a location on the map, the search field must reflect the selected location when reverse geocoding is available.
+
+When the user searches for a location, the map must update accordingly.
+
+MAP CONTEXT
+
+Opening location selection should not unnecessarily destroy the user’s previous context.
+
+Use a map screen, overlay, or full-screen map experience when appropriate, but provide a natural way to return to the previous step.
+
+Preserve previously selected locations whenever possible.
+
+⸻
+
+08 — VEHICLE SELECTION EXPERIENCE
+
+Vehicle selection must be simple, visual, and contextual.
+
+Do not make users navigate to a separate vehicle catalog before ordering.
+
+Vehicles should be presented directly when the user reaches the vehicle selection step.
+
+VEHICLE CARDS
+
+Each option should communicate:
+
+* Vehicle category.
+* Image.
+* Capacity.
+* Suitability.
+* Price.
+* Availability.
+
+INTERACTION
+
+When selecting a vehicle:
+
+* Highlight the selected option.
+* Update delivery details where relevant.
+* Update pricing when applicable.
+* Preserve the pickup and destination.
+* Allow easy switching between vehicles.
+* Do not reload the entire interface.
+
+Use a clean selection interaction.
+
+Do not overwhelm users with a large technical vehicle catalog.
+
+⸻
+
+09 — SCHEDULED DELIVERY & VEHICLE RESERVATIONS
+
+Redesign scheduled deliveries and vehicle reservations.
+
+Users must be able to:
+
+* Schedule a delivery for later.
+* Select a date.
+* Select a time or time window.
+* Reserve an appropriate vehicle.
+* Request vehicle availability.
+* Review reservation details.
+* Confirm the reservation.
+* Modify or cancel when allowed.
+
+Integrate scheduling naturally into the delivery flow.
+
+Do not force users to navigate through a complicated booking section to reserve a vehicle.
+
+Provide clear feedback about:
+
+* Availability.
+* Reservation status.
+* Confirmation.
+* Pending requests.
+* Changes.
+* Cancellation rules.
+
+⸻
+
+10 — MULTI-STOP DELIVERY EXPERIENCE
+
+Redesign the multi-stop delivery flow.
+
+Users must be able to create a delivery tour with multiple destinations.
+
+REQUIRED FEATURES
+
+* Pickup location.
+* Multiple destinations.
+* Recipient details for each stop.
+* Stop ordering.
+* Ability to add stops.
+* Ability to remove stops.
+* Ability to modify stops.
+* Route visualization.
+* Estimated delivery information where available.
+* Clear cost summary.
+* Final confirmation.
+
+The interface must remain simple.
+
+Use a visual list of stops combined with the map.
+
+Do not make users manage complex route settings unless necessary.
+
+Allow users to understand the order of deliveries at a glance.
+
+Make route modification easy.
+
+⸻
+
+11 — SHIPMENTS SECTION
+
+Redesign the shipments section as a complete operational space.
+
+When users open Shipments, they must immediately see their shipments.
+
+Do not send them to another page simply to choose what they want to view.
+
+SHIPMENT FILTERS
+
+Use lightweight tabs, segmented controls, or contextual filters:
+
+* All.
+* Active.
+* Upcoming.
+* Completed.
+* Cancelled.
+
+The exact categories must correspond to real shipment states.
+
+Do not create unnecessary filters.
+
+SHIPMENT LIST
+
+Each shipment item must clearly show:
+
+* Shipment number.
+* Status.
+* Pickup location.
+* Destination.
+* Date.
+* Vehicle.
+* Driver when assigned.
+* Relevant delivery progress.
+
+Make the list easy to scan.
+
+SHIPMENT DETAILS
+
+When the user opens a shipment, provide a complete detail view.
+
+Include:
+
+* Shipment summary.
+* Status timeline.
+* Pickup information.
+* Destination information.
+* Stops.
+* Driver information.
+* Vehicle information.
+* Tracking map when applicable.
+* Price.
+* Payment information.
+* Delivery proof when available.
+* Relevant actions.
+
+Do not hide essential information behind multiple nested menus.
+
+Use contextual actions.
+
+⸻
+
+12 — LIVE TRACKING EXPERIENCE
+
+Redesign shipment tracking.
+
+Tracking must be one of the most clear and reassuring experiences in ROVA.
+
+The user must understand what is happening without reading complicated information.
+
+TRACKING SCREEN
+
+Display:
+
+* Live map.
+* Driver position when live tracking is available.
+* Pickup point.
+* Destination.
+* Route.
+* Shipment status.
+* Estimated arrival when available.
+* Driver details.
+* Vehicle details.
+* Relevant contact actions.
+
+STATUS TIMELINE
+
+Use a clear progression, for example:
+
+* Delivery confirmed.
+* Driver assigned.
+* Driver heading to pickup.
+* Driver arrived at pickup.
+* Cargo collected.
+* Delivery in progress.
+* Driver approaching destination.
+* Delivered.
+
+Only display statuses that are supported by the actual backend and delivery process.
+
+TRACKING BEHAVIOR
+
+* Update location smoothly.
+* Avoid map flickering.
+* Avoid unnecessary map resets.
+* Keep important information visible.
+* Maintain tracking when switching between relevant sections, whenever the architecture supports it.
+* Provide clear error and offline states.
+
+⸻
+
+13 — RECIPIENT TRACKING EXPERIENCE
+
+Recipients must have an extremely simple tracking experience.
+
+A recipient should not need to create an account to track a delivery when the existing business logic allows secure public tracking.
+
+RECIPIENT TRACKING PAGE
+
+The recipient should see:
+
+* Delivery status.
+* Driver position when available.
+* Estimated arrival.
+* Relevant route.
+* Delivery information.
+* Contact options when authorized.
+
+For multi-stop deliveries, each recipient must only see information relevant to their delivery.
+
+Do not expose:
+
+* Other recipients’ names.
+* Other recipients’ phone numbers.
+* Other delivery addresses.
+* Unnecessary information about the entire tour.
+
+Tracking links must be secure and use appropriate access controls.
+
+MULTI-STOP TRACKING
+
+When a driver is heading toward a recipient’s stop, the recipient should receive relevant notifications and see their own tracking information.
+
+After a stop is completed, the next recipient can become the active tracking recipient according to the delivery workflow.
+
+The merchant must retain visibility over the complete tour.
+
+Recipients must not have access to the merchant’s full multi-stop delivery operation.
+
+⸻
+
+14 — ACTIVITY & HISTORY
+
+Redesign the Activity section.
+
+Users must immediately be able to find previous operations.
+
+Include relevant records such as:
+
+* Completed deliveries.
+* Cancelled deliveries.
+* Reservations.
+* Payments.
+* Refunds where applicable.
+* Relevant transaction history.
+
+Use simple filters.
+
+Provide a clear detail view.
+
+Allow users to retrieve relevant delivery information without navigating through several menus.
+
+Do not mix unrelated information in a confusing list.
+
+⸻
+
+15 — ACCOUNT & SETTINGS
+
+Redesign the account section.
+
+Keep it organized, minimal, and understandable.
+
+Include only relevant categories:
+
+PERSONAL INFORMATION
+
+* Name.
+* Email.
+* Phone.
+* Profile information.
+
+ADDRESSES
+
+* Saved pickup locations.
+* Saved destinations.
+* Home.
+* Office.
+* Frequently used addresses.
+
+PAYMENT METHODS
+
+* Available payment methods.
+* Payment preferences.
+* Payment history access when appropriate.
+
+PREFERENCES
+
+* Notifications.
+* Language.
+* Relevant application preferences.
+
+SUPPORT
+
+* Help.
+* Contact support.
+* Report a problem.
+* Frequently asked questions where available.
+
+SECURITY
+
+* Password.
+* Authentication.
+* Sessions.
+* Account security.
+
+Avoid a long and complicated settings structure.
+
+⸻
+
+16 — CONTEXTUAL ACTIONS
+
+Every section must provide the actions that users need directly within that section.
+
+Do not force users to return to the home screen to perform an action.
+
+Examples:
+
+From an active shipment:
+
+* Track.
+* View details.
+* Contact support.
+* View delivery information.
+* Cancel if permitted.
+
+From a completed shipment:
+
+* View details.
+* View receipt.
+* Download invoice if available.
+* Repeat delivery if supported.
+
+From a scheduled reservation:
+
+* View reservation.
+* Modify if permitted.
+* Cancel if permitted.
+* Contact support.
+
+From a saved address:
+
+* Edit.
+* Delete.
+* Use for a delivery.
+
+Contextual actions must be intelligently organized.
+
+Use action sheets, bottom sheets, small contextual menus, and direct buttons where appropriate.
+
+Do not add a menu to every card.
+
+⸻
+
+17 — EMPTY STATES
+
+Redesign all empty states.
+
+Empty states must not look like broken pages.
+
+Examples:
+
+NO SHIPMENTS
+
+Explain that there are currently no shipments.
+
+Provide a direct action:
+
+“Create your first delivery.”
+
+NO ACTIVE SHIPMENTS
+
+Display a calm, minimal message.
+
+Do not show unnecessary illustrations or empty cards.
+
+NO SAVED ADDRESSES
+
+Provide a direct action to add an address.
+
+NO RESERVATIONS
+
+Explain that the user has no upcoming reservations and allow them to schedule a vehicle.
+
+NO HISTORY
+
+Explain that past activity will appear here after the first completed operation.
+
+Empty states must be helpful, not decorative.
+
+⸻
+
+18 — LOADING, ERROR & SUCCESS STATES
+
+Implement consistent application states.
+
+LOADING
+
+* Use lightweight skeletons where appropriate.
+* Avoid blank screens.
+* Avoid unnecessarily large loading spinners.
+* Maintain the structure of the screen while data loads.
+
+ERROR
+
+* Clearly explain what went wrong.
+* Avoid exposing technical stack traces.
+* Provide retry actions where appropriate.
+* Preserve user input whenever possible.
+
+SUCCESS
+
+* Confirm actions clearly.
+* Use subtle feedback.
+* Avoid unnecessary success pages.
+
+NETWORK FAILURE
+
+* Communicate connection issues.
+* Avoid losing entered information.
+* Allow retry when possible.
+* Clearly indicate when information may not be current.
+
+⸻
+
+19 — DESIGN SYSTEM
+
+Create a consistent design system across the entire application.
+
+Do not redesign each screen independently.
+
+VISUAL IDENTITY
+
+Preserve ROVA’s minimalist black-and-white identity.
+
+Use:
+
+* White or very light neutral surfaces.
+* Black or deep charcoal typography.
+* Subtle gray dividers.
+* Restrained contrast.
+* Carefully controlled accent colors when needed for status.
+* Consistent spacing.
+* Clean iconography.
+
+TYPOGRAPHY
+
+Use a modern, highly readable typeface.
+
+Establish a clear hierarchy:
+
+* Screen titles.
+* Section titles.
+* Body text.
+* Labels.
+* Secondary text.
+* Status text.
+
+Avoid excessive font sizes and weights.
+
+SPACING
+
+Use a consistent spacing scale.
+
+Do not randomly change spacing between screens.
+
+CARDS
+
+Cards must be used only when they help organize content.
+
+Avoid:
+
+* Excessive rounded cards.
+* Nested cards.
+* Card inside card inside card.
+* Excessive shadows.
+* Unnecessary borders.
+
+BUTTONS
+
+Create a consistent hierarchy:
+
+* Primary action.
+* Secondary action.
+* Tertiary action.
+* Destructive action.
+
+Buttons must have consistent sizes, typography, spacing, and behavior.
+
+ICONS
+
+Use a consistent icon system.
+
+Avoid mixing different icon styles.
+
+Icons must be recognizable and must not replace clear text where clarity is required.
+
+⸻
+
+20 — RESPONSIVE EXPERIENCE
+
+The application must work properly on:
+
+* iPhone.
+* Android.
+* Small mobile screens.
+* Tablets.
+* Desktop browsers.
+
+MOBILE
+
+Mobile is the primary experience.
+
+Optimize:
+
+* Touch interactions.
+* Bottom navigation.
+* Thumb reach.
+* Bottom sheets.
+* Forms.
+* Map interaction.
+* Scrolling.
+* Safe areas.
+* Keyboard behavior.
+
+DESKTOP
+
+Do not simply stretch the mobile layout.
+
+Adapt the interface intelligently.
+
+Use:
+
+* Better content width.
+* Appropriate layouts.
+* Side panels where useful.
+* More efficient information presentation.
+
+Desktop must remain clean and minimal.
+
+⸻
+
+21 — ACCESSIBILITY & USABILITY
+
+Ensure the interface is accessible.
+
+Implement:
+
+* Clear contrast.
+* Readable text.
+* Proper labels.
+* Accessible controls.
+* Keyboard navigation.
+* Focus states.
+* Screen-reader-friendly structures.
+* Sufficient touch target sizes.
+* Reduced-motion support.
+* Accessible error messages.
+
+Do not rely solely on color to communicate shipment status.
+
+Do not use icons without accessible labels when their purpose is not obvious.
+
+⸻
+
+22 — PERFORMANCE & TECHNICAL UX
+
+Improve performance wherever it directly affects the user experience.
+
+Avoid:
+
+* Unnecessary full-page reloads.
+* Unnecessary re-rendering.
+* Duplicate requests.
+* Slow navigation.
+* Blocking interfaces.
+* Unnecessary loading states.
+* Map initialization on screens that do not need a map.
+* Excessive animations.
+* Unoptimized images.
+* Large bundles caused by unnecessary dependencies.
+
+Use lazy loading where appropriate.
+
+Keep map components efficient.
+
+Ensure that real-time tracking does not unnecessarily rerender the entire application.
+
+Optimize list rendering for larger shipment histories.
+
+⸻
+
+23 — PRESERVE EXISTING FUNCTIONALITY
+
+IMPORTANT:
+
+This is a redesign and improvement of an existing application.
+
+Do not destroy or replace existing business logic unnecessarily.
+
+Before making changes:
+
+1. Inspect the existing project.
+2. Understand the current routes.
+3. Understand the existing application structure.
+4. Identify all implemented features.
+5. Identify all existing backend connections.
+6. Identify existing database tables and relationships.
+7. Identify authentication logic.
+8. Identify current map integrations.
+9. Identify existing delivery workflows.
+10. Identify any unfinished or broken functionality.
+
+Preserve all working functionality.
+
+Do not replace real backend functionality with mock data.
+
+Do not introduce fake drivers, fake shipment statuses, fake locations, fake pricing, or fake tracking into the production experience.
+
+Do not break existing integrations.
+
+Do not create duplicate database structures just to support the redesign.
+
+If the existing architecture needs improvement, refactor it carefully.
+
+Maintain compatibility with the existing backend and business logic.
+
+⸻
+
+24 — IMPLEMENTATION STRATEGY
+
+Do not attempt to redesign the application by randomly changing individual components.
+
+Use a structured implementation approach.
+
+PHASE 1 — AUDIT
+
+Review the existing application and identify:
+
+* UX problems.
+* Navigation problems.
+* Unnecessary screens.
+* Duplicate components.
+* Inconsistent styles.
+* Broken interactions.
+* Poor transitions.
+* Difficult workflows.
+
+PHASE 2 — ARCHITECTURE
+
+Define the new navigation structure.
+
+Define reusable layouts.
+
+Define reusable components.
+
+Define transition behavior.
+
+Define the design system.
+
+PHASE 3 — CORE EXPERIENCE
+
+Prioritize the following:
+
+1. Application shell and navigation.
+2. Home screen.
+3. New delivery workflow.
+4. Map and location selection.
+5. Vehicle selection.
+6. Shipment list.
+7. Shipment detail.
+8. Live tracking.
+
+PHASE 4 — SECONDARY EXPERIENCE
+
+Improve:
+
+1. Scheduled reservations.
+2. Multi-stop deliveries.
+3. Activity and history.
+4. Account.
+5. Saved addresses.
+6. Payment methods.
+7. Support.
+
+PHASE 5 — POLISH
+
+Review:
+
+* Animations.
+* Responsive behavior.
+* Empty states.
+* Loading states.
+* Error states.
+* Accessibility.
+* Performance.
+* Visual consistency.
+
+Do not leave the application partially redesigned.
+
+All sections must follow the same design system and navigation principles.
+
+⸻
+
+25 — FINAL QUALITY REQUIREMENTS
+
+Before considering the redesign complete, test the entire application.
+
+NAVIGATION
+
+* Can users navigate without abrupt page reloads?
+* Is the navigation structure easy to understand?
+* Is the back action consistent?
+* Is the context preserved?
+
+HOME
+
+* Are the primary actions immediately visible?
+* Is the home screen useful?
+* Is there unnecessary content?
+
+DELIVERY
+
+* Can a user create a delivery easily?
+* Is the workflow understandable?
+* Are there unnecessary steps?
+* Is location selection intuitive?
+
+MAP
+
+* Does search work?
+* Does GPS work?
+* Can the user select a location directly?
+* Does the map remain synchronized with the form?
+
+SHIPMENTS
+
+* Are all shipments immediately visible?
+* Are filters understandable?
+* Is the detail view complete?
+
+TRACKING
+
+* Is the map easy to understand?
+* Are statuses clear?
+* Is tracking reliable?
+* Is recipient privacy preserved?
+
+ACCOUNT
+
+* Are settings organized?
+* Are unnecessary menus removed?
+
+UI
+
+* Are spacing, typography, buttons, icons, cards, and transitions consistent?
+
+RESPONSIVENESS
+
+* Does the application work properly on mobile?
+* Does it adapt correctly to desktop?
+
+FUNCTIONALITY
+
+* Do all buttons work?
+* Are there broken routes?
+* Are there duplicate actions?
+* Are there fake features?
+* Are there errors?
+
+⸻
+
+26 — FINAL PRODUCT VISION
+
+ROVA must feel like a modern, premium, intelligent logistics application.
+
+It must not feel like:
+
+* A traditional website.
+* An admin dashboard.
+* A complicated logistics management system.
+* A collection of menus.
+* A generic AI-generated interface.
+* A series of disconnected pages.
+
+It must feel like a product designed carefully for real merchants and businesses who need to move goods efficiently.
+
+Users must be able to open ROVA, understand what they can do, perform an action, track the result, and continue with their business without friction.
+
+The experience should be simple enough for a first-time user and powerful enough for a regular business customer.
+
+FINAL INSTRUCTION
+
+Now inspect the existing ROVA application and perform the complete UX/UI redesign.
+
+Do not merely provide recommendations.
+
+Do not stop after an audit.
+
+Do not generate a concept or mockup without implementing it.
+
+Actually implement the redesign in the existing project.
+
+Preserve all working features, backend connections, data, business logic, and integrations.
+
+Improve the application’s architecture, navigation, screen hierarchy, transitions, interactions, and visual consistency.
+
+Remove unnecessary complexity.
+
+Make every screen useful.
+
+Make every action understandable.
+
+Make the entire experience feel fluid, intuitive, premium, and effortless.
+
+The final result must be a coherent, fully functional application — not simply a prettier version of the existing interface.

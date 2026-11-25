@@ -5,7 +5,7 @@ import { db } from '../lib/firebase';
 import { PublicTrackingRecord } from '../types/rova';
 import { getStatusLabel, getVehicleLabel, STATUS_META } from '../lib/logistics';
 import { MapMarkerItem, RovaMap } from '../components/RovaMap';
-import { useLanguage } from '../context/LanguageContext';
+import { LanguageSelector, useLanguage } from '../context/LanguageContext';
 
 interface RecipientTrackingPageProps {
   trackingToken: string;
@@ -142,7 +142,7 @@ export function RecipientTrackingPage({
             {t('Retour', 'Back')}
           </button>
           <span className="font-display text-sm font-extrabold tracking-[0.2em]">ROVA</span>
-          <span className="text-xs text-neutral-500">{t('Suivi isolé', 'Isolated tracking')}</span>
+          <LanguageSelector compact />
         </div>
 
         {/* Search / Token Bar */}
