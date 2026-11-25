@@ -115,9 +115,9 @@ export function RovaHomeView({ onNavigateTab }: RovaHomeViewProps) {
       </header>
 
       {/* Main Responsive Operational Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
+      <div className="grid grid-cols-1 gap-6 items-start">
         {/* Left / Primary Operational Column */}
-        <div className="lg:col-span-7 space-y-6">
+        <div className="w-full space-y-6">
           {/* Greeting */}
           <section className="space-y-1 pt-1">
             <h1 className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-neutral-950">
