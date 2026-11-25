@@ -11,11 +11,11 @@ const SIZE_MAP: Record<NonNullable<RovaWordmarkProps['size']>, string> = {
   sm: 'text-base tracking-[0.2em]',
   md: 'text-lg tracking-[0.22em]',
   lg: 'text-2xl tracking-[0.24em]',
-  xl: 'text-4xl sm:text-5xl tracking-[0.26em]',
+  xl: 'text-4xl sm:text-5xl tracking-[0.18em]',
 };
 
 /**
- * Shared ROVA brand wordmark used consistently across the splash screen,
+ * Shared Rovia brand wordmark used consistently across the splash screen,
  * main client application header, live tracking window, and driver workspace.
  */
 export function RovaWordmark({ size = 'md', className = '' }: RovaWordmarkProps) {
@@ -23,7 +23,7 @@ export function RovaWordmark({ size = 'md', className = '' }: RovaWordmarkProps)
     <span
       className={`font-display font-extrabold text-[#171717] select-none inline-flex items-baseline leading-none ${SIZE_MAP[size]} ${className}`}
     >
-      ROVA<span className="text-[#E52B32] tracking-normal">.</span>
+      ROVIA<span className="text-[#E52B32] tracking-normal">.</span>
     </span>
   );
 }
@@ -33,7 +33,7 @@ interface RovaSplashScreenProps {
   ready: boolean;
 }
 
-const SPLASH_SESSION_KEY = 'rova_splash_seen_v1';
+const SPLASH_SESSION_KEY = 'rovia_splash_seen_v1';
 
 export function RovaSplashScreen({ ready }: RovaSplashScreenProps) {
   const { t } = useLanguage();
@@ -67,17 +67,14 @@ export function RovaSplashScreen({ ready }: RovaSplashScreenProps) {
     <AnimatePresence>
       {visible && (
         <motion.div
-          key="rova-splash"
+          key="rovia-splash"
           initial={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: prefersReducedMotion ? 0.15 : 0.36, ease: [0.16, 1, 0.3, 1] }}
-          aria-label={t('Chargement de ROVA', 'Loading ROVA')}
+          aria-label={t('Chargement de Rovia', 'Loading Rovia')}
           role="status"
           className="fixed inset-0 z-[200] bg-white text-[#171717] flex flex-col items-center justify-center px-6 select-none overflow-hidden"
         >
-          {/* Minimalist architectural corner hairline marks */}
-          <div aria-hidden="true" className="pointer-events-none absolute inset-6 sm:inset-10 border border-[#E5E5E5] rounded-3xl" />
-
           <motion.div
             initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, y: 10, scale: 0.97 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -85,7 +82,7 @@ export function RovaSplashScreen({ ready }: RovaSplashScreenProps) {
             transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
             className="relative z-10 flex flex-col items-center text-center"
           >
-            {/* Current ROVA. Logo Mark */}
+            {/* Current Rovia. Logo Mark */}
             <RovaWordmark size="xl" />
 
             {/* Crisp red-black route line progress indicator */}
@@ -102,9 +99,6 @@ export function RovaSplashScreen({ ready }: RovaSplashScreenProps) {
               />
             </div>
 
-            <p className="mt-4 text-xs font-medium text-[#777777] tracking-tight">
-              {t('Logistique urbaine & suivi en direct', 'Urban logistics & live tracking')}
-            </p>
           </motion.div>
         </motion.div>
       )}
