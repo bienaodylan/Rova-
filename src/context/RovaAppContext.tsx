@@ -239,7 +239,7 @@ export function RovaAppProvider({
   onSignIn: () => Promise<void>;
 }) {
   const { firebaseUser, profile, updateProfileFields } = useAuth();
-  const { t } = useLanguage();
+  const { t, currency } = useLanguage();
   const uid = firebaseUser?.uid || '';
 
   const [loadingData, setLoadingData] = useState(false);
@@ -929,7 +929,7 @@ export function RovaAppProvider({
             name: (profile?.displayName || 'Entreprise ROVA').slice(0, 160),
             city: 'Abidjan',
             country: 'Côte d’Ivoire',
-            currency: 'GHS',
+            currency,
             verificationStatus: 'pending',
             walletBalance: 0,
             createdAt: serverTimestamp(),
