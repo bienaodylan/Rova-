@@ -370,7 +370,7 @@ export function DeliveryComposerSheet() {
       open={composerOpen}
       onClose={closeComposer}
       size="lg"
-      scrollable={false}
+      scrollable={true}
       title={sheetTitle}
       subtitle={`${t('Étape', 'Step')} ${draft.step} / 5 · ${steps[draft.step - 1].label}`}
       footer={
@@ -436,7 +436,7 @@ export function DeliveryComposerSheet() {
         </div>
       }
     >
-      <div className="h-full min-h-0 flex flex-col gap-3 overflow-hidden">
+      <div className="min-h-0 flex flex-col gap-3">
         {/* Compact Interactive Progress Stepper */}
         <div className="flex shrink-0 items-center gap-1.5 overflow-x-auto overflow-y-hidden overscroll-x-contain overscroll-y-none no-scrollbar pb-1">
           {steps.map((s) => {
