@@ -329,7 +329,7 @@ export function DeliveryComposerSheet() {
 
   const steps: Array<{ id: 1 | 2 | 3 | 4 | 5; label: string }> = [
     { id: 1, label: t('Collecte', 'Pickup') },
-    { id: 2, label: t('Destination', 'Drop-off') },
+    { id: 2, label: t('Lieu de livraison', 'Delivery location') },
     { id: 3, label: t('Véhicule', 'Vehicle') },
     { id: 4, label: t('Détails', 'Details') },
     { id: 5, label: t('Confirmation', 'Confirm') },
@@ -583,8 +583,8 @@ export function DeliveryComposerSheet() {
               showSearchBar
               initialSearchText={currentStop.address}
               searchPlaceholder={t(
-                `Rechercher la destination #${safeStopIdx + 1}...`,
-                `Search destination #${safeStopIdx + 1}...`
+                `Rechercher le lieu de livraison #${safeStopIdx + 1}...`,
+                `Search delivery location #${safeStopIdx + 1}...`
               )}
               heightClass="h-[220px] sm:h-[260px]"
               onLocationSelected={(place) => {
@@ -655,7 +655,7 @@ export function DeliveryComposerSheet() {
             <div className="rounded-2xl border border-neutral-200 p-4 space-y-3 bg-neutral-50/60">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-xs font-semibold text-neutral-900">
-                  {t(`Destination #${safeStopIdx + 1}`, `Destination #${safeStopIdx + 1}`)}
+                  {t(`Lieu de livraison #${safeStopIdx + 1}`, `Delivery location #${safeStopIdx + 1}`)}
                 </span>
                 {draft.stops.length > 1 && (
                   <div className="flex items-center gap-1">
@@ -991,7 +991,7 @@ export function DeliveryComposerSheet() {
                     </div>
                     <div className="min-w-0">
                       <p className="text-[11px] text-neutral-500">
-                        {s.recipientName || t('Destination', 'Destination')}
+                        {s.recipientName || t('Lieu de livraison', 'Delivery location')}
                         {s.recipientPhone ? ` · ${s.recipientPhone}` : ''}
                       </p>
                       <p className="text-sm font-medium text-neutral-950">{s.address}</p>
