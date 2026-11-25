@@ -1762,7 +1762,7 @@ export function OperationsCenter({
                         <button
                           type="button"
                           onClick={() => handleReturnEquipment(a)}
-                          className="px-3 py-1 rounded-full border border-neutral-300 hover:border-neutral-950"
+                          className="min-h-[36px] px-4 py-2 rounded-full border border-neutral-300 font-semibold text-neutral-700 hover:border-neutral-950 hover:bg-neutral-950 hover:text-white transition-colors"
                         >
                           {t('Marquer restitué', 'Mark returned')}
                         </button>
