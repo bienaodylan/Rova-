@@ -8,10 +8,10 @@ interface RovaWordmarkProps {
 }
 
 const SIZE_MAP: Record<NonNullable<RovaWordmarkProps['size']>, string> = {
-  sm: 'text-base tracking-[0.2em]',
-  md: 'text-lg tracking-[0.22em]',
-  lg: 'text-2xl tracking-[0.24em]',
-  xl: 'text-4xl sm:text-5xl tracking-[0.18em]',
+  sm: 'text-base tracking-[0.02em]',
+  md: 'text-lg tracking-[0.02em]',
+  lg: 'text-2xl tracking-[0.02em]',
+  xl: 'text-4xl sm:text-5xl tracking-[0.01em]',
 };
 
 /**
@@ -23,7 +23,7 @@ export function RovaWordmark({ size = 'md', className = '' }: RovaWordmarkProps)
     <span
       className={`font-display font-extrabold text-[#171717] select-none inline-flex items-baseline leading-none ${SIZE_MAP[size]} ${className}`}
     >
-      ROVIA<span className="text-[#E52B32] tracking-normal">.</span>
+      Rovia<span className="text-[#E52B32] tracking-normal">.</span>
     </span>
   );
 }
