@@ -185,20 +185,20 @@ function RovaApplicationShell({
   // Dedicated secondary workspaces (Driver App & Operations Center)
   if (workspace !== 'none') {
     return (
-      <div className="min-h-screen bg-[#f8f8f9] flex flex-col">
+      <div className="min-h-screen bg-white text-[#171717] flex flex-col">
         <RovaSplashScreen ready={!loading} />
 
         {workspace === 'operations' && (
-          <div className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-neutral-200 px-4 py-2.5 flex items-center justify-between">
+          <div className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-[#E5E5E5] px-4 py-2.5 flex items-center justify-between">
             <button
               type="button"
               onClick={returnToMainApp}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-neutral-100 hover:bg-neutral-950 hover:text-white text-xs font-semibold text-neutral-900 transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-[#F3F3F3] hover:bg-[#171717] hover:text-white text-xs font-semibold text-[#171717] transition-colors cursor-pointer"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
               {t('Retour à ROVA', 'Back to ROVA')}
             </button>
-            <span className="text-xs font-medium text-neutral-500">
+            <span className="text-xs font-medium text-[#777777]">
               {t('Centre d’Opérations', 'Operations Center')}
             </span>
           </div>
@@ -206,7 +206,7 @@ function RovaApplicationShell({
 
         <Suspense
           fallback={
-            <div className="flex-1 flex items-center justify-center py-20 text-xs text-neutral-500">
+            <div className="flex-1 flex items-center justify-center py-20 text-xs text-[#777777]">
               {t('Chargement de l’interface...', 'Loading interface...')}
             </div>
           }
@@ -240,7 +240,7 @@ function RovaApplicationShell({
   }
 
   return (
-    <div className="min-h-screen bg-[#f8f8f9] text-neutral-950 flex flex-col">
+    <div className="min-h-screen bg-white text-[#171717] flex flex-col">
       {/* Branded Splash Screen with current ROVA. logo */}
       <RovaSplashScreen ready={!loading} />
 
@@ -253,7 +253,7 @@ function RovaApplicationShell({
       />
 
       {authError && (
-        <div className="bg-neutral-950 text-white text-xs px-4 py-2.5 text-center">
+        <div className="bg-[#171717] text-white text-xs px-4 py-2.5 text-center">
           {t('Connexion interrompue :', 'Sign-in could not be completed:')} {authError}
         </div>
       )}

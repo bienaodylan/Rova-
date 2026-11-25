@@ -1,8 +1,18 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { Check, Copy, CreditCard, FileText, Lock, Receipt } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import {
+  Building2,
+  ChevronRight,
+  Copy,
+  CreditCard,
+  FileText,
+  Lock,
+  Receipt,
+  Wallet,
+} from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
 import { useRovaApp } from '../../context/RovaAppContext';
 import { BottomSheet } from '../BottomSheet';
+import { PaymentMethodModal } from '../PaymentMethodModal';
 import {
   getPaymentMethodLabelEn,
   getVehicleLabel,
@@ -10,13 +20,6 @@ import {
 } from '../../lib/logistics';
 import { PaymentMethod } from '../../types/rova';
 import { formatExactCurrency } from './accountTypes';
-
-interface ProviderStatus {
-  id: string;
-  name: string;
-  configured: boolean;
-  mode: 'live_ready' | 'setup_required' | 'active';
-}
 
 interface LedgerEntry {
   id: string;
@@ -43,29 +46,8 @@ export function PaymentsSection() {
     showToast,
   } = useRovaApp();
 
-  const [providers, setProviders] = useState<ProviderStatus[]>([]);
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [activeReceipt, setActiveReceipt] = useState<LedgerEntry | null>(null);
-
-  useEffect(() => {
-    let active = true;
-    fetch('/api/payments/providers')
-      .then((r) => r.json())
-      .then((data: { providers?: ProviderStatus[] }) => {
-        if (active && Array.isArray(data.providers)) {
-          setProviders(data.providers);
-        }
-      })
-      .catch(() => {});
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  const providerMap = useMemo(() => {
-    const map = new Map<string, ProviderStatus>();
-    providers.forEach((p) => map.set(p.id, p));
-    return map;
-  }, [providers]);
 
   const ledger = useMemo<LedgerEntry[]>(() => {
     const items: LedgerEntry[] = [];
@@ -105,19 +87,33 @@ export function PaymentsSection() {
         amount: r.quotedPrice,
         currency: r.currency || 'GHS',
         paymentMethod: getPaymentMethodLabelEn(preferredPayment),
-        paymentStatus: r.status === 'cancelled' ? 'refunded' : r.status === 'completed' ? 'paid' : 'authorized',
+        paymentStatus:
+          r.status === 'cancelled'
+            ? 'refunded'
+            : r.status === 'completed'
+            ? 'paid'
+            : 'authorized',
       });
     });
 
     return items.sort((a, b) => b.timestampMs - a.timestampMs);
   }, [deliveries, reservations, lang, preferredPayment, t]);
 
-  const paymentStatusLabel = (status: string) => {
-    if (status === 'paid') return t('Payé', 'Paid');
-    if (status === 'invoiced') return t('Facturé', 'Invoiced');
-    if (status === 'refunded') return t('Remboursé', 'Refunded');
-    if (status === 'authorized') return t('Autorisé', 'Authorized');
-    return t('En attente', 'Pending');
+  const paymentStatusMeta = (status: string): { label: string; colorClass: string } => {
+    switch (status) {
+      case 'paid':
+        return { label: t('Confirmé', 'Confirmed'), colorClass: 'text-emerald-700' };
+      case 'invoiced':
+        return { label: t('Facturé', 'Invoiced'), colorClass: 'text-[#171717]' };
+      case 'refunded':
+        return { label: t('Remboursé', 'Refunded'), colorClass: 'text-[#777777]' };
+      case 'failed':
+        return { label: t('Échec', 'Failed'), colorClass: 'text-[#E52B32]' };
+      case 'authorized':
+        return { label: t('Autorisé', 'Authorized'), colorClass: 'text-amber-700' };
+      default:
+        return { label: t('En attente', 'Pending'), colorClass: 'text-amber-700' };
+    }
   };
 
   const copyReference = (ref: string) => {
@@ -129,167 +125,164 @@ export function PaymentsSection() {
 
   const walletCurrency = business?.currency || 'GHS';
   const walletAmount = business?.walletBalance ?? 0;
+  const isCorporateVerified = business?.verificationStatus === 'verified';
+  const currentPaymentMeta = PAYMENT_METHODS_EN.find((m) => m.id === preferredPayment);
 
   return (
     <div className="space-y-8">
-      {/* Header */}
-      <div className="pb-5 border-b border-neutral-200/80 flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h2 className="font-display text-xl font-bold tracking-tight text-neutral-950">
-            {t('Paiements', 'Payments')}
-          </h2>
-          <p className="text-xs text-neutral-500 mt-1">
-            {t(
-              'Méthode de règlement par défaut, solde du compte et historique des reçus.',
-              'Default settlement method, account balance, and itemized receipts.'
-            )}
-          </p>
+      {/* Section Header */}
+      <div className="pb-5 border-b border-[#E5E5E5] space-y-1">
+        <h2 className="font-display text-xl font-bold tracking-tight text-[#171717]">
+          {t('Paiements', 'Payments')}
+        </h2>
+        <p className="text-xs text-[#777777]">
+          {t(
+            'Moyen de paiement par défaut, solde entreprise, facturation et reçus.',
+            'Default settlement method, business balance, billing status, and itemized receipts.'
+          )}
+        </p>
+      </div>
+
+      {/* 1. Default Payment Method (Contextual Stripe × Apple Selector) */}
+      <div className="space-y-2.5">
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="text-xs font-medium text-[#777777]">Default Payment Method</h3>
+          <span className="inline-flex items-center gap-1 text-[11px] text-[#777777]">
+            <Lock className="w-3 h-3 text-[#171717]" />
+            <span>{t('Chiffré', 'Encrypted')}</span>
+          </span>
         </div>
-        <div className="text-left sm:text-right">
-          <p className="text-[11px] font-mono uppercase tracking-wider text-neutral-500">
-            Business Wallet
-          </p>
-          <p className="font-mono text-base font-bold text-neutral-950 tabular-nums">
+
+        <button
+          type="button"
+          onClick={() => setPaymentModalOpen(true)}
+          className="w-full min-h-[68px] px-4 py-3.5 rounded-2xl border border-[#E5E5E5] hover:border-[#171717] bg-white flex items-center justify-between gap-4 text-left transition-colors cursor-pointer"
+        >
+          <div className="flex items-center gap-3.5 min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-[#F3F3F3] text-[#171717] flex items-center justify-center shrink-0">
+              <CreditCard className="w-4 h-4" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-[#171717] truncate">
+                {getPaymentMethodLabelEn(preferredPayment)}
+              </p>
+              <p className="text-xs text-[#777777] truncate mt-0.5">
+                {currentPaymentMeta?.subtitle || 'Verified electronic settlement'}
+              </p>
+            </div>
+          </div>
+
+          <span className="inline-flex items-center gap-1 text-xs font-semibold text-[#E52B32] shrink-0">
+            <span>{t('Modifier', 'Change')}</span>
+            <ChevronRight className="w-4 h-4" />
+          </span>
+        </button>
+      </div>
+
+      {/* 2. Balances & Corporate Billing Eligibility (Separated Clearly) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-[#E5E5E5] border border-[#E5E5E5] rounded-2xl overflow-hidden bg-white">
+        <div className="p-4 space-y-1.5">
+          <div className="flex items-center gap-2 text-xs text-[#777777]">
+            <Wallet className="w-3.5 h-3.5 text-[#171717]" />
+            <span>Business Wallet</span>
+          </div>
+          <p className="font-mono text-lg font-bold text-[#171717] tabular-nums">
             {formatExactCurrency(walletAmount, walletCurrency, lang)}
           </p>
           {walletCurrency.toUpperCase() !== currency.toUpperCase() && (
-            <p className="font-mono text-[11px] text-neutral-500 tabular-nums">
+            <p className="font-mono text-[11px] text-[#777777] tabular-nums">
               ≈ {formatLocalMoney(walletAmount, walletCurrency)}
             </p>
           )}
         </div>
-      </div>
 
-      {/* Payment Methods — Strictly in English per standing rule */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <h3 className="text-xs font-mono uppercase tracking-wider text-neutral-500">
-            Payment Methods
-          </h3>
-          <span className="inline-flex items-center gap-1 text-[11px] text-neutral-500">
-            <Lock className="w-3 h-3" />
-            <span>{t('Aucune donnée de carte stockée localement', 'No card numbers stored locally')}</span>
-          </span>
-        </div>
-
-        <div className="divide-y divide-neutral-200/70 border-y border-neutral-200/70">
-          {PAYMENT_METHODS_EN.map((pm) => {
-            const active = preferredPayment === pm.id;
-            const liveProvider = providerMap.get(pm.id);
-            const isActiveMode = liveProvider
-              ? liveProvider.mode === 'active' || liveProvider.mode === 'live_ready'
-              : true;
-
-            return (
-              <button
-                key={pm.id}
-                type="button"
-                onClick={() => {
-                  setPreferredPayment(pm.id as PaymentMethod);
-                  showToast(
-                    t(`Méthode par défaut : ${pm.label}`, `Default payment method: ${pm.label}`),
-                    'success'
-                  );
-                }}
-                className="w-full py-4 text-left flex items-center justify-between gap-4 hover:bg-neutral-100/60 transition-colors cursor-pointer px-1"
-              >
-                <div className="flex items-center gap-3.5 min-w-0">
-                  <CreditCard className="w-4 h-4 text-neutral-600 shrink-0" />
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className="text-sm font-semibold text-neutral-950">{pm.label}</p>
-                      {liveProvider && !isActiveMode && (
-                        <span className="text-[11px] text-neutral-400 font-mono">
-                          Setup required
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-xs text-neutral-500 truncate mt-0.5">{pm.subtitle}</p>
-                  </div>
-                </div>
-
-                {active ? (
-                  <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-neutral-950 shrink-0">
-                    <span className="w-1.5 h-1.5 rounded-full bg-red-600" aria-hidden="true" />
-                    <Check className="w-4 h-4 text-red-600" />
-                    <span>Default</span>
-                  </span>
-                ) : (
-                  <span className="text-xs text-neutral-400 hover:text-neutral-950 shrink-0">
-                    Select
-                  </span>
+        <div className="p-4 space-y-1.5">
+          <div className="flex items-center gap-2 text-xs text-[#777777]">
+            <Building2 className="w-3.5 h-3.5 text-[#171717]" />
+            <span>Corporate Invoice</span>
+          </div>
+          <p className="text-sm font-semibold text-[#171717]">
+            {isCorporateVerified
+              ? t('Éligible · Net 15 / Net 30', 'Eligible · Net 15 / Net 30')
+              : t('Vérification entreprise requise', 'Business verification required')}
+          </p>
+          <p className="text-[11px] text-[#777777]">
+            {isCorporateVerified
+              ? t('Facturation mensuelle activée sur votre compte.', 'Monthly consolidated billing active.')
+              : t(
+                  'Complétez votre profil commerçant pour activer la facturation différée.',
+                  'Complete business verification to unlock monthly invoicing.'
                 )}
-              </button>
-            );
-          })}
+          </p>
         </div>
       </div>
 
-      {/* Real Transaction & Receipts History */}
-      <div className="space-y-2">
+      {/* 3. Real Transactions & Receipts History */}
+      <div className="space-y-2.5">
         <div className="flex items-center justify-between">
-          <h3 className="text-xs font-mono uppercase tracking-wider text-neutral-500">
+          <h3 className="text-xs font-medium text-[#777777]">
             {t('Historique des transactions & reçus', 'Transactions & receipts')}
           </h3>
-          <span className="font-mono text-xs text-neutral-400 tabular-nums">
+          <span className="font-mono text-xs text-[#777777] tabular-nums">
             {ledger.length}
           </span>
         </div>
 
         {ledger.length === 0 ? (
-          <div className="py-10 text-center border-y border-neutral-200/70 space-y-1.5">
-            <Receipt className="w-5 h-5 text-neutral-400 mx-auto" />
-            <p className="text-sm font-medium text-neutral-900">
+          <div className="py-10 text-center border-y border-[#E5E5E5] space-y-1.5">
+            <Receipt className="w-5 h-5 text-[#777777] mx-auto" />
+            <p className="text-sm font-semibold text-[#171717]">
               {t('Aucune transaction enregistrée', 'No transactions yet')}
             </p>
-            <p className="text-xs text-neutral-500">
+            <p className="text-xs text-[#777777] max-w-sm mx-auto">
               {t(
                 'Les reçus de vos livraisons et réservations apparaîtront automatiquement ici.',
-                'Receipts for your deliveries and reservations will appear here automatically.'
+                'Receipts for your deliveries and vehicle reservations will appear here automatically.'
               )}
             </p>
           </div>
         ) : (
-          <div className="divide-y divide-neutral-200/70 border-y border-neutral-200/70">
+          <div className="divide-y divide-[#E5E5E5] border-y border-[#E5E5E5]">
             {ledger.slice(0, 20).map((item) => {
               const showConverted = item.currency.toUpperCase() !== currency.toUpperCase();
+              const statusInfo = paymentStatusMeta(item.paymentStatus);
               return (
                 <button
                   key={item.id}
                   type="button"
                   onClick={() => setActiveReceipt(item)}
-                  className="w-full py-4 px-1 text-left flex items-start justify-between gap-4 hover:bg-neutral-100/60 transition-colors cursor-pointer"
+                  className="w-full py-4 px-2 -mx-2 rounded-xl text-left flex items-start justify-between gap-4 hover:bg-[#F3F3F3]/60 transition-colors cursor-pointer"
                 >
                   <div className="min-w-0 space-y-0.5">
-                    <div className="flex items-center gap-2 text-xs text-neutral-500 flex-wrap">
-                      <span className="font-mono font-semibold text-neutral-950">
+                    <div className="flex items-center gap-2 text-xs text-[#777777] flex-wrap">
+                      <span className="font-mono font-semibold text-[#171717]">
                         {item.reference}
                       </span>
                       <span aria-hidden="true">·</span>
                       <span>{item.dateLabel}</span>
                       <span aria-hidden="true">·</span>
-                      <span className="text-neutral-700 font-medium">
-                        {paymentStatusLabel(item.paymentStatus)}
+                      <span className={`font-semibold ${statusInfo.colorClass}`}>
+                        {statusInfo.label}
                       </span>
                     </div>
-                    <p className="text-sm font-medium text-neutral-950 truncate">{item.title}</p>
-                    <p className="text-xs text-neutral-500 truncate">
+                    <p className="text-sm font-medium text-[#171717] truncate">{item.title}</p>
+                    <p className="text-xs text-[#777777] truncate">
                       {item.paymentMethod} · {item.subtitle}
                     </p>
                   </div>
 
                   <div className="text-right shrink-0 space-y-0.5">
-                    <p className="font-mono text-xs font-bold text-neutral-950 tabular-nums">
+                    <p className="font-mono text-xs sm:text-sm font-bold text-[#171717] tabular-nums">
                       {formatExactCurrency(item.amount, item.currency, lang)}
                     </p>
                     {showConverted && (
-                      <p className="font-mono text-[11px] text-neutral-400 tabular-nums">
+                      <p className="font-mono text-[11px] text-[#777777] tabular-nums">
                         ≈ {formatLocalMoney(item.amount, item.currency)}
                       </p>
                     )}
-                    <span className="inline-flex items-center gap-1 text-[11px] text-neutral-500">
+                    <span className="inline-flex items-center gap-1 text-[11px] text-[#777777]">
                       <FileText className="w-3 h-3" />
-                      {t('Reçu', 'Receipt')}
+                      <span>{t('Reçu', 'Receipt')}</span>
                     </span>
                   </div>
                 </button>
@@ -298,6 +291,24 @@ export function PaymentsSection() {
           </div>
         )}
       </div>
+
+      {/* Contextual Payment Method Selector Modal */}
+      <PaymentMethodModal
+        open={paymentModalOpen}
+        onClose={() => setPaymentModalOpen(false)}
+        selected={preferredPayment}
+        onSelect={(method: PaymentMethod) => {
+          setPreferredPayment(method);
+          showToast(
+            t(
+              `Méthode par défaut : ${getPaymentMethodLabelEn(method)}`,
+              `Default payment method: ${getPaymentMethodLabelEn(method)}`
+            ),
+            'success'
+          );
+        }}
+        title="Default Payment Method"
+      />
 
       {/* Itemized Receipt Sheet */}
       <BottomSheet
@@ -311,7 +322,7 @@ export function PaymentsSection() {
             <button
               type="button"
               onClick={() => copyReference(activeReceipt.reference)}
-              className="w-full py-2.5 rounded-full bg-neutral-950 text-white text-xs font-semibold hover:bg-neutral-800 transition-colors cursor-pointer inline-flex items-center justify-center gap-1.5"
+              className="w-full min-h-[44px] rounded-xl bg-[#171717] text-white text-xs font-semibold hover:bg-neutral-800 transition-colors cursor-pointer inline-flex items-center justify-center gap-1.5"
             >
               <Copy className="w-3.5 h-3.5" />
               <span>{t('Copier la référence du reçu', 'Copy receipt reference')}</span>
@@ -320,49 +331,47 @@ export function PaymentsSection() {
         }
       >
         {activeReceipt && (
-          <div className="space-y-4">
-            <div className="divide-y divide-neutral-200/70 border-y border-neutral-200/70 text-xs">
-              <div className="py-3 flex justify-between gap-4">
-                <span className="text-neutral-500">{t('Référence', 'Reference')}</span>
-                <span className="font-mono font-semibold text-neutral-950">{activeReceipt.reference}</span>
-              </div>
-              <div className="py-3 flex justify-between gap-4">
-                <span className="text-neutral-500">{t('Date', 'Date')}</span>
-                <span className="text-neutral-950">{activeReceipt.dateLabel}</span>
-              </div>
-              <div className="py-3 flex justify-between gap-4">
-                <span className="text-neutral-500">{t('Prestation', 'Service')}</span>
-                <span className="text-neutral-950 text-right">{activeReceipt.title}</span>
-              </div>
-              <div className="py-3 flex justify-between gap-4">
-                <span className="text-neutral-500">Payment Method</span>
-                <span className="text-neutral-950 font-medium">{activeReceipt.paymentMethod}</span>
-              </div>
-              <div className="py-3 flex justify-between gap-4">
-                <span className="text-neutral-500">{t('Statut', 'Status')}</span>
-                <span className="text-neutral-950 font-medium">
-                  {paymentStatusLabel(activeReceipt.paymentStatus)}
-                </span>
-              </div>
-              <div className="py-3.5 flex justify-between gap-4 items-baseline">
-                <span className="text-neutral-500 font-medium">
-                  {t('Montant facturé (devise d’origine)', 'Billed amount (original currency)')}
-                </span>
-                <span className="font-mono text-base font-bold text-neutral-950 tabular-nums">
-                  {formatExactCurrency(activeReceipt.amount, activeReceipt.currency, lang)}
-                </span>
-              </div>
-              {activeReceipt.currency.toUpperCase() !== currency.toUpperCase() && (
-                <div className="py-3 flex justify-between gap-4">
-                  <span className="text-neutral-500">
-                    {t('Équivalent affiché (indicatif)', 'Display equivalent (estimate)')}
-                  </span>
-                  <span className="font-mono text-neutral-600 tabular-nums">
-                    ≈ {formatLocalMoney(activeReceipt.amount, activeReceipt.currency)}
-                  </span>
-                </div>
-              )}
+          <div className="divide-y divide-[#E5E5E5] border-y border-[#E5E5E5] text-xs">
+            <div className="py-3 flex justify-between gap-4">
+              <span className="text-[#777777]">{t('Référence', 'Reference')}</span>
+              <span className="font-mono font-semibold text-[#171717]">{activeReceipt.reference}</span>
             </div>
+            <div className="py-3 flex justify-between gap-4">
+              <span className="text-[#777777]">{t('Date', 'Date')}</span>
+              <span className="text-[#171717]">{activeReceipt.dateLabel}</span>
+            </div>
+            <div className="py-3 flex justify-between gap-4">
+              <span className="text-[#777777]">{t('Prestation', 'Service')}</span>
+              <span className="text-[#171717] text-right">{activeReceipt.title}</span>
+            </div>
+            <div className="py-3 flex justify-between gap-4">
+              <span className="text-[#777777]">Payment Method</span>
+              <span className="text-[#171717] font-medium">{activeReceipt.paymentMethod}</span>
+            </div>
+            <div className="py-3 flex justify-between gap-4">
+              <span className="text-[#777777]">{t('Statut', 'Status')}</span>
+              <span className={`font-semibold ${paymentStatusMeta(activeReceipt.paymentStatus).colorClass}`}>
+                {paymentStatusMeta(activeReceipt.paymentStatus).label}
+              </span>
+            </div>
+            <div className="py-3.5 flex justify-between gap-4 items-baseline">
+              <span className="text-[#777777] font-medium">
+                {t('Montant facturé', 'Billed amount')}
+              </span>
+              <span className="font-mono text-base font-bold text-[#171717] tabular-nums">
+                {formatExactCurrency(activeReceipt.amount, activeReceipt.currency, lang)}
+              </span>
+            </div>
+            {activeReceipt.currency.toUpperCase() !== currency.toUpperCase() && (
+              <div className="py-3 flex justify-between gap-4">
+                <span className="text-[#777777]">
+                  {t('Équivalent affiché (indicatif)', 'Display equivalent (estimate)')}
+                </span>
+                <span className="font-mono text-[#777777] tabular-nums">
+                  ≈ {formatLocalMoney(activeReceipt.amount, activeReceipt.currency)}
+                </span>
+              </div>
+            )}
           </div>
         )}
       </BottomSheet>

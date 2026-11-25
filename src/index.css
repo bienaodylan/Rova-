@@ -1,123 +1,129 @@
 @import "tailwindcss";
-@import "leaflet/dist/leaflet.css";
+
+:root {
+  --rova-red: #E52B32;
+  --rova-red-hover: #CC2229;
+  --rova-red-soft: #FEF2F2;
+  --rova-black: #171717;
+  --rova-white: #FFFFFF;
+  --rova-surface: #F3F3F3;
+  --rova-muted: #777777;
+  --rova-border: #E5E5E5;
+  --rova-success: #15803D;
+  --rova-warning: #B45309;
+  --rova-error: #B91C1C;
+}
 
 @layer base {
   html {
-    width: 100%;
-    min-height: 100%;
-    overflow-x: clip;
     font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    background-color: var(--rova-white);
+    color: var(--rova-black);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
     scroll-behavior: smooth;
-    background-color: #f8f8f9;
-    color: #0a0a0a;
-    -webkit-tap-highlight-color: transparent;
-    -webkit-text-size-adjust: 100%;
-    overscroll-behavior-x: none;
   }
 
   body {
-    width: 100%;
-    min-width: 0;
-    min-height: 100%;
-    margin: 0;
-    overflow-x: clip;
-    overscroll-behavior-x: none;
+    background-color: var(--rova-white);
+    color: var(--rova-black);
   }
 
-  #root {
-    width: 100%;
-    min-width: 0;
-    min-height: 100%;
-    overflow-x: clip;
-  }
-
-  body.rova-map-picker-open {
-    position: fixed;
-    inset: 0;
-    width: 100%;
-    touch-action: none;
-  }
-
-  h1, h2, h3, h4, .font-display {
-    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  h1, h2, h3, .font-display {
+    font-family: 'Plus Jakarta Sans', 'DM Sans', sans-serif;
     text-wrap: balance;
   }
 
-  .font-mono, .tabular-nums {
+  .font-mono {
     font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
     font-variant-numeric: tabular-nums;
   }
 
-  @media (prefers-reduced-motion: reduce) {
-    html {
-      scroll-behavior: auto;
-    }
-    *, *::before, *::after {
-      animation-duration: 0.01ms !important;
-      animation-iteration-count: 1 !important;
-      transition-duration: 0.01ms !important;
-    }
+  button:focus-visible,
+  a:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
+    outline: 2px solid var(--rova-black);
+    outline-offset: 2px;
   }
 }
 
-@layer utilities {
-  .no-scrollbar::-webkit-scrollbar {
-    display: none;
-  }
-  .no-scrollbar {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-  }
-  .pb-safe {
-    padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
-  }
-}
-
-/* Monochrome editorial styling for Leaflet maps */
-.rova-map-tiles {
-  filter: grayscale(100%) contrast(1.04);
-}
-
-.leaflet-container {
-  width: 100%;
-  height: 100%;
+/* Monochrome editorial map styling for Leaflet fallback tiles */
+.rova-leaflet-map {
   font-family: 'DM Sans', sans-serif !important;
-  background-color: #f3f3f4 !important;
-  touch-action: none;
-  overscroll-behavior: contain;
-  -webkit-user-select: none;
-  user-select: none;
+  background: #F3F3F3 !important;
 }
 
-.rova-map-gesture-surface,
-.rova-map-gesture-surface .leaflet-container {
-  touch-action: none;
-  overscroll-behavior: contain;
-  -webkit-user-select: none;
-  user-select: none;
+.rova-leaflet-map .leaflet-tile-pane {
+  filter: grayscale(100%) contrast(1.04) brightness(1.02);
 }
 
-/* Keep the installed PWA viewport stable around device safe areas. */
-@media (display-mode: standalone) {
-  html, body, #root {
-    min-height: 100%;
-    overscroll-behavior-x: none;
-  }
-}
-
-.leaflet-control-attribution {
+.rova-leaflet-map .leaflet-control-attribution {
+  background: rgba(255, 255, 255, 0.9) !important;
+  color: #777777 !important;
   font-size: 9px !important;
-  background: rgba(255, 255, 255, 0.85) !important;
-  color: #525252 !important;
+  padding: 2px 6px !important;
 }
 
+.rova-leaflet-map .leaflet-popup-content-wrapper {
+  border-radius: 12px !important;
+  box-shadow: 0 10px 28px rgba(23, 23, 23, 0.14) !important;
+  border: 1px solid #E5E5E5;
+}
 
-/* Prevent iOS Safari from auto-zooming the page when a form field receives focus.
-   Keep this limited to form controls: map pinch-zoom remains available. */
-@media screen and (max-width: 767px) {
-  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
-  textarea,
-  select {
+.rova-leaflet-map .leaflet-popup-content {
+  margin: 10px 12px !important;
+}
+
+/* Hide scrollbars cleanly for horizontal pills & filter strips */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Safe area padding helper for mobile bottom nav */
+.pb-safe {
+  padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+}
+
+/* Subtle custom scrollbars for split desktop views */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(23, 23, 23, 0.14);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(23, 23, 23, 0.28);
+}
+
+/*
+ * Mobile UX: prevent iOS Safari from auto-zooming the viewport when focusing
+ * text fields with a computed font-size below 16px, and remove tap flash.
+ */
+@media (max-width: 639px) {
+  input:not([type='checkbox']):not([type='radio']),
+  select,
+  textarea {
     font-size: 16px !important;
   }
+}
+
+button,
+a,
+[role='button'] {
+  -webkit-tap-highlight-color: transparent;
 }

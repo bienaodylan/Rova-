@@ -21,9 +21,9 @@ const SIZE_MAP: Record<NonNullable<RovaWordmarkProps['size']>, string> = {
 export function RovaWordmark({ size = 'md', className = '' }: RovaWordmarkProps) {
   return (
     <span
-      className={`font-display font-extrabold text-neutral-950 select-none inline-flex items-baseline leading-none ${SIZE_MAP[size]} ${className}`}
+      className={`font-display font-extrabold text-[#171717] select-none inline-flex items-baseline leading-none ${SIZE_MAP[size]} ${className}`}
     >
-      ROVA<span className="text-red-600 tracking-normal">.</span>
+      ROVA<span className="text-[#E52B32] tracking-normal">.</span>
     </span>
   );
 }
@@ -73,10 +73,10 @@ export function RovaSplashScreen({ ready }: RovaSplashScreenProps) {
           transition={{ duration: prefersReducedMotion ? 0.15 : 0.36, ease: [0.16, 1, 0.3, 1] }}
           aria-label={t('Chargement de ROVA', 'Loading ROVA')}
           role="status"
-          className="fixed inset-0 z-[200] bg-[#f8f8f9] text-neutral-950 flex flex-col items-center justify-center px-6 select-none overflow-hidden"
+          className="fixed inset-0 z-[200] bg-white text-[#171717] flex flex-col items-center justify-center px-6 select-none overflow-hidden"
         >
           {/* Minimalist architectural corner hairline marks */}
-          <div aria-hidden="true" className="pointer-events-none absolute inset-6 sm:inset-10 border border-neutral-200/70 rounded-[28px]" />
+          <div aria-hidden="true" className="pointer-events-none absolute inset-6 sm:inset-10 border border-[#E5E5E5] rounded-3xl" />
 
           <motion.div
             initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, y: 10, scale: 0.97 }}
@@ -89,7 +89,7 @@ export function RovaSplashScreen({ ready }: RovaSplashScreenProps) {
             <RovaWordmark size="xl" />
 
             {/* Crisp red-black route line progress indicator */}
-            <div className="mt-6 w-36 h-[2px] rounded-full bg-neutral-200 overflow-hidden">
+            <div className="mt-6 w-36 h-[2px] rounded-full bg-[#E5E5E5] overflow-hidden">
               <motion.div
                 initial={{ x: '-100%' }}
                 animate={{ x: '100%' }}
@@ -98,11 +98,11 @@ export function RovaSplashScreen({ ready }: RovaSplashScreenProps) {
                   duration: 1.15,
                   ease: [0.4, 0, 0.2, 1],
                 }}
-                className="w-1/2 h-full bg-gradient-to-r from-neutral-950 via-red-600 to-red-600 rounded-full"
+                className="w-1/2 h-full bg-gradient-to-r from-[#171717] via-[#E52B32] to-[#E52B32] rounded-full"
               />
             </div>
 
-            <p className="mt-4 text-xs font-medium text-neutral-500 tracking-tight">
+            <p className="mt-4 text-xs font-medium text-[#777777] tracking-tight">
               {t('Logistique urbaine & suivi en direct', 'Urban logistics & live tracking')}
             </p>
           </motion.div>

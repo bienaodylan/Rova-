@@ -221,15 +221,13 @@ export function RovaAccountView({
 
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-0 sm:pt-8 pb-10">
-      {/* ================================================================== */}
-      {/* DESKTOP HEADER (lg+): Clean Editorial Title Bar                    */}
-      {/* ================================================================== */}
-      <div className="hidden lg:flex items-end justify-between gap-6 pb-6 border-b border-neutral-200/80">
+      {/* DESKTOP HEADER (lg+) */}
+      <div className="hidden lg:flex items-end justify-between gap-6 pb-6 border-b border-[#E5E5E5]">
         <div>
-          <h1 className="font-display text-3xl font-bold tracking-tight text-neutral-950">
+          <h1 className="font-display text-3xl font-bold tracking-tight text-[#171717]">
             {t('Mon compte', 'My account')}
           </h1>
-          <p className="text-sm text-neutral-500 mt-1">
+          <p className="text-sm text-[#777777] mt-1">
             {t(
               'Gérez votre identité, vos adresses, vos paiements et les paramètres de votre espace ROVA.',
               'Manage your identity, addresses, payments, and ROVA workspace preferences.'
@@ -241,7 +239,7 @@ export function RovaAccountView({
           <button
             type="button"
             onClick={() => selectSection('profile')}
-            className="px-4 py-2 rounded-full border border-neutral-300 hover:border-neutral-950 text-xs font-semibold text-neutral-950 transition-colors cursor-pointer"
+            className="min-h-[40px] px-4 rounded-xl border border-[#E5E5E5] hover:border-[#171717] text-xs font-semibold text-[#171717] transition-colors cursor-pointer"
           >
             {t('Modifier le profil', 'Edit profile')}
           </button>
@@ -250,7 +248,7 @@ export function RovaAccountView({
             <button
               type="button"
               onClick={() => void signInWithGoogle().catch(() => {})}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-neutral-300 hover:border-neutral-950 text-xs font-semibold text-neutral-950 transition-colors cursor-pointer"
+              className="min-h-[40px] inline-flex items-center gap-2 px-4 rounded-xl bg-white border border-[#E5E5E5] hover:border-[#171717] text-xs font-semibold text-[#171717] transition-colors cursor-pointer"
             >
               <GoogleLogo className="w-3.5 h-3.5" />
               <span>Google</span>
@@ -258,7 +256,7 @@ export function RovaAccountView({
             <button
               type="button"
               onClick={() => void signInWithApple().catch(() => {})}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-neutral-950 text-white text-xs font-semibold hover:bg-neutral-800 transition-colors cursor-pointer"
+              className="min-h-[40px] inline-flex items-center gap-2 px-4 rounded-xl bg-[#171717] text-white text-xs font-semibold hover:bg-neutral-800 transition-colors cursor-pointer"
             >
               <AppleLogo className="w-3.5 h-3.5" />
               <span>Apple</span>
@@ -267,50 +265,34 @@ export function RovaAccountView({
         )}
       </div>
 
-      {/* ================================================================== */}
-      {/* DESKTOP TWO-COLUMN EDITORIAL LAYOUT (lg+)                          */}
-      {/* ================================================================== */}
+      {/* DESKTOP TWO-COLUMN EDITORIAL LAYOUT (lg+) */}
       <div className="hidden lg:grid lg:grid-cols-12 gap-10 pt-8 items-start">
-        {/* Left Sticky Navigation Column */}
         <aside className="lg:col-span-4 xl:col-span-3 sticky top-6 space-y-6">
-          {/* Compact Identity Summary */}
-          <div className="pb-5 border-b border-neutral-200/80 flex items-center gap-3.5">
+          <div className="pb-5 border-b border-[#E5E5E5] flex items-center gap-3.5">
             {firebaseUser?.photoURL ? (
               <img
                 src={firebaseUser.photoURL}
                 alt={fullName}
                 referrerPolicy="no-referrer"
-                className="w-11 h-11 rounded-full object-cover border border-neutral-200 shrink-0"
+                className="w-11 h-11 rounded-full object-cover border border-[#E5E5E5] shrink-0"
               />
             ) : (
-              <div className="w-11 h-11 rounded-full bg-neutral-950 text-white font-display text-sm font-bold flex items-center justify-center shrink-0">
+              <div className="w-11 h-11 rounded-full bg-[#171717] text-white font-display text-sm font-bold flex items-center justify-center shrink-0">
                 {initials}
               </div>
             )}
             <div className="min-w-0">
-              <p className="font-display text-sm font-bold text-neutral-950 truncate">{fullName}</p>
-              <p className="text-xs text-neutral-500 truncate">{emailDisplay}</p>
+              <p className="font-display text-sm font-bold text-[#171717] truncate">{fullName}</p>
+              <p className="text-xs text-[#777777] truncate">{emailDisplay}</p>
               {firebaseUser && (
-                <p className="text-[11px] text-neutral-500 mt-0.5 inline-flex items-center gap-1.5">
-                  <span
-                    className={`w-1.5 h-1.5 rounded-full ${
-                      firebaseUser.emailVerified ? 'bg-red-600' : 'bg-neutral-400'
-                    }`}
-                    aria-hidden="true"
-                  />
-                  <span>{roleLabel}</span>
-                  {profile?.phone && (
-                    <>
-                      <span aria-hidden="true">·</span>
-                      <span className="truncate">{profile.phone}</span>
-                    </>
-                  )}
+                <p className="text-[11px] text-[#777777] mt-0.5 truncate">
+                  {roleLabel}
+                  {profile?.phone ? ` · ${profile.phone}` : ''}
                 </p>
               )}
             </div>
           </div>
 
-          {/* 8 Editorial Settings Links */}
           <nav aria-label={t('Navigation du compte', 'Account navigation')} className="space-y-0.5">
             {navItems.map((item) => {
               const Icon = item.icon;
@@ -322,31 +304,31 @@ export function RovaAccountView({
                   onClick={() => selectSection(item.id)}
                   className={`group relative w-full text-left pl-4 pr-3 py-3 rounded-xl transition-colors cursor-pointer flex items-center justify-between gap-3 ${
                     isActive
-                      ? 'bg-white text-neutral-950'
-                      : 'text-neutral-600 hover:text-neutral-950 hover:bg-white/60'
+                      ? 'bg-[#F3F3F3] text-[#171717]'
+                      : 'text-[#777777] hover:text-[#171717] hover:bg-[#F3F3F3]/60'
                   }`}
                 >
                   {isActive && (
                     <span
-                      className="absolute left-0 top-2.5 bottom-2.5 w-[2.5px] rounded-full bg-red-600"
+                      className="absolute left-0 top-2.5 bottom-2.5 w-[2.5px] rounded-full bg-[#E52B32]"
                       aria-hidden="true"
                     />
                   )}
                   <div className="flex items-center gap-3 min-w-0">
                     <Icon
                       className={`w-4 h-4 shrink-0 transition-colors ${
-                        isActive ? 'text-neutral-950' : 'text-neutral-400 group-hover:text-neutral-700'
+                        isActive ? 'text-[#171717]' : 'text-[#777777] group-hover:text-[#171717]'
                       }`}
                     />
                     <div className="min-w-0">
                       <p
                         className={`text-sm truncate ${
-                          isActive ? 'font-semibold text-neutral-950' : 'font-medium'
+                          isActive ? 'font-semibold text-[#171717]' : 'font-medium'
                         }`}
                       >
                         {item.label}
                       </p>
-                      <p className="text-[11px] text-neutral-400 truncate">{item.hint}</p>
+                      <p className="text-[11px] text-[#777777] truncate">{item.hint}</p>
                     </div>
                   </div>
                 </button>
@@ -354,13 +336,12 @@ export function RovaAccountView({
             })}
           </nav>
 
-          {/* Subtle Sign-out Action */}
           {firebaseUser && (
-            <div className="pt-4 border-t border-neutral-200/80">
+            <div className="pt-4 border-t border-[#E5E5E5]">
               <button
                 type="button"
                 onClick={() => void logout()}
-                className="w-full px-3 py-2.5 rounded-xl text-left text-xs font-medium text-neutral-500 hover:text-red-700 hover:bg-white/70 transition-colors cursor-pointer inline-flex items-center gap-2.5"
+                className="w-full px-3 py-2.5 rounded-xl text-left text-xs font-medium text-[#777777] hover:text-[#E52B32] hover:bg-[#F3F3F3]/70 transition-colors cursor-pointer inline-flex items-center gap-2.5"
               >
                 <LogOut className="w-3.5 h-3.5" />
                 <span>{t('Se déconnecter', 'Sign out')}</span>
@@ -369,15 +350,14 @@ export function RovaAccountView({
           )}
         </aside>
 
-        {/* Right Editorial Content Canvas */}
-        <section className="lg:col-span-8 xl:col-span-9 bg-white border border-neutral-200/80 rounded-2xl p-8">
+        <section className="lg:col-span-8 xl:col-span-9 bg-white border border-[#E5E5E5] rounded-2xl p-8">
           <AnimatePresence mode="wait" initial={false}>
             <motion.div
               key={activeSection}
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -4 }}
-              transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+              transition={{ duration: 0.16, ease: [0.16, 1, 0.3, 1] }}
             >
               {renderSectionContent(activeSection)}
             </motion.div>
@@ -385,26 +365,23 @@ export function RovaAccountView({
         </section>
       </div>
 
-      {/* ================================================================== */}
-      {/* MOBILE & TABLET ARCHITECTURE (< lg): Overview <-> Sub-Section      */}
-      {/* ================================================================== */}
+      {/* MOBILE & TABLET ARCHITECTURE (< lg) */}
       <div className="lg:hidden">
         {mobileSection === null ? (
           <div className="space-y-6">
-            {/* Auto-Hide Sticky Header */}
             <header
               className={`sticky top-0 z-30 -mx-4 px-4 py-3 transition-transform duration-200 ease-out will-change-transform motion-reduce:transition-none ${
                 headerHidden ? '-translate-y-full pointer-events-none' : 'translate-y-0'
               } ${
                 headerScrolled
-                  ? 'bg-[#f8f8f9]/92 backdrop-blur-md border-b border-neutral-200/70'
-                  : 'bg-transparent border-b border-transparent'
+                  ? 'bg-white/95 backdrop-blur-md border-b border-[#E5E5E5]'
+                  : 'bg-white border-b border-transparent'
               }`}
             >
-              <h1 className="font-display text-2xl font-bold tracking-tight text-neutral-950">
+              <h1 className="font-display text-2xl font-bold tracking-tight text-[#171717]">
                 {t('Mon compte', 'My account')}
               </h1>
-              <p className="text-xs text-neutral-500 mt-0.5">
+              <p className="text-xs text-[#777777] mt-0.5">
                 {t(
                   'Identité, adresses, paiements et préférences.',
                   'Identity, addresses, payments, and preferences.'
@@ -412,29 +389,28 @@ export function RovaAccountView({
               </p>
             </header>
 
-            {/* Editorial Identity Header Block */}
-            <section className="pb-6 border-b border-neutral-200/80 space-y-4">
+            <section className="pb-6 border-b border-[#E5E5E5] space-y-4">
               <div className="flex items-center gap-4">
                 {firebaseUser?.photoURL ? (
                   <img
                     src={firebaseUser.photoURL}
                     alt={fullName}
                     referrerPolicy="no-referrer"
-                    className="w-14 h-14 rounded-full object-cover border border-neutral-200 shrink-0"
+                    className="w-14 h-14 rounded-full object-cover border border-[#E5E5E5] shrink-0"
                   />
                 ) : (
-                  <div className="w-14 h-14 rounded-full bg-neutral-950 text-white font-display text-lg font-bold flex items-center justify-center shrink-0">
+                  <div className="w-14 h-14 rounded-full bg-[#171717] text-white font-display text-lg font-bold flex items-center justify-center shrink-0">
                     {initials}
                   </div>
                 )}
                 <div className="min-w-0 space-y-0.5">
-                  <h2 className="font-display text-base font-bold text-neutral-950 truncate">
+                  <h2 className="font-display text-base font-bold text-[#171717] truncate">
                     {fullName}
                   </h2>
-                  <p className="text-xs text-neutral-500 truncate">{emailDisplay}</p>
+                  <p className="text-xs text-[#777777] truncate">{emailDisplay}</p>
                   {firebaseUser && (
-                    <p className="text-xs text-neutral-600 inline-flex items-center gap-1.5 pt-0.5">
-                      <ShieldCheck className="w-3.5 h-3.5 text-neutral-950 shrink-0" />
+                    <p className="text-xs text-[#777777] inline-flex items-center gap-1.5 pt-0.5">
+                      <ShieldCheck className="w-3.5 h-3.5 text-[#171717] shrink-0" />
                       <span>
                         {firebaseUser.emailVerified
                           ? t('Vérifié', 'Verified')
@@ -451,7 +427,7 @@ export function RovaAccountView({
                 <button
                   type="button"
                   onClick={() => selectSection('profile')}
-                  className="w-full py-2.5 rounded-full border border-neutral-300 bg-white hover:border-neutral-950 text-xs font-semibold text-neutral-950 transition-colors cursor-pointer"
+                  className="w-full min-h-[44px] rounded-xl border border-[#E5E5E5] bg-white hover:border-[#171717] text-xs font-semibold text-[#171717] transition-colors cursor-pointer"
                 >
                   {t('Modifier le profil', 'Edit profile')}
                 </button>
@@ -460,7 +436,7 @@ export function RovaAccountView({
                   <button
                     type="button"
                     onClick={() => void signInWithGoogle().catch(() => {})}
-                    className="inline-flex items-center justify-center gap-2 py-2.5 px-3 rounded-full bg-white border border-neutral-300 hover:border-neutral-950 text-xs font-semibold text-neutral-950 transition-colors cursor-pointer"
+                    className="min-h-[44px] inline-flex items-center justify-center gap-2 px-3 rounded-xl bg-white border border-[#E5E5E5] hover:border-[#171717] text-xs font-semibold text-[#171717] transition-colors cursor-pointer"
                   >
                     <GoogleLogo className="w-3.5 h-3.5" />
                     <span>Google</span>
@@ -468,7 +444,7 @@ export function RovaAccountView({
                   <button
                     type="button"
                     onClick={() => void signInWithApple().catch(() => {})}
-                    className="inline-flex items-center justify-center gap-2 py-2.5 px-3 rounded-full bg-neutral-950 text-white text-xs font-semibold hover:bg-neutral-800 transition-colors cursor-pointer"
+                    className="min-h-[44px] inline-flex items-center justify-center gap-2 px-3 rounded-xl bg-[#171717] text-white text-xs font-semibold hover:bg-neutral-800 transition-colors cursor-pointer"
                   >
                     <AppleLogo className="w-3.5 h-3.5" />
                     <span>Apple</span>
@@ -477,27 +453,26 @@ export function RovaAccountView({
               )}
             </section>
 
-            {/* Structured Personal Info Summary */}
             {firebaseUser && (
               <section className="space-y-2">
-                <h2 className="text-[11px] font-mono uppercase tracking-wider text-neutral-500">
+                <h2 className="text-xs font-medium text-[#777777]">
                   {t('Informations personnelles', 'Personal details')}
                 </h2>
-                <div className="bg-white border-y border-neutral-200/80 -mx-4 px-4 divide-y divide-neutral-200/70 text-xs">
+                <div className="border-y border-[#E5E5E5] divide-y divide-[#E5E5E5] text-xs">
                   <div className="py-3 flex items-center justify-between gap-4">
-                    <span className="text-neutral-500">{t('Téléphone', 'Phone')}</span>
-                    <span className="font-medium text-neutral-950 truncate">{phoneDisplay}</span>
+                    <span className="text-[#777777]">{t('Téléphone', 'Phone')}</span>
+                    <span className="font-medium text-[#171717] truncate">{phoneDisplay}</span>
                   </div>
                   <div className="py-3 flex items-center justify-between gap-4">
-                    <span className="text-neutral-500">{t('Localisation', 'Location')}</span>
-                    <span className="font-medium text-neutral-950 truncate">
+                    <span className="text-[#777777]">{t('Localisation', 'Location')}</span>
+                    <span className="font-medium text-[#171717] truncate">
                       {business?.city || region.city}, {business?.country || region.countryName}
                     </span>
                   </div>
                   {business?.defaultPickupAddress && (
                     <div className="py-3 flex items-center justify-between gap-4">
-                      <span className="text-neutral-500 shrink-0">{t('Adresse', 'Address')}</span>
-                      <span className="font-medium text-neutral-950 truncate text-right">
+                      <span className="text-[#777777] shrink-0">{t('Adresse', 'Address')}</span>
+                      <span className="font-medium text-[#171717] truncate text-right">
                         {business.defaultPickupAddress}
                       </span>
                     </div>
@@ -506,14 +481,13 @@ export function RovaAccountView({
               </section>
             )}
 
-            {/* Structured Hairline Settings Navigation List */}
             <section className="space-y-2">
-              <h2 className="text-[11px] font-mono uppercase tracking-wider text-neutral-500">
+              <h2 className="text-xs font-medium text-[#777777]">
                 {t('Paramètres', 'Settings')}
               </h2>
               <nav
                 aria-label={t('Paramètres du compte', 'Account settings')}
-                className="bg-white border-y border-neutral-200/80 -mx-4 divide-y divide-neutral-200/70"
+                className="border-y border-[#E5E5E5] divide-y divide-[#E5E5E5]"
               >
                 {navItems.map((item) => {
                   const Icon = item.icon;
@@ -522,31 +496,30 @@ export function RovaAccountView({
                       key={item.id}
                       type="button"
                       onClick={() => selectSection(item.id)}
-                      className="w-full px-4 py-4 text-left flex items-center justify-between gap-3 active:bg-neutral-100/80 transition-colors cursor-pointer"
+                      className="w-full py-4 text-left flex items-center justify-between gap-3 active:bg-[#F3F3F3]/80 transition-colors cursor-pointer"
                     >
                       <div className="flex items-center gap-3.5 min-w-0">
-                        <Icon className="w-4 h-4 text-neutral-600 shrink-0" />
+                        <Icon className="w-4 h-4 text-[#171717] shrink-0" />
                         <div className="min-w-0">
-                          <p className="text-sm font-semibold text-neutral-950 truncate">
+                          <p className="text-sm font-semibold text-[#171717] truncate">
                             {item.label}
                           </p>
-                          <p className="text-xs text-neutral-500 truncate mt-0.5">{item.hint}</p>
+                          <p className="text-xs text-[#777777] truncate mt-0.5">{item.hint}</p>
                         </div>
                       </div>
-                      <ChevronRight className="w-4 h-4 text-neutral-400 shrink-0" />
+                      <ChevronRight className="w-4 h-4 text-[#777777] shrink-0" />
                     </button>
                   );
                 })}
               </nav>
             </section>
 
-            {/* Sign Out */}
             {firebaseUser && (
               <div className="pt-2">
                 <button
                   type="button"
                   onClick={() => void logout()}
-                  className="w-full py-3 rounded-full border border-neutral-200 bg-white hover:border-red-300 text-xs font-semibold text-neutral-700 hover:text-red-700 transition-colors cursor-pointer inline-flex items-center justify-center gap-2"
+                  className="w-full min-h-[44px] rounded-xl border border-[#E5E5E5] bg-white hover:border-red-300 text-xs font-semibold text-[#777777] hover:text-[#E52B32] transition-colors cursor-pointer inline-flex items-center justify-center gap-2"
                 >
                   <LogOut className="w-3.5 h-3.5" />
                   <span>{t('Se déconnecter', 'Sign out')}</span>
@@ -555,21 +528,20 @@ export function RovaAccountView({
             )}
           </div>
         ) : (
-          /* Mobile Sub-Section Focused View */
           <div className="space-y-5">
-            <div className="sticky top-0 z-30 -mx-4 px-4 py-3 bg-[#f8f8f9]/95 backdrop-blur-md border-b border-neutral-200/80 flex items-center justify-between gap-3">
+            <div className="sticky top-0 z-30 -mx-4 px-4 py-3 bg-white/95 backdrop-blur-md border-b border-[#E5E5E5] flex items-center justify-between gap-3">
               <button
                 type="button"
                 onClick={() => {
                   setMobileSection(null);
                   window.scrollTo({ top: 0, behavior: 'smooth' });
                 }}
-                className="inline-flex items-center gap-1.5 text-xs font-semibold text-neutral-950 hover:text-red-600 transition-colors cursor-pointer"
+                className="min-h-[36px] inline-flex items-center gap-1.5 text-xs font-semibold text-[#171717] hover:text-[#E52B32] transition-colors cursor-pointer"
               >
                 <ArrowLeft className="w-4 h-4" />
                 <span>{t('Mon compte', 'My account')}</span>
               </button>
-              <span className="text-xs font-medium text-neutral-500 truncate">
+              <span className="text-xs font-medium text-[#777777] truncate">
                 {activeNavMeta?.label}
               </span>
             </div>
@@ -578,8 +550,7 @@ export function RovaAccountView({
               key={mobileSection}
               initial={{ opacity: 0, x: 10 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
-              className="bg-white border border-neutral-200/80 rounded-2xl p-5"
+              transition={{ duration: 0.16, ease: [0.16, 1, 0.3, 1] }}
             >
               {renderSectionContent(mobileSection)}
             </motion.div>

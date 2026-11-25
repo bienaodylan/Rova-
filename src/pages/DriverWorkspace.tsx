@@ -811,8 +811,8 @@ export function DriverWorkspace({
   ];
 
   return (
-    <div className="min-h-screen bg-[#f8f8f9] text-neutral-950 flex flex-col">
-      {/* Unified Main Content Area — Exact same responsive structure as RovaHomeView / RovaShipmentsView */}
+    <div className="min-h-screen bg-white text-[#171717] flex flex-col">
+      {/* Unified Main Content Area */}
       <main className="flex-1 pb-28">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-0 sm:pt-7 pb-8 space-y-6">
           {/* Minimal Auto-Hide Mobile Header matching main ROVA app */}
@@ -821,16 +821,16 @@ export function DriverWorkspace({
               headerHidden ? '-translate-y-full pointer-events-none' : 'translate-y-0'
             } ${
               headerScrolled
-                ? 'bg-[#f8f8f9]/92 backdrop-blur-md border-b border-neutral-200/70'
-                : 'bg-transparent border-b border-transparent'
+                ? 'bg-white/95 backdrop-blur-md border-b border-[#E5E5E5]'
+                : 'bg-white border-b border-transparent'
             }`}
           >
             <div className="flex items-center gap-2.5 min-w-0">
               <RovaWordmark size="md" />
-              <span className="text-neutral-300 text-sm" aria-hidden="true">
+              <span className="text-[#E5E5E5] text-sm" aria-hidden="true">
                 /
               </span>
-              <span className="text-xs font-medium text-neutral-500 whitespace-nowrap">
+              <span className="text-xs font-medium text-[#777777] whitespace-nowrap">
                 {t('Livreur', 'Driver')}
               </span>
             </div>
@@ -840,9 +840,9 @@ export function DriverWorkspace({
                 <button
                   type="button"
                   onClick={onBackToClient}
-                  className="min-h-[40px] px-3.5 rounded-full bg-white border border-neutral-200 hover:border-neutral-950 text-xs font-medium text-neutral-800 inline-flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap"
+                  className="min-h-[40px] px-3.5 rounded-full bg-[#F3F3F3] hover:bg-[#E5E5E5] text-xs font-medium text-[#171717] inline-flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap"
                 >
-                  <ArrowLeft className="w-3.5 h-3.5 text-neutral-500" />
+                  <ArrowLeft className="w-3.5 h-3.5 text-[#777777]" />
                   <span>{t('Mode Client', 'Client App')}</span>
                 </button>
               )}
@@ -1644,11 +1644,11 @@ export function DriverWorkspace({
         </div>
       </main>
 
-      {/* IDENTICAL Floating Glassmorphism 4-Tab Bottom Navigation Bar (White / Black / Red) */}
-      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 w-auto max-w-[calc(100vw-1rem)] pointer-events-none pb-[env(safe-area-inset-bottom,0px)]">
+      {/* Unified Floating 4-Tab Bottom Navigation Bar matching main ROVA app */}
+      <div className="fixed bottom-3.5 left-1/2 -translate-x-1/2 z-50 w-auto max-w-[calc(100vw-1.5rem)] pointer-events-none pb-[env(safe-area-inset-bottom,0px)]">
         <nav
           aria-label={t('Navigation livreur', 'Driver navigation')}
-          className="pointer-events-auto relative flex items-center gap-1.5 sm:gap-2 p-1.5 rounded-full bg-transparent backdrop-blur-md border border-white/60 ring-1 ring-black/[0.08] shadow-[0_12px_36px_rgba(0,0,0,0.08),inset_0_1px_1px_rgba(255,255,255,0.65)]"
+          className="pointer-events-auto relative flex items-center gap-1 p-1.5 rounded-full bg-white/95 backdrop-blur-xl border border-[#E5E5E5] shadow-[0_10px_30px_rgba(23,23,23,0.10)]"
         >
           {driverNavItems.map((item) => {
             const Icon = item.icon;
@@ -1663,69 +1663,44 @@ export function DriverWorkspace({
                   window.scrollTo({ top: 0, behavior: 'smooth' });
                 }}
                 aria-current={isActive ? 'page' : undefined}
-                className="group relative flex flex-col items-center justify-center min-w-[74px] sm:min-w-[92px] h-[52px] px-3 sm:px-5 rounded-full cursor-pointer select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/30 transition-transform duration-150 active:scale-95"
+                className="group relative flex flex-col items-center justify-center min-w-[72px] sm:min-w-[88px] h-[48px] px-3 sm:px-4 rounded-full cursor-pointer select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[#171717] transition-transform duration-150 active:scale-[0.96]"
               >
-                <span
-                  aria-hidden="true"
-                  className={`absolute inset-0 rounded-full transition-all duration-200 ${
-                    isActive
-                      ? 'opacity-0'
-                      : 'bg-transparent backdrop-blur-sm border border-white/40 group-hover:border-white/75'
-                  }`}
-                />
-
                 {isActive && (
                   <motion.span
-                    layoutId="rova-driver-active-glass-pill"
+                    layoutId="rova-driver-active-nav-pill"
                     transition={{
                       type: 'spring',
-                      stiffness: 420,
-                      damping: 32,
-                      mass: 0.75,
+                      stiffness: 460,
+                      damping: 34,
+                      mass: 0.7,
                     }}
                     aria-hidden="true"
-                    className="absolute inset-0 rounded-full bg-transparent backdrop-blur-lg border border-white/85 ring-1 ring-black/[0.10] shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.8),0_4px_14px_rgba(0,0,0,0.08)]"
+                    className="absolute inset-0 rounded-full bg-[#F3F3F3]"
                   />
                 )}
 
                 <span className="relative z-10 flex flex-col items-center justify-center gap-0.5">
                   <span className="relative">
-                    <motion.span
-                      animate={isActive ? { y: [0, -2, 0], scale: [1, 1.12, 1] } : { y: 0, scale: 1 }}
-                      transition={isActive ? { duration: 0.34, ease: [0.2, 0.8, 0.2, 1] } : { duration: 0.18 }}
-                      className="inline-flex"
-                    >
-                      <Icon
-                        strokeWidth={isActive ? 2.3 : 1.85}
-                        className={`w-[19px] h-[19px] transition-colors duration-200 ${
-                          isActive ? 'text-neutral-950' : 'text-neutral-600 group-hover:text-neutral-900'
-                        }`}
-                      />
-                    </motion.span>
+                    <Icon
+                      strokeWidth={isActive ? 2.25 : 1.75}
+                      className={`w-[19px] h-[19px] transition-colors duration-150 ${
+                        isActive ? 'text-[#E52B32]' : 'text-[#777777] group-hover:text-[#171717]'
+                      }`}
+                    />
                     {item.badge && item.badge > 0 ? (
-                      <span className="absolute -top-1.5 -right-2.5 min-w-[16px] h-[16px] px-1 rounded-full bg-red-600 text-white font-mono text-[9px] font-bold flex items-center justify-center tabular-nums shadow-[0_2px_8px_rgba(220,38,38,0.45)]">
+                      <span className="absolute -top-1.5 -right-2.5 min-w-[16px] h-[16px] px-1 rounded-full bg-[#E52B32] text-white font-mono text-[9px] font-bold flex items-center justify-center tabular-nums">
                         {item.badge > 9 ? '9+' : item.badge}
                       </span>
                     ) : null}
                   </span>
-                  <span className="inline-flex items-center gap-1">
-                    {isActive && (
-                      <motion.span
-                        layoutId="rova-driver-active-red-dot"
-                        transition={{ type: 'spring', stiffness: 460, damping: 32 }}
-                        className="w-1.5 h-1.5 rounded-full bg-red-600 shrink-0"
-                        aria-hidden="true"
-                      />
-                    )}
-                    <span
-                      className={`text-[10px] leading-none tracking-tight whitespace-nowrap transition-colors duration-200 ${
-                        isActive
-                          ? 'font-semibold text-neutral-950'
-                          : 'font-medium text-neutral-600 group-hover:text-neutral-900'
-                      }`}
-                    >
-                      {item.label}
-                    </span>
+                  <span
+                    className={`text-[10px] leading-none tracking-tight whitespace-nowrap transition-colors duration-150 ${
+                      isActive
+                        ? 'font-semibold text-[#171717]'
+                        : 'font-medium text-[#777777] group-hover:text-[#171717]'
+                    }`}
+                  >
+                    {item.label}
                   </span>
                 </span>
               </button>

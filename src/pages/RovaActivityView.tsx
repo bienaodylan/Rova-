@@ -2,7 +2,6 @@ import React, { useMemo } from 'react';
 import { Calendar, ChevronRight, CreditCard, Package, RefreshCw } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { ActivityFilter, useRovaApp } from '../context/RovaAppContext';
-import { ActivityLedgerIllustration } from '../components/RovaIllustrations';
 import { useHideOnScroll } from '../hooks/useHideOnScroll';
 import {
   getPaymentMethodLabelEn,
@@ -115,7 +114,7 @@ export function RovaActivityView() {
     }
 
     return rows.sort((a, b) => b.timestamp - a.timestamp);
-  }, [deliveries, reservations, activityFilter, lang, t]);
+  }, [deliveries, reservations, activityFilter, lang, t, formatLocalMoney]);
 
   const filters: Array<{ id: ActivityFilter; label: string }> = [
     { id: 'all', label: t('Tout', 'All') },
@@ -125,51 +124,51 @@ export function RovaActivityView() {
   ];
 
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-0 sm:pt-7 pb-8 space-y-6">
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-0 sm:pt-7 pb-10 space-y-6">
       <header
         className={`sticky top-0 z-30 -mx-4 px-4 py-3 transition-transform duration-200 ease-out will-change-transform motion-reduce:transition-none sm:static sm:mx-0 sm:px-0 sm:py-0 sm:translate-y-0 sm:pointer-events-auto sm:bg-transparent sm:backdrop-blur-none sm:border-none ${
           headerHidden ? '-translate-y-full pointer-events-none' : 'translate-y-0'
         } ${
           headerScrolled
-            ? 'bg-[#f8f8f9]/92 backdrop-blur-md border-b border-neutral-200/70'
-            : 'bg-transparent border-b border-transparent'
+            ? 'bg-white/95 backdrop-blur-md border-b border-[#E5E5E5]'
+            : 'bg-white border-b border-transparent'
         }`}
       >
-        <h1 className="font-display text-2xl font-bold tracking-tight text-neutral-950">
+        <h1 className="font-display text-2xl font-bold tracking-tight text-[#171717]">
           {t('Activité', 'Activity')}
         </h1>
-        <p className="text-xs text-neutral-500 mt-0.5">
-          {t('Historique complet de vos expéditions, réservations et règlements.', 'Full record of your deliveries, reservations, and payments.')}
+        <p className="text-xs text-[#777777] mt-0.5">
+          {t(
+            'Historique complet de vos expéditions, réservations et règlements.',
+            'Full ledger of your deliveries, reservations, and settlements.'
+          )}
         </p>
       </header>
 
-      {/* Clean Numeric Summary Strip */}
-      <div className="grid grid-cols-3 gap-3">
-        <div className="rounded-2xl bg-white border border-neutral-200/80 p-4">
-          <p className="text-xs text-neutral-500 flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-red-600 shrink-0" aria-hidden="true" />
-            <span>{t('Livrées', 'Delivered')}</span>
-          </p>
-          <p className="font-mono text-xl font-bold text-neutral-950 mt-1 tabular-nums">
+      {/* Hairline-Divided Metric Summary Strip (Linear precision, no decorative card grid) */}
+      <div className="grid grid-cols-3 divide-x divide-[#E5E5E5] border-y border-[#E5E5E5] py-4">
+        <div className="pr-3">
+          <p className="text-xs text-[#777777]">{t('Livrées', 'Delivered')}</p>
+          <p className="font-mono text-xl font-bold text-[#171717] mt-1 tabular-nums">
             {summary.completedCount}
           </p>
         </div>
-        <div className="rounded-2xl bg-white border border-neutral-200/80 p-4">
-          <p className="text-xs text-neutral-500">{t('Réservations', 'Reservations')}</p>
-          <p className="font-mono text-xl font-bold text-neutral-950 mt-1 tabular-nums">
+        <div className="px-4">
+          <p className="text-xs text-[#777777]">{t('Réservations', 'Reservations')}</p>
+          <p className="font-mono text-xl font-bold text-[#171717] mt-1 tabular-nums">
             {summary.reservationsCount}
           </p>
         </div>
-        <div className="rounded-2xl bg-white border border-neutral-200/80 p-4">
-          <p className="text-xs text-neutral-500">{t('Volume', 'Total')}</p>
-          <p className="font-mono text-base sm:text-xl font-bold text-neutral-950 mt-1 tabular-nums truncate">
+        <div className="pl-4">
+          <p className="text-xs text-[#777777]">{t('Volume total', 'Total spend')}</p>
+          <p className="font-mono text-base sm:text-xl font-bold text-[#171717] mt-1 tabular-nums truncate">
             {formatLocalMoney(summary.totalSpend, summary.currency)}
           </p>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+      <div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
         {filters.map((f) => {
           const isActive = activityFilter === f.id;
           return (
@@ -177,14 +176,13 @@ export function RovaActivityView() {
               key={f.id}
               type="button"
               onClick={() => setActivityFilter(f.id)}
-              className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-medium whitespace-nowrap shrink-0 transition-colors cursor-pointer ${
+              className={`min-h-[36px] px-3.5 rounded-lg text-xs whitespace-nowrap shrink-0 transition-colors cursor-pointer ${
                 isActive
-                  ? 'bg-neutral-950 text-white'
-                  : 'bg-white border border-neutral-200 text-neutral-700 hover:border-neutral-400'
+                  ? 'bg-[#171717] text-white font-semibold'
+                  : 'text-[#777777] hover:text-[#171717] hover:bg-[#F3F3F3] font-medium'
               }`}
             >
-              {isActive && <span className="w-1.5 h-1.5 rounded-full bg-red-600 shrink-0" aria-hidden="true" />}
-              <span>{f.label}</span>
+              {f.label}
             </button>
           );
         })}
@@ -192,58 +190,56 @@ export function RovaActivityView() {
 
       {/* Activity Ledger */}
       {timelineItems.length === 0 ? (
-        <div className="rounded-3xl bg-white border border-neutral-200/80 p-10 text-center space-y-3">
-          <div className="flex justify-center">
-            <ActivityLedgerIllustration className="w-32 h-24" />
-          </div>
-          <p className="font-display text-base font-bold text-neutral-950">
+        <div className="border-y border-[#E5E5E5] py-12 text-center space-y-3">
+          <Package className="w-6 h-6 text-[#777777] mx-auto" />
+          <p className="font-display text-base font-bold text-[#171717]">
             {t('Aucune activité enregistrée', 'No activity recorded yet')}
           </p>
-          <p className="text-xs text-neutral-500 max-w-sm mx-auto leading-relaxed">
+          <p className="text-xs text-[#777777] max-w-sm mx-auto leading-relaxed">
             {t(
               'Votre historique apparaîtra automatiquement dès votre première livraison ou réservation.',
-              'Your past operations and receipts will appear here after your first completed operation.'
+              'Your history and receipts will appear here after your first completed operation.'
             )}
           </p>
           <div className="pt-1">
             <button
               type="button"
               onClick={() => openComposer('single')}
-              className="px-5 py-2.5 rounded-full bg-neutral-950 text-white text-xs font-semibold hover:bg-neutral-800 transition-colors cursor-pointer"
+              className="min-h-[42px] px-5 rounded-xl bg-[#E52B32] text-white text-xs font-semibold hover:bg-[#CC2229] transition-colors cursor-pointer"
             >
               {t('Créer une livraison', 'Create a delivery')}
             </button>
           </div>
         </div>
       ) : (
-        <div className="rounded-3xl bg-white border border-neutral-200/80 divide-y divide-neutral-100 overflow-hidden">
+        <div className="border-y border-[#E5E5E5] divide-y divide-[#E5E5E5]">
           {timelineItems.map((item) => (
             <div
               key={item.id}
               onClick={() => item.deliveryObj && openShipmentDetail(item.deliveryObj.id)}
-              className={`p-4 sm:p-5 flex items-center justify-between gap-4 transition-colors ${
-                item.deliveryObj ? 'hover:bg-neutral-50 cursor-pointer' : ''
+              className={`py-4 px-2 -mx-2 rounded-xl flex items-center justify-between gap-4 transition-colors ${
+                item.deliveryObj ? 'hover:bg-[#F3F3F3]/60 cursor-pointer' : ''
               }`}
             >
               <div className="flex items-start gap-3.5 min-w-0">
-                <div className="w-10 h-10 rounded-full bg-neutral-100 flex items-center justify-center shrink-0">
+                <div className="w-10 h-10 rounded-xl bg-[#F3F3F3] flex items-center justify-center shrink-0">
                   {item.kind === 'payment' ? (
-                    <CreditCard className="w-4 h-4 text-neutral-800" />
+                    <CreditCard className="w-4 h-4 text-[#171717]" />
                   ) : item.kind === 'reservation' ? (
-                    <Calendar className="w-4 h-4 text-neutral-800" />
+                    <Calendar className="w-4 h-4 text-[#171717]" />
                   ) : (
-                    <Package className="w-4 h-4 text-neutral-800" />
+                    <Package className="w-4 h-4 text-[#171717]" />
                   )}
                 </div>
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold text-neutral-950 truncate">{item.title}</p>
-                  <p className="text-xs text-neutral-500 truncate mt-0.5">{item.subtitle}</p>
-                  {item.meta && <p className="text-[11px] text-neutral-400 mt-0.5">{item.meta}</p>}
+                  <p className="text-sm font-semibold text-[#171717] truncate">{item.title}</p>
+                  <p className="text-xs text-[#777777] truncate mt-0.5">{item.subtitle}</p>
+                  {item.meta && <p className="text-[11px] text-[#777777]/80 mt-0.5">{item.meta}</p>}
                 </div>
               </div>
 
               <div className="flex items-center gap-2.5 shrink-0">
-                <span className="font-mono text-xs sm:text-sm font-semibold text-neutral-950 tabular-nums">
+                <span className="font-mono text-xs sm:text-sm font-semibold text-[#171717] tabular-nums">
                   {item.amount}
                 </span>
                 {item.deliveryObj && (
@@ -254,12 +250,12 @@ export function RovaActivityView() {
                       void repeatDelivery(item.deliveryObj!);
                     }}
                     title={t('Répéter cette livraison', 'Repeat delivery')}
-                    className="p-2 rounded-full border border-neutral-200 hover:border-neutral-950 text-neutral-700 hover:text-neutral-950 transition-colors cursor-pointer"
+                    className="min-w-[36px] min-h-[36px] rounded-lg border border-[#E5E5E5] hover:border-[#171717] text-[#777777] hover:text-[#171717] flex items-center justify-center transition-colors cursor-pointer"
                   >
                     <RefreshCw className="w-3.5 h-3.5" />
                   </button>
                 )}
-                {item.deliveryObj && <ChevronRight className="w-4 h-4 text-neutral-400" />}
+                {item.deliveryObj && <ChevronRight className="w-4 h-4 text-[#777777]" />}
               </div>
             </div>
           ))}

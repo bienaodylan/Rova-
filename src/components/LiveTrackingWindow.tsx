@@ -4,7 +4,7 @@ import { doc, onSnapshot } from 'firebase/firestore';
 import {
   Bell,
   BellRing,
-  CheckCircle2,
+  Check,
   Clock,
   MapPin,
   Search,
@@ -56,13 +56,6 @@ function formatArrivalTime(etaMinutes: number | undefined, lang: 'fr' | 'en'): {
   };
 }
 
-/**
- * Unified, fixed in-app live tracking window.
- * Replaces the separate "second recipient tracking page":
- * - Senders see live map, driver GPS, ETA, stops, and recipient alert triggers right in-app.
- * - Recipients opening a tracking link or code get the exact same fixed tracking window
- *   with live arrival-time updates and real-time recipient progress notifications.
- */
 export function LiveTrackingWindow({
   delivery,
   trackingToken,
@@ -96,7 +89,6 @@ export function LiveTrackingWindow({
 
   const prevRecipientStatusRef = useRef<DeliveryStatus | null>(null);
 
-  // Lock background page scroll while the fixed window is open
   useEffect(() => {
     if (!isOpen) return;
     const onKeyDown = (e: KeyboardEvent) => {
@@ -127,7 +119,6 @@ export function LiveTrackingWindow({
     };
   }, [isOpen, onClose]);
 
-  // Subscribe to public tracking record when in token mode
   useEffect(() => {
     setInputCode(trackingToken);
     const cleanToken = trackingToken.trim();
@@ -207,7 +198,6 @@ export function LiveTrackingWindow({
     return () => unsub();
   }, [trackingToken]);
 
-  // Trigger real-time recipient notification whenever driver progresses delivery status
   useEffect(() => {
     if (!record) return;
     const prev = prevRecipientStatusRef.current;
@@ -223,7 +213,7 @@ export function LiveTrackingWindow({
               `Arrivée estimée à ${eta.clock} (${eta.relative}).`,
               `Estimated arrival at ${eta.clock} (${eta.relative}).`
             )
-          : t('Votre livreur ROVA progresse vers votre adresse.', 'Your ROVA driver is on the way.');
+          : t('Votre livreur ROVA progresse vers votre adresse.', 'Your ROVA courier is on the way.');
 
       setLiveUpdateBanner({
         id: Date.now(),
@@ -241,7 +231,6 @@ export function LiveTrackingWindow({
     }
   }, [record?.status, record?.etaMinutes, record?.reference, lang, t, recipientAlertsOn]);
 
-  // Fetch road polyline for recipient mode
   useEffect(() => {
     if (!record || !record.showLiveDriver || !record.driverLat || !record.driverLng) {
       setRouteCoords([]);
@@ -304,8 +293,8 @@ export function LiveTrackingWindow({
         if (perm === 'granted') {
           showToast(
             t(
-              'Alertes en direct activées : vous serez notifié à chaque étape et heure d’arrivée.',
-              'Live alerts enabled: you will be notified on every status & ETA update.'
+              'Alertes en direct activées pour cette livraison.',
+              'Live alerts enabled for this delivery.'
             ),
             'success'
           );
@@ -313,12 +302,12 @@ export function LiveTrackingWindow({
         }
       }
     } catch {
-      // Fallback to in-app live alerts
+      // Fallback to in-app alerts
     }
     showToast(
       t(
-        'Alertes en direct activées dans cette fenêtre de suivi.',
-        'Live alerts enabled inside this tracking window.'
+        'Alertes en direct activées dans cette fenêtre.',
+        'Live alerts enabled inside this window.'
       ),
       'info'
     );
@@ -333,77 +322,81 @@ export function LiveTrackingWindow({
   ];
 
   const activeEta = isTokenMode
-    ? formatArrivalTime(record?.etaMinutes, lang)
+    ? record && record.status !== 'delivered' && record.status !== 'cancelled' && record.status !== 'failed'
+      ? formatArrivalTime(record.etaMinutes, lang)
+      : null
     : delivery && !['delivered', 'cancelled', 'failed'].includes(delivery.status)
     ? formatArrivalTime(delivery.estimatedDurationMin, lang)
     : null;
+
+  const hasLiveGps = isTokenMode
+    ? Boolean(record?.showLiveDriver && typeof record.driverLat === 'number' && typeof record.driverLng === 'number')
+    : Boolean(delivery && typeof delivery.driverLat === 'number' && typeof delivery.driverLng === 'number');
 
   return (
     <AnimatePresence>
       {isOpen && (
         <div
-          className="fixed inset-0 z-[95] flex items-end sm:items-center justify-center sm:p-6"
+          className="fixed inset-0 z-[95] flex items-end sm:items-center justify-center sm:p-5"
           role="dialog"
           aria-modal="true"
           aria-label={t('Suivi de livraison en direct', 'Live delivery tracking')}
         >
-          {/* Dimmed backdrop */}
+          {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
+            transition={{ duration: 0.18 }}
             onClick={onClose}
-            className="fixed inset-0 bg-neutral-950/50 backdrop-blur-[3px]"
+            className="fixed inset-0 bg-[#171717]/45 backdrop-blur-[2px]"
           />
 
-          {/* Fixed In-App Window */}
+          {/* Fixed In-App Tracking Window */}
           <motion.div
-            initial={{ opacity: 0, y: 28, scale: 0.99 }}
+            initial={{ opacity: 0, y: 24, scale: 0.99 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 24, scale: 0.99 }}
-            transition={{ duration: 0.26, ease: [0.16, 1, 0.3, 1] }}
-            className="relative z-10 w-full sm:max-w-2xl h-[94dvh] sm:h-[min(860px,90dvh)] bg-white rounded-t-[28px] sm:rounded-3xl shadow-2xl border border-neutral-200/80 flex flex-col overflow-hidden"
+            exit={{ opacity: 0, y: 20, scale: 0.99 }}
+            transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+            className="relative z-10 w-full sm:max-w-2xl h-[94dvh] sm:h-[min(860px,90dvh)] bg-white rounded-t-3xl sm:rounded-2xl shadow-[0_24px_64px_rgba(23,23,23,0.18)] border border-[#E5E5E5] flex flex-col overflow-hidden"
           >
-            {/* Mobile drag bar */}
+            {/* Mobile Drag Handle */}
             <div className="sm:hidden pt-2.5 pb-1 flex justify-center shrink-0">
-              <span className="w-10 h-1 rounded-full bg-neutral-200" aria-hidden="true" />
+              <span className="w-9 h-1 rounded-full bg-[#E5E5E5]" aria-hidden="true" />
             </div>
 
-            {/* Fixed Window Header */}
-            <header className="px-5 sm:px-6 pt-2.5 sm:pt-5 pb-4 border-b border-neutral-100 flex items-center justify-between gap-3 shrink-0 bg-white">
+            {/* Clean Operational Header */}
+            <header className="px-5 sm:px-6 pt-2.5 sm:pt-4 pb-3.5 border-b border-[#E5E5E5] flex items-center justify-between gap-3 shrink-0 bg-white">
               <div className="min-w-0 flex items-center gap-3">
                 <RovaWordmark size="sm" />
-                <span className="text-neutral-300" aria-hidden="true">
-                  /
-                </span>
+                <span className="text-[#E5E5E5]" aria-hidden="true">/</span>
                 <div className="min-w-0">
-                  <p className="text-sm font-bold text-neutral-950 truncate">
+                  <p className="font-mono text-sm font-bold text-[#171717] truncate">
                     {isTokenMode
                       ? record?.reference || t('Suivi en direct', 'Live tracking')
                       : delivery?.reference || t('Suivi en direct', 'Live tracking')}
                   </p>
-                  <p className="text-[11px] text-neutral-500 truncate">
+                  <p className="text-[11px] text-[#777777] truncate">
                     {isTokenMode
-                      ? t('Fenêtre de suivi destinataire', 'Recipient tracking window')
-                      : t('Fenêtre de suivi expéditeur', 'Sender tracking window')}
+                      ? t('Suivi destinataire', 'Recipient tracking')
+                      : t('Suivi expéditeur', 'Sender tracking')}
                   </p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex items-center gap-1.5 shrink-0">
                 {isTokenMode && record && record.status !== 'delivered' && (
                   <button
                     type="button"
                     onClick={() => void enableRecipientAlerts()}
-                    className={`min-h-[38px] px-3 rounded-full text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer ${
+                    className={`min-h-[40px] px-3 rounded-xl text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer ${
                       recipientAlertsOn
-                        ? 'bg-neutral-950 text-white'
-                        : 'border border-neutral-200 hover:border-neutral-950 text-neutral-900'
+                        ? 'bg-[#171717] text-white'
+                        : 'border border-[#E5E5E5] hover:border-[#171717] text-[#171717]'
                     }`}
                   >
                     {recipientAlertsOn ? (
-                      <BellRing className="w-3.5 h-3.5 text-red-500" />
+                      <BellRing className="w-3.5 h-3.5 text-[#E52B32]" />
                     ) : (
                       <Bell className="w-3.5 h-3.5" />
                     )}
@@ -419,18 +412,20 @@ export function LiveTrackingWindow({
                   type="button"
                   onClick={onClose}
                   aria-label={t('Fermer la fenêtre de suivi', 'Close tracking window')}
-                  className="min-w-[38px] min-h-[38px] rounded-full bg-neutral-100 hover:bg-neutral-950 hover:text-white flex items-center justify-center text-neutral-700 transition-colors cursor-pointer"
+                  className="min-w-[44px] min-h-[44px] -mr-1.5 rounded-full hover:bg-[#F3F3F3] flex items-center justify-center text-[#777777] hover:text-[#171717] transition-colors cursor-pointer"
                 >
                   <X className="w-4 h-4" />
                 </button>
               </div>
             </header>
 
-            {/* Live Arrival & ETA Banner pinned right under header */}
+            {/* Operational ETA Strip (only when real reliable ETA exists) */}
             {activeEta && (
-              <div className="px-5 sm:px-6 py-3 bg-neutral-950 text-white flex items-center justify-between gap-3 shrink-0">
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <span className="w-2 h-2 rounded-full bg-red-600 shrink-0" aria-hidden="true" />
+              <div className="px-5 sm:px-6 py-3 bg-[#171717] text-white flex items-center justify-between gap-3 shrink-0">
+                <div className="flex items-center gap-2 min-w-0">
+                  {hasLiveGps && (
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" aria-hidden="true" />
+                  )}
                   <p className="text-xs font-medium text-neutral-200 truncate">
                     {isTokenMode && record
                       ? getStatusLabel(record.status, lang)
@@ -440,14 +435,14 @@ export function LiveTrackingWindow({
                   </p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0 font-mono text-xs tabular-nums">
-                  <Clock className="w-3.5 h-3.5 text-red-500" />
+                  <Clock className="w-3.5 h-3.5 text-[#E52B32]" />
                   <span className="font-bold text-white">{activeEta.clock}</span>
                   <span className="text-neutral-400">({activeEta.relative})</span>
                 </div>
               </div>
             )}
 
-            {/* Live Push Update Banner inside recipient window */}
+            {/* Live Push Update Banner */}
             <AnimatePresence>
               {liveUpdateBanner && (
                 <motion.div
@@ -455,7 +450,7 @@ export function LiveTrackingWindow({
                   initial={{ opacity: 0, y: -8 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -8 }}
-                  className="mx-5 sm:mx-6 mt-3 rounded-2xl bg-red-600 text-white px-4 py-3 flex items-center justify-between gap-3 shrink-0"
+                  className="mx-5 sm:mx-6 mt-3 rounded-xl bg-[#E52B32] text-white px-4 py-3 flex items-center justify-between gap-3 shrink-0"
                 >
                   <div className="min-w-0">
                     <p className="text-xs font-bold truncate">{liveUpdateBanner.title}</p>
@@ -465,7 +460,7 @@ export function LiveTrackingWindow({
                     type="button"
                     onClick={() => setLiveUpdateBanner(null)}
                     aria-label={t('Fermer', 'Dismiss')}
-                    className="p-1 rounded-full hover:bg-white/15 shrink-0 cursor-pointer"
+                    className="p-1.5 rounded-full hover:bg-white/15 shrink-0 cursor-pointer"
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>
@@ -473,8 +468,8 @@ export function LiveTrackingWindow({
               )}
             </AnimatePresence>
 
-            {/* Scrollable Tracking Content Body */}
-            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 sm:px-6 py-5">
+            {/* Scrollable Body */}
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 sm:px-6 py-5 bg-white">
               {!isTokenMode && delivery ? (
                 <ShipmentDetailContent
                   delivery={delivery}
@@ -482,53 +477,51 @@ export function LiveTrackingWindow({
                 />
               ) : (
                 <div className="space-y-5">
-                  {/* Inline Lookup Bar */}
+                  {/* Inline Tracking Code Bar */}
                   <form
                     onSubmit={(e) => {
                       e.preventDefault();
                       if (inputCode.trim()) onLookupToken(inputCode.trim());
                     }}
-                    className="flex items-center gap-2 rounded-2xl border border-neutral-200 bg-neutral-50 px-3 py-2"
+                    className="flex items-center gap-2 rounded-xl border border-[#E5E5E5] bg-[#F3F3F3]/60 px-3 py-1.5 focus-within:border-[#171717] focus-within:bg-white transition-colors"
                   >
-                    <Search className="w-4 h-4 text-neutral-400 shrink-0" />
+                    <Search className="w-4 h-4 text-[#777777] shrink-0" />
                     <input
                       type="text"
                       value={inputCode}
                       onChange={(e) => setInputCode(e.target.value)}
                       placeholder={t('Code de suivi (ex. rvt_...)', 'Tracking code (e.g. rvt_...)')}
-                      className="flex-1 bg-transparent font-mono text-xs sm:text-sm text-neutral-950 focus:outline-none min-w-0"
+                      className="flex-1 bg-transparent font-mono text-xs sm:text-sm text-[#171717] focus:outline-none min-w-0 py-1.5"
                     />
                     <button
                       type="submit"
-                      className="px-3.5 py-1.5 rounded-full bg-neutral-950 text-white text-xs font-semibold hover:bg-red-600 transition-colors shrink-0 cursor-pointer"
+                      className="min-h-[34px] px-3.5 rounded-lg bg-[#171717] text-white text-xs font-semibold hover:bg-[#E52B32] transition-colors shrink-0 cursor-pointer"
                     >
-                      {t('Actualiser', 'Track')}
+                      {t('Suivre', 'Track')}
                     </button>
                   </form>
 
                   {loadingToken && (
                     <div className="py-12 text-center space-y-2">
-                      <Clock className="w-5 h-5 mx-auto text-neutral-400 animate-spin" />
-                      <p className="text-sm text-neutral-600">
+                      <Clock className="w-5 h-5 mx-auto text-[#777777] animate-spin" />
+                      <p className="text-sm text-[#777777]">
                         {t('Connexion au suivi en direct...', 'Connecting to live tracking...')}
                       </p>
                     </div>
                   )}
 
                   {!loadingToken && !record && (
-                    <div className="rounded-3xl border border-neutral-200 p-6 text-center space-y-3 bg-neutral-50/50">
-                      <div className="w-11 h-11 rounded-2xl bg-white border border-neutral-200 mx-auto flex items-center justify-center">
-                        <MapPin className="w-5 h-5 text-neutral-950" />
-                      </div>
-                      <h2 className="font-display text-lg font-bold text-neutral-950">
+                    <div className="border-y border-[#E5E5E5] py-10 text-center space-y-2.5">
+                      <MapPin className="w-5 h-5 text-[#777777] mx-auto" />
+                      <h2 className="font-display text-base font-bold text-[#171717]">
                         {notFound
                           ? t('Aucun colis trouvé pour ce code', 'No parcel found for this code')
                           : t('Suivi en direct ROVA', 'ROVA Live Tracking')}
                       </h2>
-                      <p className="text-xs text-neutral-500 max-w-sm mx-auto leading-relaxed">
+                      <p className="text-xs text-[#777777] max-w-sm mx-auto leading-relaxed">
                         {t(
-                          'Vérifiez le code reçu par notification ou auprès de l’expéditeur pour suivre le livreur et connaître l’heure d’arrivée estimée.',
-                          'Check the tracking code sent by the sender to follow your driver and estimated arrival time.'
+                          'Vérifiez le code communiqué par l’expéditeur pour suivre le livreur et connaître l’heure d’arrivée estimée.',
+                          'Verify the tracking code shared by the sender to follow your courier and estimated arrival.'
                         )}
                       </p>
                     </div>
@@ -536,64 +529,62 @@ export function LiveTrackingWindow({
 
                   {!loadingToken && record && (
                     <div className="space-y-5">
-                      {/* Recipient Greeting & Status Summary */}
-                      <div className="flex flex-wrap items-start justify-between gap-3 pb-4 border-b border-neutral-100">
+                      {/* Map-First View */}
+                      <div className="overflow-hidden rounded-2xl border border-[#E5E5E5]">
+                        <RovaMap
+                          center={[record.destinationLat, record.destinationLng]}
+                          zoom={14}
+                          markers={recipientMarkers}
+                          routeCoordinates={routeCoords}
+                          heightClass="h-[250px] sm:h-[290px]"
+                        />
+                      </div>
+
+                      {/* Recipient & Courier Header */}
+                      <div className="flex flex-wrap items-start justify-between gap-3 pb-4 border-b border-[#E5E5E5]">
                         <div className="space-y-1 min-w-0">
-                          <h2 className="font-display text-xl font-bold text-neutral-950">
+                          <h2 className="font-display text-lg font-bold text-[#171717]">
                             {t('Bonjour', 'Hello')} {record.recipientFirstName}
                           </h2>
-                          <p className="text-xs text-neutral-600">{record.destinationLabel}</p>
-                          <div className="flex flex-wrap items-center gap-2 text-xs text-neutral-500 pt-1">
+                          <p className="text-xs text-[#777777]">{record.destinationLabel}</p>
+                          <div className="flex flex-wrap items-center gap-2 text-xs text-[#777777] pt-0.5">
                             <span className="inline-flex items-center gap-1.5">
-                              <Truck className="w-3.5 h-3.5 text-neutral-700" />
+                              <Truck className="w-3.5 h-3.5 text-[#171717]" />
                               {getVehicleLabel(record.vehicleCategory, lang)}
                             </span>
                             {record.driverFirstName && (
                               <>
                                 <span aria-hidden="true">·</span>
                                 <span>
-                                  {t('Livreur', 'Driver')}:{' '}
-                                  <strong className="text-neutral-950">{record.driverFirstName}</strong>
+                                  {t('Livreur', 'Courier')}:{' '}
+                                  <strong className="text-[#171717] font-semibold">{record.driverFirstName}</strong>
                                 </span>
                               </>
                             )}
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-2">
-                          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-neutral-950">
-                            <span
-                              className={`w-2 h-2 rounded-full ${STATUS_META[record.status]?.dot || 'bg-red-600'}`}
-                            />
-                            {getStatusLabel(record.status, lang)}
-                          </span>
-                        </div>
+                        <span className={`text-xs font-semibold ${STATUS_META[record.status]?.text || 'text-[#171717]'}`}>
+                          {getStatusLabel(record.status, lang)}
+                        </span>
                       </div>
 
-                      {/* Live Map */}
-                      <RovaMap
-                        center={[record.destinationLat, record.destinationLng]}
-                        zoom={14}
-                        markers={recipientMarkers}
-                        routeCoordinates={routeCoords}
-                        heightClass="h-[240px] sm:h-[280px]"
-                      />
-
                       {!record.showLiveDriver && record.status !== 'delivered' && (
-                        <div className="rounded-2xl bg-neutral-50 border border-neutral-200 p-4 text-xs text-neutral-600">
+                        <div className="rounded-xl bg-[#F3F3F3]/75 border border-[#E5E5E5] px-4 py-3 text-xs text-[#777777] leading-relaxed">
                           {t(
                             'La position GPS du livreur s’affichera automatiquement dès que votre arrêt sera le prochain sur la tournée.',
-                            'Live driver GPS activates automatically once your stop is next on the route.'
+                            'Live courier GPS activates automatically once your stop is next on the route.'
                           )}
                         </div>
                       )}
 
-                      {/* Delivery Progress Timeline */}
+                      {/* Linear Vertical Progress Spine */}
                       <div className="space-y-3">
-                        <p className="text-xs font-semibold text-neutral-500">
-                          {t('Évolution de votre livraison', 'Delivery progress')}
+                        <p className="text-xs font-medium text-[#777777]">
+                          {t('Progression de la livraison', 'Delivery progress')}
                         </p>
-                        <div className="space-y-2.5">
+                        <div className="relative pl-6 space-y-3.5">
+                          <div className="absolute left-[7px] top-2 bottom-2 w-px bg-[#E5E5E5]" aria-hidden="true" />
                           {recipientMilestones.map((m) => {
                             const currentRank = DELIVERY_STATUS_ORDER.indexOf(record.status);
                             const stepRank = DELIVERY_STATUS_ORDER.indexOf(m.key);
@@ -602,23 +593,25 @@ export function LiveTrackingWindow({
                               (m.key === 'driver_assigned' && Boolean(record.driverUid));
                             const isCurrent = record.status === m.key;
                             return (
-                              <div key={m.key} className="flex items-center gap-3 text-sm">
-                                <CheckCircle2
-                                  className={`w-4 h-4 shrink-0 ${
+                              <div key={m.key} className="relative flex items-center gap-3 text-sm">
+                                <span
+                                  className={`absolute -left-6 w-4 h-4 rounded-full flex items-center justify-center border ${
                                     isCurrent
-                                      ? 'text-red-600'
+                                      ? 'border-[#E52B32] bg-[#E52B32] text-white'
                                       : done
-                                      ? 'text-neutral-950'
-                                      : 'text-neutral-300'
+                                      ? 'border-[#171717] bg-[#171717] text-white'
+                                      : 'border-[#E5E5E5] bg-white'
                                   }`}
-                                />
+                                >
+                                  {(done || isCurrent) && <Check className="w-2.5 h-2.5 stroke-[3]" />}
+                                </span>
                                 <span
                                   className={
                                     isCurrent
-                                      ? 'font-semibold text-neutral-950'
+                                      ? 'font-semibold text-[#171717]'
                                       : done
-                                      ? 'text-neutral-700'
-                                      : 'text-neutral-400'
+                                      ? 'text-[#171717]'
+                                      : 'text-[#777777]'
                                   }
                                 >
                                   {m.label}
@@ -629,27 +622,32 @@ export function LiveTrackingWindow({
                         </div>
                       </div>
 
-                      {/* OTP Handover Card */}
+                      {/* OTP Handover Code */}
                       {record.otpHint && record.status !== 'delivered' && (
-                        <div className="rounded-2xl bg-neutral-950 text-white p-4 flex items-center justify-between gap-4">
+                        <div className="rounded-2xl bg-[#171717] text-white px-5 py-4 flex items-center justify-between gap-4">
                           <div className="space-y-0.5">
                             <p className="text-xs font-semibold text-white">
                               {t('Code de remise sécurisé (OTP)', 'Secure handover code (OTP)')}
                             </p>
                             <p className="text-[11px] text-neutral-400">
-                              {t('À communiquer au livreur à son arrivée', 'Share with driver upon arrival')}
+                              {t('À communiquer au livreur à son arrivée', 'Share with courier upon arrival')}
                             </p>
                           </div>
-                          <span className="font-mono text-lg font-bold tracking-widest text-white">
+                          <span className="font-mono text-xl font-bold tracking-[0.2em] text-white tabular-nums">
                             {record.otpHint}
                           </span>
                         </div>
                       )}
 
                       {/* Privacy Footer */}
-                      <div className="flex items-center gap-1.5 pt-2 border-t border-neutral-100 text-[11px] text-neutral-500">
-                        <ShieldCheck className="w-3.5 h-3.5 shrink-0 text-neutral-700" />
-                        <span>{t('Suivi isolé et protégé ROVA · Notifications automatiques activées', 'Isolated protected ROVA tracking · Automatic updates enabled')}</span>
+                      <div className="flex items-center gap-2 pt-3 border-t border-[#E5E5E5] text-[11px] text-[#777777]">
+                        <ShieldCheck className="w-3.5 h-3.5 shrink-0 text-[#171717]" />
+                        <span>
+                          {t(
+                            'Suivi isolé et protégé ROVA · Mises à jour automatiques',
+                            'Isolated protected ROVA tracking · Automatic updates'
+                          )}
+                        </span>
                       </div>
                     </div>
                   )}
