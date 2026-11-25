@@ -41,10 +41,23 @@ export function LiveNotificationBanner({ onOpenDelivery }: LiveNotificationBanne
 
   const [activeAlert, setActiveAlert] = useState<LiveAlertPayload | null>(null);
   const seenNotifIdsRef = useRef<Set<string>>(new Set());
+  const emittedDeliveryEventsRef = useRef<Set<string>>(new Set());
   const initializedNotifsRef = useRef(false);
   const deliveryStatusMapRef = useRef<Map<string, DeliveryStatus>>(new Map());
   const initializedDeliveriesRef = useRef(false);
   const dismissTimerRef = useRef<number | null>(null);
+
+  const claimDeliveryEvent = (deliveryId: string, eventType: string): boolean => {
+    const key = `${deliveryId}:${eventType}`;
+    if (emittedDeliveryEventsRef.current.has(key)) return false;
+    emittedDeliveryEventsRef.current.add(key);
+    // Keep the in-memory deduplication set bounded during long-lived sessions.
+    if (emittedDeliveryEventsRef.current.size > 200) {
+      const oldest = emittedDeliveryEventsRef.current.values().next().value;
+      if (oldest) emittedDeliveryEventsRef.current.delete(oldest);
+    }
+    return true;
+  };
 
   const triggerAlert = (payload: LiveAlertPayload) => {
     if (!notificationsEnabled) return;
