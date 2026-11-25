@@ -7,7 +7,6 @@ import {
   ChevronRight,
   CreditCard,
   HelpCircle,
-  MapPin,
   Package,
   Route,
   Search,
@@ -16,12 +15,10 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { useRovaApp } from '../context/RovaAppContext';
-import { MapMarkerItem, RovaMap } from '../components/RovaMap';
 import { VehicleIllustration } from '../components/VehicleIllustration';
 import { BottomSheet } from '../components/BottomSheet';
 import { PrimaryTab } from '../components/InterfaceExplorerBar';
 import {
-  formatMoney,
   getStatusLabel,
   getVehicleLabel,
   STATUS_META,
@@ -33,13 +30,11 @@ interface RovaHomeViewProps {
 
 export function RovaHomeView({ onNavigateTab }: RovaHomeViewProps) {
   const { firebaseUser, profile } = useAuth();
-  const { lang, t } = useLanguage();
+  const { lang, t, formatLocalMoney } = useLanguage();
   const {
     loadingData,
-    business,
     activeDeliveries,
     upcomingReservations,
-    onlineDrivers,
     notifications,
     unreadNotifCount,
     openComposer,
@@ -58,52 +53,6 @@ export function RovaHomeView({ onNavigateTab }: RovaHomeViewProps) {
     const raw = profile?.displayName || firebaseUser?.displayName || '';
     return raw.trim().split(' ')[0] || '';
   }, [profile?.displayName, firebaseUser?.displayName]);
-
-  const hubLat = business?.defaultPickupLat ?? 5.3235;
-  const hubLng = business?.defaultPickupLng ?? -4.0267;
-
-  const mapMarkers: MapMarkerItem[] = useMemo(() => {
-    const list: MapMarkerItem[] = [];
-    activeDeliveries.slice(0, 6).forEach((d) => {
-      list.push({
-        id: `home_del_${d.id}`,
-        lat: d.pickupLat,
-        lng: d.pickupLng,
-        kind: 'pickup',
-        label: `${d.reference} · ${d.pickupAddress}`,
-      });
-      if (typeof d.driverLat === 'number' && typeof d.driverLng === 'number') {
-        list.push({
-          id: `home_drv_${d.id}`,
-          lat: d.driverLat,
-          lng: d.driverLng,
-          kind: 'driver',
-          label: d.driverName || t('Livreur ROVA', 'ROVA Driver'),
-        });
-      }
-    });
-    if (list.length === 0) {
-      onlineDrivers.slice(0, 8).forEach((drv) => {
-        list.push({
-          id: `online_${drv.uid}`,
-          lat: drv.currentLat,
-          lng: drv.currentLng,
-          kind: 'driver',
-          label: `${drv.firstName} · ${getVehicleLabel(drv.vehicleCategory, lang)}`,
-        });
-      });
-    }
-    if (list.length === 0) {
-      list.push({
-        id: 'hub',
-        lat: hubLat,
-        lng: hubLng,
-        kind: 'selected',
-        label: business?.defaultPickupAddress || t('Votre zone d’expédition', 'Your dispatch area'),
-      });
-    }
-    return list;
-  }, [activeDeliveries, onlineDrivers, hubLat, hubLng, business?.defaultPickupAddress, lang, t]);
 
   const openNotifs = () => {
     setNotifsOpen(true);
@@ -166,9 +115,9 @@ export function RovaHomeView({ onNavigateTab }: RovaHomeViewProps) {
       </header>
 
       {/* Main Responsive Operational Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
+      <div className="grid grid-cols-1 gap-6 items-start">
         {/* Left / Primary Operational Column */}
-        <div className="lg:col-span-7 space-y-6">
+        <div className="w-full space-y-6">
           {/* Greeting */}
           <section className="space-y-1 pt-1">
             <h1 className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-neutral-950">
@@ -190,9 +139,9 @@ export function RovaHomeView({ onNavigateTab }: RovaHomeViewProps) {
             <button
               type="button"
               onClick={() => openComposer('single')}
-              className="group w-full text-left rounded-3xl bg-neutral-950 text-white p-5 sm:p-6 shadow-sm hover:bg-neutral-900 active:scale-[0.99] transition-all cursor-pointer flex items-center justify-between gap-4"
+              className="group relative w-full overflow-hidden text-left rounded-3xl bg-neutral-950 text-white p-5 sm:p-6 shadow-sm hover:bg-neutral-900 active:scale-[0.99] transition-all cursor-pointer flex items-center justify-between gap-4"
             >
-              <div className="space-y-1.5 min-w-0">
+              <div className="relative z-10 space-y-1.5 min-w-0">
                 <p className="text-xs text-neutral-400 font-medium">
                   {t('Expédition immédiate ou planifiée', 'Instant or scheduled dispatch')}
                 </p>
@@ -206,8 +155,11 @@ export function RovaHomeView({ onNavigateTab }: RovaHomeViewProps) {
                   )}
                 </p>
               </div>
-              <div className="w-12 h-12 rounded-full bg-white text-neutral-950 flex items-center justify-center shrink-0 group-hover:translate-x-0.5 transition-transform">
+              <div className="relative z-10 w-12 h-12 rounded-full bg-white text-neutral-950 flex items-center justify-center shrink-0 group-hover:translate-x-0.5 transition-transform">
                 <ArrowRight className="w-5 h-5" />
+              </div>
+              <div aria-hidden="true" className="pointer-events-none absolute -right-3 -bottom-5 opacity-35 transition-transform duration-500 group-hover:-translate-x-1 group-hover:scale-105">
+                <VehicleIllustration category="cargo_van" className="h-28 w-40 text-white" />
               </div>
             </button>
 
@@ -376,7 +328,7 @@ export function RovaHomeView({ onNavigateTab }: RovaHomeViewProps) {
                       </p>
                     </div>
                     <span className="font-mono text-xs font-semibold text-neutral-950 tabular-nums shrink-0">
-                      {formatMoney(res.quotedPrice, res.currency)}
+                      {formatLocalMoney(res.quotedPrice, res.currency)}
                     </span>
                   </div>
                 ))}
@@ -429,66 +381,7 @@ export function RovaHomeView({ onNavigateTab }: RovaHomeViewProps) {
           </section>
         </div>
 
-        {/* Right / Contextual Map Column (Mobile below, Desktop sticky beside) */}
-        <aside className="lg:col-span-5 lg:sticky lg:top-6 space-y-3">
-          <div className="rounded-3xl bg-white border border-neutral-200/80 p-3.5 sm:p-4 space-y-3">
-            <div className="flex items-center justify-between gap-2 px-1">
-              <div>
-                <h2 className="font-display text-sm font-bold text-neutral-950">
-                  {t('Carte d’expédition', 'Dispatch map')}
-                </h2>
-                <p className="text-xs text-neutral-500">
-                  {t(
-                    'Touchez un lieu pour démarrer une collecte.',
-                    'Tap or search a place to start a pickup.'
-                  )}
-                </p>
-              </div>
-              {onlineDrivers.length > 0 && (
-                <span className="text-xs font-mono text-neutral-600 tabular-nums">
-                  {onlineDrivers.length} {t('en ligne', 'online')}
-                </span>
-              )}
-            </div>
 
-            <RovaMap
-              center={[hubLat, hubLng]}
-              markers={mapMarkers}
-              interactivePick
-              showSearchBar
-              searchPlaceholder={t('D’où part votre colis ?', 'Where is your parcel picked up?')}
-              heightClass="h-[260px] lg:h-[420px]"
-              onLocationSelected={(place) => {
-                setDraft((p) => ({
-                  ...p,
-                  step: 2,
-                  pickup: {
-                    ...p.pickup,
-                    address: place.shortName || place.displayName,
-                    landmark: place.landmark || '',
-                    lat: place.lat,
-                    lng: place.lng,
-                  },
-                }));
-                openComposer('single');
-              }}
-            />
-
-            <div className="flex items-center justify-between px-1 text-xs text-neutral-500">
-              <span className="inline-flex items-center gap-1.5">
-                <MapPin className="w-3.5 h-3.5 text-neutral-700" />
-                {business?.city || t('Abidjan & couverture nationale', 'City & nationwide network')}
-              </span>
-              <button
-                type="button"
-                onClick={() => openComposer('single')}
-                className="font-semibold text-neutral-950 hover:underline cursor-pointer"
-              >
-                {t('Ouvrir le créateur', 'Open composer')}
-              </button>
-            </div>
-          </div>
-        </aside>
       </div>
 
       {/* Notifications Bottom Sheet */}

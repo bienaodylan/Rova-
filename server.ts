@@ -232,6 +232,8 @@ app.get('/api/geo/reverse', async (req, res) => {
       displayName: data.display_name || shortName,
       shortName,
       landmark: landmark || undefined,
+      country: addr.country || undefined,
+      countryCode: addr.country_code ? addr.country_code.toUpperCase() : undefined,
       lat,
       lng,
     });

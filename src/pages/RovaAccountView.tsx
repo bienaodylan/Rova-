@@ -19,7 +19,7 @@ import { LanguageSelector, useLanguage } from '../context/LanguageContext';
 import { useRovaApp } from '../context/RovaAppContext';
 import { BottomSheet } from '../components/BottomSheet';
 import { RovaMap } from '../components/RovaMap';
-import { formatMoney, PAYMENT_METHODS_EN } from '../lib/logistics';
+import { PAYMENT_METHODS_EN } from '../lib/logistics';
 import { PaymentMethod, SavedRecipient } from '../types/rova';
 
 interface RovaAccountViewProps {
@@ -28,7 +28,7 @@ interface RovaAccountViewProps {
 
 export function RovaAccountView({ onOpenWorkspace }: RovaAccountViewProps) {
   const { firebaseUser, profile, logout } = useAuth();
-  const { t } = useLanguage();
+  const { t, formatLocalMoney } = useLanguage();
   const {
     business,
     recipients,
@@ -293,7 +293,7 @@ export function RovaAccountView({ onOpenWorkspace }: RovaAccountViewProps) {
         <div className="flex items-center justify-between px-1">
           <h2 className="font-display text-sm font-bold text-neutral-950">Payment Methods</h2>
           <span className="font-mono text-xs text-neutral-500 tabular-nums">
-            Wallet: {formatMoney(business?.walletBalance ?? 0, business?.currency || 'GHS')}
+            Wallet: {formatLocalMoney(business?.walletBalance ?? 0, business?.currency || 'GHS')}
           </span>
         </div>
 

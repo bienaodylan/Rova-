@@ -5,7 +5,6 @@ import { ShipmentFilter, useRovaApp } from '../context/RovaAppContext';
 import { VehicleIllustration } from '../components/VehicleIllustration';
 import { ShipmentDetailContent } from '../components/ShipmentDetailSheet';
 import {
-  formatMoney,
   getStatusLabel,
   getVehicleLabel,
   STATUS_META,
@@ -16,7 +15,7 @@ interface RovaShipmentsViewProps {
 }
 
 export function RovaShipmentsView({ onOpenPublicTracking }: RovaShipmentsViewProps) {
-  const { lang, t } = useLanguage();
+  const { lang, t, formatLocalMoney } = useLanguage();
   const {
     loadingData,
     deliveries,
@@ -280,7 +279,7 @@ export function RovaShipmentsView({ onOpenPublicTracking }: RovaShipmentsViewPro
 
                         <div className="text-right shrink-0 flex flex-col items-end gap-1">
                           <span className="font-mono text-xs font-semibold text-neutral-950 tabular-nums">
-                            {formatMoney(del.quotedPrice, del.currency)}
+                            {formatLocalMoney(del.quotedPrice, del.currency)}
                           </span>
                           <ChevronRight className="w-4 h-4 text-neutral-400 xl:hidden" />
                         </div>
@@ -324,7 +323,7 @@ export function RovaShipmentsView({ onOpenPublicTracking }: RovaShipmentsViewPro
 
                         <div className="flex items-center gap-2 shrink-0">
                           <span className="font-mono text-xs font-semibold tabular-nums">
-                            {formatMoney(res.quotedPrice, res.currency)}
+                            {formatLocalMoney(res.quotedPrice, res.currency)}
                           </span>
                           {(res.status === 'pending_approval' || res.status === 'confirmed') && (
                             <button

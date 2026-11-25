@@ -239,7 +239,7 @@ export function RovaAppProvider({
   onSignIn: () => Promise<void>;
 }) {
   const { firebaseUser, profile, updateProfileFields } = useAuth();
-  const { t } = useLanguage();
+  const { t, currency } = useLanguage();
   const uid = firebaseUser?.uid || '';
 
   const [loadingData, setLoadingData] = useState(false);
@@ -929,7 +929,7 @@ export function RovaAppProvider({
             name: (profile?.displayName || 'Entreprise ROVA').slice(0, 160),
             city: 'Abidjan',
             country: 'Côte d’Ivoire',
-            currency: 'GHS',
+            currency,
             verificationStatus: 'pending',
             walletBalance: 0,
             createdAt: serverTimestamp(),
@@ -966,7 +966,7 @@ export function RovaAppProvider({
         setBusy(false);
       }
     },
-    [requireAuth, business?.id, profile?.displayName, uid, showToast, t]
+    [requireAuth, business?.id, profile?.displayName, uid, showToast, t, currency]
   );
 
   const deleteRecipient = useCallback(
@@ -1048,7 +1048,7 @@ export function RovaAppProvider({
         setBusy(false);
       }
     },
-    [requireAuth, updateProfileFields, business, uid, profile, showToast, t]
+    [requireAuth, updateProfileFields, business, uid, profile, showToast, t, currency]
   );
 
   const submitSupportMessage = useCallback(

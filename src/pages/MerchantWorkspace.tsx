@@ -54,7 +54,6 @@ import {
   VehicleCategory,
 } from '../types/rova';
 import {
-  formatMoney,
   generateOtp,
   generateReference,
   generateTrackingToken,
@@ -103,7 +102,7 @@ export function MerchantWorkspace({
   onRequestSignIn,
 }: MerchantWorkspaceProps) {
   const { firebaseUser, profile, updateProfileFields, logout } = useAuth();
-  const { lang, t } = useLanguage();
+  const { lang, t, formatLocalMoney } = useLanguage();
   const uid = firebaseUser?.uid || '';
 
   const [section, setSection] = useState<MerchantSection>('overview');
@@ -1070,7 +1069,7 @@ export function MerchantWorkspace({
                     value: deliveries.filter((d) => !['delivered', 'failed', 'cancelled'].includes(d.status)).length,
                   },
                   { label: t('Réservations', 'Reservations'), value: reservations.length },
-                  { label: t('Dépenses totales', 'Total Spend'), value: formatMoney(totalSpend, 'GHS') },
+                  { label: t('Dépenses totales', 'Total Spend'), value: formatLocalMoney(totalSpend, 'GHS') },
                 ].map((k) => (
                   <div key={k.label} className="rounded-3xl border border-neutral-200 bg-white p-5 space-y-1">
                     <p className="text-xs text-neutral-500">{k.label}</p>
@@ -1155,7 +1154,7 @@ export function MerchantWorkspace({
                         </div>
                         <div className="text-right">
                           <p className="font-mono text-xs font-bold tabular-nums">
-                            {formatMoney(d.quotedPrice, d.currency)}
+                            {formatLocalMoney(d.quotedPrice, d.currency)}
                           </p>
                           <p className="text-[11px] text-neutral-500">{getStatusLabel(d.status, lang)}</p>
                         </div>
@@ -1532,7 +1531,7 @@ export function MerchantWorkspace({
                         </p>
                         <p className="font-mono text-sm font-bold pt-2 border-t border-neutral-200">
                           {t('Total estimé', 'Estimated total')}:{' '}
-                          {formatMoney(quote?.total || 0, quote?.currency || 'GHS')}
+                          {formatLocalMoney(quote?.total || 0, quote?.currency || 'GHS')}
                         </p>
                       </div>
                       <button
@@ -1617,13 +1616,13 @@ export function MerchantWorkspace({
                         {quote.breakdown.map((b, i) => (
                           <div key={i} className="flex justify-between">
                             <span>{b.label}</span>
-                            <span className="font-mono tabular-nums">{formatMoney(b.amount, quote.currency)}</span>
+                            <span className="font-mono tabular-nums">{formatLocalMoney(b.amount, quote.currency)}</span>
                           </div>
                         ))}
                       </div>
                       <div className="pt-2.5 border-t border-neutral-200 flex justify-between font-semibold text-sm">
                         <span>{t('Total', 'Total')}</span>
-                        <span className="font-mono tabular-nums">{formatMoney(quote.total, quote.currency)}</span>
+                        <span className="font-mono tabular-nums">{formatLocalMoney(quote.total, quote.currency)}</span>
                       </div>
                     </div>
                   )}
@@ -1682,7 +1681,7 @@ export function MerchantWorkspace({
                         <div className="flex items-center justify-between">
                           <span className="font-mono text-sm font-bold">{d.reference}</span>
                           <span className="font-mono text-xs font-bold tabular-nums">
-                            {formatMoney(d.quotedPrice, d.currency)}
+                            {formatLocalMoney(d.quotedPrice, d.currency)}
                           </span>
                         </div>
                         <p className="text-xs text-neutral-600">{d.pickupAddress}</p>
@@ -1866,7 +1865,7 @@ export function MerchantWorkspace({
                         </p>
                       </div>
                       <div className="text-right">
-                        <p className="font-mono font-bold">{formatMoney(r.quotedPrice, r.currency)}</p>
+                        <p className="font-mono font-bold">{formatLocalMoney(r.quotedPrice, r.currency)}</p>
                         <p className="text-neutral-500">{r.status}</p>
                       </div>
                     </div>
@@ -2000,7 +1999,7 @@ export function MerchantWorkspace({
                           </p>
                         </div>
                         <span className="font-mono font-bold tabular-nums">
-                          {formatMoney(d.quotedPrice, d.currency)}
+                          {formatLocalMoney(d.quotedPrice, d.currency)}
                         </span>
                       </div>
                     ))}

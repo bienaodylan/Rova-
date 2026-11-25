@@ -82,14 +82,18 @@ export function FloatingBottomNav({
               {/* Icon + Crisp Label */}
               <span className="relative z-10 flex flex-col items-center justify-center gap-0.5">
                 <span className="relative">
-                  <Icon
-                    strokeWidth={isActive ? 2.3 : 1.85}
-                    className={`w-[19px] h-[19px] transition-all duration-200 ${
-                      isActive
-                        ? 'text-neutral-950 scale-105'
-                        : 'text-neutral-600 group-hover:text-neutral-900'
-                    }`}
-                  />
+                  <motion.span
+                    animate={isActive ? { y: [0, -2, 0], scale: [1, 1.12, 1] } : { y: 0, scale: 1 }}
+                    transition={isActive ? { duration: 0.34, ease: [0.2, 0.8, 0.2, 1] } : { duration: 0.18 }}
+                    className="inline-flex"
+                  >
+                    <Icon
+                      strokeWidth={isActive ? 2.3 : 1.85}
+                      className={`w-[19px] h-[19px] transition-colors duration-200 ${
+                        isActive ? 'text-neutral-950' : 'text-neutral-600 group-hover:text-neutral-900'
+                      }`}
+                    />
+                  </motion.span>
                   {item.badge && item.badge > 0 ? (
                     <span className="absolute -top-1.5 -right-2.5 min-w-[16px] h-[16px] px-1 rounded-full bg-neutral-950 text-white font-mono text-[9px] font-semibold flex items-center justify-center tabular-nums">
                       {item.badge > 9 ? '9+' : item.badge}

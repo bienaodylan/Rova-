@@ -3,14 +3,13 @@ import { Calendar, ChevronRight, CreditCard, Package, RefreshCw } from 'lucide-r
 import { useLanguage } from '../context/LanguageContext';
 import { ActivityFilter, useRovaApp } from '../context/RovaAppContext';
 import {
-  formatMoney,
   getPaymentMethodLabelEn,
   getStatusLabel,
   getVehicleLabel,
 } from '../lib/logistics';
 
 export function RovaActivityView() {
-  const { lang, t } = useLanguage();
+  const { lang, t, formatLocalMoney } = useLanguage();
   const {
     deliveries,
     reservations,
@@ -68,7 +67,7 @@ export function RovaActivityView() {
           title: `${d.reference} · ${d.primaryDestinationLabel || d.pickupAddress}`,
           subtitle: `${getStatusLabel(d.status, lang)} · ${getVehicleLabel(d.vehicleCategory, lang)}`,
           meta: dateStr,
-          amount: formatMoney(d.quotedPrice, d.currency),
+          amount: formatLocalMoney(d.quotedPrice, d.currency),
           deliveryObj: d,
         });
       });
@@ -84,7 +83,7 @@ export function RovaActivityView() {
           title: `${t('Réservation', 'Reservation')} · ${getVehicleLabel(r.vehicleCategory, lang)}`,
           subtitle: `${r.reservationDate} (${r.startTime}–${r.endTime}) · ${r.pickupAddress}`,
           meta: r.status,
-          amount: formatMoney(r.quotedPrice, r.currency),
+          amount: formatLocalMoney(r.quotedPrice, r.currency),
         });
       });
     }
@@ -106,7 +105,7 @@ export function RovaActivityView() {
                   month: 'short',
                 })
               : '',
-            amount: formatMoney(d.quotedPrice, d.currency),
+            amount: formatLocalMoney(d.quotedPrice, d.currency),
             deliveryObj: d,
           });
         });
@@ -150,7 +149,7 @@ export function RovaActivityView() {
         <div className="rounded-2xl bg-white border border-neutral-200/80 p-4">
           <p className="text-xs text-neutral-500">{t('Volume', 'Total')}</p>
           <p className="font-mono text-base sm:text-xl font-bold text-neutral-950 mt-1 tabular-nums truncate">
-            {formatMoney(summary.totalSpend, summary.currency)}
+            {formatLocalMoney(summary.totalSpend, summary.currency)}
           </p>
         </div>
       </div>

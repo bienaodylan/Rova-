@@ -40,7 +40,6 @@ import {
   VehicleCategory,
 } from '../types/rova';
 import {
-  formatMoney,
   getNextDriverStatus,
   getStatusLabel,
   getVehicleLabel,
@@ -60,7 +59,7 @@ interface DriverWorkspaceProps {
 
 export function DriverWorkspace({ workspaceSwitcher, onRequestSignIn }: DriverWorkspaceProps) {
   const { firebaseUser, profile, logout } = useAuth();
-  const { lang, t } = useLanguage();
+  const { lang, t, formatLocalMoney } = useLanguage();
   const uid = firebaseUser?.uid || '';
 
   const [tab, setTab] = useState<DriverTab>('radar');
@@ -857,7 +856,7 @@ export function DriverWorkspace({ workspaceSwitcher, onRequestSignIn }: DriverWo
                         <div className="flex items-center justify-between">
                           <span className="font-mono text-xs font-bold">{job.reference}</span>
                           <span className="font-mono text-sm font-bold tabular-nums">
-                            {formatMoney(job.quotedPrice * 0.85, job.currency)}
+                            {formatLocalMoney(job.quotedPrice * 0.85, job.currency)}
                           </span>
                         </div>
                         <div className="text-xs text-neutral-600 space-y-1">
@@ -1028,7 +1027,7 @@ export function DriverWorkspace({ workspaceSwitcher, onRequestSignIn }: DriverWo
                       {t('Gains cumulés (85% net)', 'Total net earnings (85%)')}
                     </p>
                     <p className="font-mono text-3xl font-bold tabular-nums">
-                      {formatMoney(driver?.earningsTotal || 0, 'GHS')}
+                      {formatLocalMoney(driver?.earningsTotal || 0, 'GHS')}
                     </p>
                     <div className="flex items-center gap-4 pt-3 text-xs text-neutral-300 font-mono">
                       <span>{driver?.completedDeliveries || 0} {t('courses', 'trips')}</span>
@@ -1056,7 +1055,7 @@ export function DriverWorkspace({ workspaceSwitcher, onRequestSignIn }: DriverWo
                             <p className="text-neutral-500">{d.merchantName}</p>
                           </div>
                           <span className="font-mono font-semibold tabular-nums">
-                            +{formatMoney(d.quotedPrice * 0.85, d.currency)}
+                            +{formatLocalMoney(d.quotedPrice * 0.85, d.currency)}
                           </span>
                         </div>
                       ))

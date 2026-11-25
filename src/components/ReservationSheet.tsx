@@ -5,11 +5,11 @@ import { RovaMap } from './RovaMap';
 import { VehicleIllustration } from './VehicleIllustration';
 import { useRovaApp } from '../context/RovaAppContext';
 import { useLanguage } from '../context/LanguageContext';
-import { formatMoney, getEffectivePricingRule, VEHICLE_CATALOG } from '../lib/logistics';
+import { getEffectivePricingRule, VEHICLE_CATALOG } from '../lib/logistics';
 import { VehicleCategory } from '../types/rova';
 
 export function ReservationSheet() {
-  const { lang, t } = useLanguage();
+  const { lang, t, formatLocalMoney } = useLanguage();
   const {
     reservationSheetOpen,
     closeReservationSheet,
@@ -78,7 +78,7 @@ export function ReservationSheet() {
           <div>
             <p className="text-[11px] text-neutral-500">{t('Tarif estimé', 'Estimated rate')}</p>
             <p className="font-mono text-base font-bold text-neutral-950 tabular-nums">
-              {formatMoney(quotedPrice, rule.currency || 'GHS')}
+              {formatLocalMoney(quotedPrice, rule.currency || 'GHS')}
             </p>
           </div>
           <button
