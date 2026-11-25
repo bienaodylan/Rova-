@@ -323,7 +323,7 @@ export function RovaShipmentsView({ onOpenPublicTracking }: RovaShipmentsViewPro
 
                         <div className="flex items-center gap-2 shrink-0">
                           <span className="font-mono text-xs font-semibold tabular-nums">
-                            {formatMoney(res.quotedPrice, res.currency)}
+                            {formatLocalMoney(res.quotedPrice, res.currency)}
                           </span>
                           {(res.status === 'pending_approval' || res.status === 'confirmed') && (
                             <button
