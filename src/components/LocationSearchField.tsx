@@ -163,6 +163,7 @@ export function LocationSearchField({ value, center, placeholder, onSelect }: Lo
               zoom={16}
               markers={[]}
               heightClass="h-full"
+              className="h-full rounded-none border-0"
               centerMarker
               onMapCenterChanged={handleMapCenter}
             />
