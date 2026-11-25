@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Calendar, Check, Loader2 } from 'lucide-react';
 import { BottomSheet } from './BottomSheet';
-import { RovaMap } from './RovaMap';
+import { LocationSearchField } from './LocationSearchField';
 import { VehicleIllustration } from './VehicleIllustration';
 import { useRovaApp } from '../context/RovaAppContext';
 import { useLanguage } from '../context/LanguageContext';
@@ -25,6 +25,7 @@ export function ReservationSheet() {
     return d.toISOString().slice(0, 10);
   }, []);
 
+  const [reservationStep, setReservationStep] = useState<1 | 2 | 3>(1);
   const [vehicleCategory, setVehicleCategory] = useState<VehicleCategory>('cargo_van');
   const [durationType, setDurationType] = useState<'window' | 'hours' | 'full_day'>('hours');
   const [reservationDate, setReservationDate] = useState(tomorrow);
@@ -77,26 +78,32 @@ export function ReservationSheet() {
         'Reserve a dedicated vehicle with driver for a window or full day.'
       )}
       footer={
-        <div className="flex items-center justify-between gap-4">
-          <div>
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
             <p className="text-[11px] text-[#777777]">{t('Tarif estimé', 'Estimated rate')}</p>
-            <p className="font-mono text-base font-bold text-[#171717] tabular-nums">
-              {formatLocalMoney(quotedPrice, rule.currency || 'GHS')}
-            </p>
+            <p className="font-mono text-base font-bold text-[#171717] tabular-nums">{formatLocalMoney(quotedPrice, rule.currency || 'GHS')}</p>
           </div>
-          <button
-            type="submit"
-            form="rova-reservation-form"
-            disabled={busy || !pickupAddress.trim()}
-            className="min-h-[46px] inline-flex items-center gap-2 px-6 rounded-xl bg-[#E52B32] text-white text-sm font-semibold hover:bg-[#CC2229] disabled:opacity-40 transition-all active:scale-[0.98] cursor-pointer"
-          >
-            {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-            <span>{t('Confirmer la réservation', 'Confirm reservation')}</span>
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            {reservationStep > 1 && <button type="button" onClick={() => setReservationStep((step) => (step - 1) as 1 | 2 | 3)} className="min-h-[46px] rounded-xl border border-[#E5E5E5] px-4 text-sm font-semibold text-[#171717] hover:border-[#171717]">{t('Retour', 'Back')}</button>}
+            {reservationStep < 3 ? (
+              <button type="button" onClick={() => setReservationStep((step) => (step + 1) as 1 | 2 | 3)} className="min-h-[46px] inline-flex items-center gap-2 rounded-xl bg-[#171717] px-6 text-sm font-semibold text-white hover:bg-neutral-800">{t('Continuer', 'Continue')}</button>
+            ) : (
+              <button type="submit" form="rova-reservation-form" disabled={busy || !pickupAddress.trim()} className="min-h-[46px] inline-flex items-center gap-2 rounded-xl bg-[#E52B32] px-6 text-sm font-semibold text-white hover:bg-[#CC2229] disabled:opacity-40 transition-all active:scale-[0.98] cursor-pointer">
+                {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                <span>{t('Confirmer la réservation', 'Confirm reservation')}</span>
+              </button>
+            )}
+          </div>
         </div>
       }
     >
       <form id="rova-reservation-form" onSubmit={handleSubmit} className="space-y-5">
+        <div className="space-y-2.5">
+          <div className="flex items-center justify-between text-[11px] font-semibold text-[#777777]"><span>{t(`Étape ${reservationStep} sur 3`, `Step ${reservationStep} of 3`)}</span><span className="text-[#171717]">{[t("Véhicule", "Vehicle"), t("Horaire", "Schedule"), t("Adresse", "Address")][reservationStep - 1]}</span></div>
+          <div className="grid grid-cols-3 gap-1.5" aria-hidden="true">{[1, 2, 3].map((step) => <span key={step} className={`h-1 rounded-full ${step <= reservationStep ? "bg-[#E52B32]" : "bg-[#E5E5E5]"}`} />)}</div>
+        </div>
+{reservationStep === 1 && (
+        <>
         {/* Vehicle Picker */}
         <div className="space-y-2">
           <label className="block text-xs font-medium text-[#171717]">
@@ -136,6 +143,11 @@ export function ReservationSheet() {
           </div>
         </div>
 
+        </>
+        )}
+
+{reservationStep === 2 && (
+        <>
         {/* Duration & Schedule */}
         <div className="space-y-3">
           <div className="grid grid-cols-3 p-1 rounded-xl bg-[#F3F3F3] gap-1">
@@ -204,41 +216,20 @@ export function ReservationSheet() {
           </div>
         </div>
 
-        {/* Pickup Location with Synchronized Map */}
+        </>
+        )}
+
+        {/* Pickup address: map is available on demand from the address field. */}
         <div className="space-y-2.5">
-          <label className="block text-xs font-medium text-[#171717]">
-            {t('Point de départ du véhicule', 'Vehicle pickup location')}
-          </label>
-          <div className="overflow-hidden rounded-2xl border border-[#E5E5E5]">
-            <RovaMap
-              center={[pickupCoords.lat, pickupCoords.lng]}
-              markers={[
-                {
-                  id: 'res_pickup',
-                  lat: pickupCoords.lat,
-                  lng: pickupCoords.lng,
-                  kind: 'pickup',
-                  label: pickupAddress || t('Départ', 'Start'),
-                  draggable: true,
-                },
-              ]}
-              interactivePick
-              showSearchBar
-              initialSearchText={pickupAddress}
-              heightClass="h-[190px]"
-              onLocationSelected={(place) => {
-                setPickupAddress(place.shortName || place.displayName);
-                setPickupCoords({ lat: place.lat, lng: place.lng });
-              }}
-            />
-          </div>
-          <input
-            type="text"
-            required
+          <label className="block text-xs font-medium text-[#171717]">{t('Point de départ du véhicule', 'Vehicle pickup location')}</label>
+          <LocationSearchField
             value={pickupAddress}
-            onChange={(e) => setPickupAddress(e.target.value)}
-            placeholder={t('Adresse de prise en charge *', 'Pickup address *')}
-            className={inputClass}
+            center={[pickupCoords.lat, pickupCoords.lng]}
+            placeholder={t('Rechercher une adresse ou un quartier…', 'Search an address or area…')}
+            onSelect={(place) => {
+              setPickupAddress(place.shortName || place.displayName);
+              setPickupCoords({ lat: place.lat, lng: place.lng });
+            }}
           />
         </div>
 
@@ -259,6 +250,8 @@ export function ReservationSheet() {
             className={inputClass}
           />
         </div>
+        </>
+        )}
       </form>
     </BottomSheet>
   );
