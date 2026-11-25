@@ -110,7 +110,7 @@ export function QrScannerSheet({ open, onClose, onDetected }: QrScannerSheetProp
       stopCamera();
       if (videoRef.current) videoRef.current.srcObject = null;
     };
-  }, [open, onDetected, onClose, t]);
+  }, [open]);
 
   const submitManualCode = (event: React.FormEvent) => {
     event.preventDefault();
