@@ -27,6 +27,26 @@ export function LocationSearchField({ value, center, placeholder, onSelect }: Lo
 
   useEffect(() => setQuery(value), [value]);
 
+  // Freeze the page underneath the full-screen map picker.
+  useEffect(() => {
+    if (!pickerOpen) return;
+    const body = document.body;
+    const root = document.documentElement;
+    const previousBodyOverflow = body.style.overflow;
+    const previousRootOverflow = root.style.overflow;
+    const previousOverscroll = root.style.overscrollBehavior;
+    body.style.overflow = 'hidden';
+    root.style.overflow = 'hidden';
+    root.style.overscrollBehavior = 'none';
+    body.classList.add('rova-map-picker-open');
+    return () => {
+      body.style.overflow = previousBodyOverflow;
+      root.style.overflow = previousRootOverflow;
+      root.style.overscrollBehavior = previousOverscroll;
+      body.classList.remove('rova-map-picker-open');
+    };
+  }, [pickerOpen]);
+
   useEffect(() => {
     const q = query.trim();
     if (q.length < 2) { setResults([]); return; }
@@ -115,6 +135,12 @@ export function LocationSearchField({ value, center, placeholder, onSelect }: Lo
             onChange={(event) => setQuery(event.target.value)}
             placeholder={placeholder}
             className="min-w-0 flex-1 bg-transparent px-3 py-3 text-sm text-neutral-950 outline-none placeholder:text-neutral-400"
+            type="search"
+            inputMode="search"
+            enterKeyHint="search"
+            autoCapitalize="off"
+            autoCorrect="off"
+            spellCheck={false}
             autoComplete="off"
           />
           {searching && <Loader2 className="mr-2 h-4 w-4 animate-spin text-neutral-400" />}
@@ -144,8 +170,8 @@ export function LocationSearchField({ value, center, placeholder, onSelect }: Lo
       </div>
 
       {pickerOpen && (
-        <div className="fixed inset-0 z-[1000] flex flex-col bg-white" role="dialog" aria-modal="true" aria-label={t('Choisir un emplacement', 'Choose a location')}>
-          <header className="relative z-[20] flex h-14 shrink-0 items-center justify-between border-b border-neutral-200 bg-white px-4">
+        <div className="fixed inset-0 z-[1000] flex h-[100dvh] min-h-0 w-screen max-w-[100vw] flex-col overflow-hidden overscroll-none bg-white" role="dialog" aria-modal="true" aria-label={t('Choisir un emplacement', 'Choose a location')}>
+          <header className="relative z-[20] flex h-[calc(3.5rem+env(safe-area-inset-top))] shrink-0 items-center justify-between border-b border-neutral-200 bg-white px-4 pt-[env(safe-area-inset-top)]">
             <button type="button" onClick={() => setPickerOpen(false)} className="flex h-10 w-10 items-center justify-center rounded-full hover:bg-neutral-100" aria-label={t('Retour', 'Back')}>
               <ArrowLeft className="h-5 w-5" />
             </button>
@@ -157,13 +183,13 @@ export function LocationSearchField({ value, center, placeholder, onSelect }: Lo
               <X className="h-5 w-5" />
             </button>
           </header>
-          <div className="relative min-h-0 flex-1">
+          <div className="relative min-h-0 flex-1 overflow-hidden rova-map-gesture-surface">
             <RovaMap
               center={pickerCenter}
               zoom={16}
               markers={[]}
               heightClass="h-full"
-              className="h-full rounded-none border-0"
+              className="h-full rounded-none border-0 rova-map-gesture-surface"
               centerMarker
               onMapCenterChanged={handleMapCenter}
             />
