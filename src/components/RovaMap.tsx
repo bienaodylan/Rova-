@@ -687,9 +687,9 @@ function GoogleRovaMap({
           clickableIcons={false}
           internalUsageAttributionIds={['gmp_mcp_codeassist_v1_aistudio']}
           onClick={handleMapClick}
-          onCenterChanged={(event) => {
-            const point = event.detail.center;
-            if (point) onMapCenterChanged?.(point.lat, point.lng);
+          onIdle={(event) => {
+            const point = event.map.getCenter();
+            if (point) onMapCenterChanged?.(point.lat(), point.lng());
           }}
           style={{ width: '100%', height: '100%', minHeight: 220 }}
         >
@@ -848,6 +848,13 @@ function LeafletRovaMap({
       center,
       zoom,
       zoomControl: false,
+      // One-finger pan and two-finger pinch zoom, like a native maps app.
+      dragging: true,
+      touchZoom: true,
+      doubleClickZoom: true,
+      bounceAtZoomLimits: false,
+      zoomSnap: 0.5,
+      tap: false,
     });
 
     L.control.zoom({ position: 'bottomright' }).addTo(map);
