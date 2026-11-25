@@ -159,6 +159,11 @@ function getGoogleMapsPublicBrowserKey(): string {
   return getValidEnvKey(process.env.VITE_GOOGLE_MAPS_API_KEY);
 }
 
+function getGeoapifyServerKey(): string {
+  // Geoapify key stays on the server; it is never embedded in browser bundles.
+  return getValidEnvKey(process.env.GEOAPIFY_API_KEY);
+}
+
 function createBoundedTtlCache<T>(maxEntries = 500) {
   const store = new Map<string, { value: T; expiresAt: number }>();
   return {
@@ -569,6 +574,63 @@ export function createApiApp(): express.Express {
         }
       }
 
+      const geoapifyKey = getGeoapifyServerKey();
+      if (geoapifyKey) {
+        try {
+          const geoParams = new URLSearchParams({
+            text: rawQ,
+            apiKey: geoapifyKey,
+            limit: '6',
+            format: 'json',
+          });
+          if (countryCodes) geoParams.set('filter', `countrycode:${countryCodes.split(',').join(',')}`);
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 5000);
+          const geoRes = await fetch(`https://api.geoapify.com/v1/geocode/search?${geoParams.toString()}`, {
+            headers: { Accept: 'application/json' },
+            signal: controller.signal,
+          });
+          clearTimeout(timeout);
+          if (geoRes.ok) {
+            const geoData = (await geoRes.json()) as {
+              features?: Array<{
+                properties?: Record<string, unknown>;
+                geometry?: { coordinates?: [number, number] };
+              }>;
+            };
+            const results = (geoData.features || [])
+              .map((feature) => {
+                const props = feature.properties || {};
+                const coords = feature.geometry?.coordinates;
+                const lat = Number(coords?.[1]);
+                const lng = Number(coords?.[0]);
+                if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+                const displayName = String(props.formatted || props.address_line2 || props.name || rawQ);
+                const shortName = [
+                  props.name || props.address_line1,
+                  props.suburb || props.district || props.city,
+                  props.state,
+                ].filter(Boolean).map(String).slice(0, 3).join(', ') || displayName;
+                return {
+                  displayName,
+                  shortName,
+                  landmark: String(props.name || props.suburb || '') || undefined,
+                  lat,
+                  lng,
+                  type: String(props.result_type || 'place'),
+                };
+              })
+              .filter((item): item is NonNullable<typeof item> => item !== null);
+            if (results.length) {
+              geocodeSearchCache.set(cacheKey, results, 15 * 60_000);
+              return res.json({ results, provider: 'geoapify' });
+            }
+          }
+        } catch {
+          // Continue to the existing Nominatim fallback.
+        }
+      }
+
       const params = new URLSearchParams({
         q: rawQ,
         format: 'jsonv2',
@@ -688,6 +750,51 @@ export function createApiApp(): express.Express {
           }
         } catch {
           // Fall through to Nominatim
+        }
+      }
+
+      const geoapifyKey = getGeoapifyServerKey();
+      if (geoapifyKey) {
+        try {
+          const geoParams = new URLSearchParams({
+            lat: String(lat),
+            lon: String(lng),
+            apiKey: geoapifyKey,
+            format: 'json',
+          });
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 5000);
+          const geoRes = await fetch(`https://api.geoapify.com/v1/geocode/reverse?${geoParams.toString()}`, {
+            headers: { Accept: 'application/json' },
+            signal: controller.signal,
+          });
+          clearTimeout(timeout);
+          if (geoRes.ok) {
+            const geoData = (await geoRes.json()) as {
+              features?: Array<{ properties?: Record<string, unknown> }>;
+            };
+            const props = geoData.features?.[0]?.properties;
+            if (props) {
+              const displayName = String(props.formatted || props.address_line2 || `${lat.toFixed(5)}, ${lng.toFixed(5)}`);
+              const shortName = [
+                props.address_line1 || props.name,
+                props.suburb || props.district || props.city,
+                props.state,
+              ].filter(Boolean).map(String).slice(0, 3).join(', ') || displayName;
+              const payload = {
+                displayName,
+                shortName,
+                landmark: String(props.name || props.suburb || '') || undefined,
+                country: String(props.country || '') || undefined,
+                countryCode: String(props.country_code || '').toUpperCase() || undefined,
+                provider: 'geoapify',
+              };
+              reverseGeocodeCache.set(cacheKey, payload, 15 * 60_000);
+              return res.json({ ...payload, lat, lng });
+            }
+          }
+        } catch {
+          // Continue to the existing Nominatim fallback.
         }
       }
 
