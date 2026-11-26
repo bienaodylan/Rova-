@@ -26,11 +26,6 @@ export function ReservationSheet() {
   }, []);
 
   const [reservationStep, setReservationStep] = useState<1 | 2 | 3>(1);
-
-  useEffect(() => {
-    if (!reservationSheetOpen) setReservationStep(1);
-  }, [reservationSheetOpen]);
-
   const [vehicleCategory, setVehicleCategory] = useState<VehicleCategory>('cargo_van');
   const [durationType, setDurationType] = useState<'window' | 'hours' | 'full_day'>('hours');
   const [reservationDate, setReservationDate] = useState(tomorrow);
@@ -43,6 +38,24 @@ export function ReservationSheet() {
   });
   const [destinationsSummary, setDestinationsSummary] = useState('');
   const [cargoRequirements, setCargoRequirements] = useState('');
+
+  useEffect(() => {
+    if (!reservationSheetOpen) {
+      setReservationStep(1);
+      setVehicleCategory('cargo_van');
+      setDurationType('hours');
+      setReservationDate(tomorrow);
+      setStartTime('09:00');
+      setEndTime('13:00');
+      setPickupAddress(business?.defaultPickupAddress || '');
+      setPickupCoords({
+        lat: business?.defaultPickupLat ?? region.lat,
+        lng: business?.defaultPickupLng ?? region.lng,
+      });
+      setDestinationsSummary('');
+      setCargoRequirements('');
+    }
+  }, [reservationSheetOpen, tomorrow, business?.defaultPickupAddress, business?.defaultPickupLat, business?.defaultPickupLng, region.lat, region.lng]);
 
   const rule = getEffectivePricingRule(pricingRules, vehicleCategory);
   const quotedPrice = useMemo(() => {

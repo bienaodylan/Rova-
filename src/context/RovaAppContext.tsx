@@ -626,81 +626,94 @@ export function RovaAppProvider({
       presetPickup?: { address: string; landmark?: string; lat: number; lng: number },
       presetVehicle?: VehicleCategory
     ) => {
-      setDraft((prev) => {
-        const next = { ...prev, step: 1 as const };
-        if (mode) {
-          next.mode = mode;
-          next.timingType = mode === 'scheduled' ? 'scheduled' : 'instant';
-          if (mode === 'multi' && next.stops.length < 2) {
-            next.stops = [
-              ...next.stops,
-              {
-                id: `stop_${Date.now()}_2`,
-                recipientName: '',
-                recipientPhone: '',
-                address: '',
-                landmark: '',
-                instructions: '',
-                packageRef: '',
-                lat: prev.pickup.lat + 0.02,
-                lng: prev.pickup.lng + 0.015,
-              },
-            ];
-          }
+      const fresh = createInitialDraft(business, preferredPayment);
+      if (!business?.defaultPickupLat && region.detected) {
+        fresh.pickup.lat = region.lat;
+        fresh.pickup.lng = region.lng;
+        fresh.stops = fresh.stops.map((s, idx) => ({
+          ...s,
+          lat: region.lat + 0.012 * (idx + 1),
+          lng: region.lng + 0.01 * (idx + 1),
+        }));
+      }
+      if (mode) {
+        fresh.mode = mode;
+        fresh.timingType = mode === 'scheduled' ? 'scheduled' : 'instant';
+        if (mode === 'multi' && fresh.stops.length < 2) {
+          fresh.stops = [
+            ...fresh.stops,
+            {
+              id: `stop_${Date.now()}_2`,
+              recipientName: '',
+              recipientPhone: '',
+              address: '',
+              landmark: '',
+              instructions: '',
+              packageRef: '',
+              lat: fresh.pickup.lat + 0.02,
+              lng: fresh.pickup.lng + 0.015,
+            },
+          ];
         }
-        if (presetVehicle) {
-          next.vehicleCategory = presetVehicle;
-          if (presetVehicle === 'truck') {
-            next.packageSize = 'bulk';
-            next.weightKg = Math.max(prev.weightKg, 250);
-          } else if (presetVehicle === 'cargo_van' || presetVehicle === 'commercial_van') {
-            next.packageSize = 'large';
-            next.weightKg = Math.max(prev.weightKg, 40);
-          } else if (presetVehicle === 'motorcycle' && prev.weightKg > 15) {
-            next.packageSize = 'small';
-            next.weightKg = 3;
-          }
+      }
+      if (presetVehicle) {
+        fresh.vehicleCategory = presetVehicle;
+        if (presetVehicle === 'truck') {
+          fresh.packageSize = 'bulk';
+          fresh.weightKg = 250;
+        } else if (presetVehicle === 'cargo_van' || presetVehicle === 'commercial_van') {
+          fresh.packageSize = 'large';
+          fresh.weightKg = 40;
+        } else if (presetVehicle === 'tricycle') {
+          fresh.packageSize = 'medium';
+          fresh.weightKg = 25;
+        } else if (presetVehicle === 'cargo_motorcycle') {
+          fresh.packageSize = 'medium';
+          fresh.weightKg = 10;
+        } else {
+          fresh.packageSize = 'small';
+          fresh.weightKg = 3;
         }
-        if (presetPickup) {
-          next.pickup = {
-            ...next.pickup,
-            address: presetPickup.address,
-            landmark: presetPickup.landmark || next.pickup.landmark,
-            lat: presetPickup.lat,
-            lng: presetPickup.lng,
-          };
+      }
+      if (presetPickup) {
+        fresh.pickup = {
+          ...fresh.pickup,
+          address: presetPickup.address,
+          landmark: presetPickup.landmark || fresh.pickup.landmark,
+          lat: presetPickup.lat,
+          lng: presetPickup.lng,
+        };
+      }
+      if (presetStop) {
+        const stopObj: DraftStop = {
+          id: `stop_${Date.now()}`,
+          recipientName: presetStop.name,
+          recipientPhone: presetStop.phone,
+          address: presetStop.address,
+          landmark: presetStop.landmark || '',
+          instructions: presetStop.instructions || '',
+          packageRef: '',
+          lat: presetStop.lat,
+          lng: presetStop.lng,
+        };
+        if (fresh.mode === 'multi') {
+          const copy = [...fresh.stops];
+          copy[0] = stopObj;
+          fresh.stops = copy;
+        } else {
+          fresh.stops = [stopObj];
         }
-        if (presetStop) {
-          const stopObj: DraftStop = {
-            id: `stop_${Date.now()}`,
-            recipientName: presetStop.name,
-            recipientPhone: presetStop.phone,
-            address: presetStop.address,
-            landmark: presetStop.landmark || '',
-            instructions: presetStop.instructions || '',
-            packageRef: '',
-            lat: presetStop.lat,
-            lng: presetStop.lng,
-          };
-          if (next.mode === 'multi') {
-            const firstEmpty = next.stops.findIndex((s) => !s.address.trim());
-            if (firstEmpty >= 0) {
-              const copy = [...next.stops];
-              copy[firstEmpty] = stopObj;
-              next.stops = copy;
-            } else {
-              next.stops = [...next.stops, stopObj];
-            }
-          } else {
-            next.stops = [stopObj];
-          }
-        }
-        return next;
-      });
+      }
+      setDraft(fresh);
       setComposerOpen(true);
     },
-    []
+    [business, preferredPayment, region.detected, region.lat, region.lng]
   );
+
+  const closeComposer = useCallback(() => {
+    setComposerOpen(false);
+    resetDraft('single');
+  }, [resetDraft]);
 
   const requireAuth = useCallback((): boolean => {
     if (!uid) {
@@ -1682,7 +1695,7 @@ export function RovaAppProvider({
         resetDraft,
         composerOpen,
         openComposer,
-        closeComposer: () => setComposerOpen(false),
+        closeComposer,
         reservationSheetOpen,
         openReservationSheet: () => setReservationSheetOpen(true),
         closeReservationSheet: () => setReservationSheetOpen(false),
