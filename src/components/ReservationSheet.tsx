@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Calendar, Check, Loader2 } from 'lucide-react';
 import { BottomSheet } from './BottomSheet';
 import { LocationSearchField } from './LocationSearchField';
-import { VehicleIllustration } from './VehicleIllustration';
+import { VehicleStudioImage } from './VehicleIllustration';
 import { useRovaApp } from '../context/RovaAppContext';
 import { useLanguage } from '../context/LanguageContext';
 import { getEffectivePricingRule, VEHICLE_CATALOG } from '../lib/logistics';
@@ -30,6 +30,7 @@ export function ReservationSheet() {
   useEffect(() => {
     if (!reservationSheetOpen) setReservationStep(1);
   }, [reservationSheetOpen]);
+
   const [vehicleCategory, setVehicleCategory] = useState<VehicleCategory>('cargo_van');
   const [durationType, setDurationType] = useState<'window' | 'hours' | 'full_day'>('hours');
   const [reservationDate, setReservationDate] = useState(tomorrow);
@@ -76,25 +77,57 @@ export function ReservationSheet() {
       open={reservationSheetOpen}
       onClose={closeReservationSheet}
       size="lg"
-      title={t('Planifier un véhicule', 'Schedule a vehicle')}
+      title={t('Planifier une livraison', 'Schedule a delivery')}
       subtitle={t(
-        'Réservez un véhicule dédié avec chauffeur pour un créneau ou la journée.',
-        'Reserve a dedicated vehicle with driver for a window or full day.'
+        'Réservez un créneau horaire ou une journée complète avec chauffeur.',
+        'Reserve a time slot or full day with a dedicated driver.'
       )}
       footer={
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
             <p className="text-[11px] text-[#777777]">{t('Tarif estimé', 'Estimated rate')}</p>
-            <p className="font-mono text-base font-bold text-[#171717] tabular-nums">{formatLocalMoney(quotedPrice, rule.currency || 'GHS')}</p>
+            <p className="font-mono text-base font-bold text-[#171717] tabular-nums">
+              {formatLocalMoney(quotedPrice, rule.currency || 'GHS')}
+            </p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            {reservationStep > 1 && <button type="button" onClick={() => setReservationStep((step) => (step - 1) as 1 | 2 | 3)} className="min-h-[46px] rounded-full border border-[#E5E5E5] px-5 text-sm font-semibold text-[#171717] hover:border-[#171717] cursor-pointer">{t('Retour', 'Back')}</button>}
+            {reservationStep > 1 && (
+              <button
+                type="button"
+                onClick={() => setReservationStep((step) => (step - 1) as 1 | 2 | 3)}
+                className="min-h-[46px] rounded-full border border-[#E5E5E5] px-5 text-sm font-semibold text-[#171717] hover:border-[#171717] transition-colors active:scale-[0.98] cursor-pointer"
+              >
+                {t('Retour', 'Back')}
+              </button>
+            )}
             {reservationStep < 3 ? (
-              <button type="button" onClick={() => setReservationStep((step) => (step + 1) as 1 | 2 | 3)} disabled={reservationStep === 2 && (!reservationDate || !startTime || !endTime || endTime <= startTime)} className="min-h-[46px] inline-flex items-center gap-2 rounded-full bg-[#171717] px-6 text-sm font-semibold text-white hover:bg-neutral-800 cursor-pointer">{t('Continuer', 'Continue')}</button>
+              <button
+                type="button"
+                onClick={() => setReservationStep((step) => (step + 1) as 1 | 2 | 3)}
+                disabled={
+                  reservationStep === 2 &&
+                  (!reservationDate || !startTime || !endTime || endTime <= startTime)
+                }
+                className="min-h-[46px] inline-flex items-center gap-2 rounded-full bg-[#171717] px-6 text-sm font-semibold text-white hover:bg-neutral-800 disabled:opacity-40 transition-all active:scale-[0.98] cursor-pointer"
+              >
+                {t('Continuer', 'Continue')}
+              </button>
             ) : (
-              <button type="submit" form="rova-reservation-form" disabled={busy || !pickupAddress.trim() || !reservationDate || !startTime || !endTime || endTime <= startTime} className="min-h-[46px] inline-flex items-center gap-2 rounded-full bg-[#E52B32] px-6 text-sm font-semibold text-white hover:bg-[#CC2229] disabled:opacity-40 transition-all active:scale-[0.98] cursor-pointer">
+              <button
+                type="submit"
+                form="rova-reservation-form"
+                disabled={
+                  busy ||
+                  !pickupAddress.trim() ||
+                  !reservationDate ||
+                  !startTime ||
+                  !endTime ||
+                  endTime <= startTime
+                }
+                className="min-h-[46px] inline-flex items-center gap-2 rounded-full bg-[#E52B32] px-6 text-sm font-semibold text-white hover:bg-[#CC2229] disabled:opacity-40 transition-all active:scale-[0.98] cursor-pointer"
+              >
                 {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-                <span>{t('Confirmer la réservation', 'Confirm reservation')}</span>
+                <span>{t('Confirmer la planification', 'Confirm schedule')}</span>
               </button>
             )}
           </div>
@@ -103,160 +136,178 @@ export function ReservationSheet() {
     >
       <form id="rova-reservation-form" onSubmit={handleSubmit} className="space-y-5">
         <div className="space-y-2.5">
-          <div className="flex items-center justify-between text-[11px] font-semibold text-[#777777]"><span>{t(`Étape ${reservationStep} sur 3`, `Step ${reservationStep} of 3`)}</span><span className="text-[#171717]">{[t("Véhicule", "Vehicle"), t("Horaire", "Schedule"), t("Adresse", "Address")][reservationStep - 1]}</span></div>
-          <div className="grid grid-cols-3 gap-1.5" aria-hidden="true">{[1, 2, 3].map((step) => <span key={step} className={`h-1 rounded-full ${step <= reservationStep ? "bg-[#E52B32]" : "bg-[#E5E5E5]"}`} />)}</div>
-        </div>
-{reservationStep === 1 && (
-        <>
-        {/* Vehicle Picker */}
-        <div className="space-y-2">
-          <label className="block text-xs font-medium text-[#171717]">
-            {t('Catégorie de véhicule', 'Vehicle category')}
-          </label>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-            {VEHICLE_CATALOG.map((v) => {
-              const active = vehicleCategory === v.id;
-              return (
-                <button
-                  key={v.id}
-                  type="button"
-                  onClick={() => setVehicleCategory(v.id)}
-                  className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer ${
-                    active
-                      ? 'border-[#E52B32] bg-[#FEF2F2]/40 ring-1 ring-[#E52B32]/20'
-                      : 'border-[#E5E5E5] bg-white hover:border-[#171717]/40'
-                  }`}
-                >
-                  <div className="flex items-center justify-between gap-2 mb-2">
-                    <VehicleIllustration category={v.id} className="w-10 h-7 text-[#171717]" />
-                    <span
-                      className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${
-                        active ? 'border-[#E52B32] bg-[#E52B32] text-white' : 'border-[#E5E5E5]'
-                      }`}
-                    >
-                      {active && <Check className="w-2.5 h-2.5 stroke-[3]" />}
-                    </span>
-                  </div>
-                  <p className="text-xs font-semibold text-[#171717] truncate">
-                    {lang === 'fr' ? v.labelFr : v.label}
-                  </p>
-                  <p className="text-[11px] font-mono text-[#777777]">≤ {v.maxWeightKg} kg</p>
-                </button>
-              );
-            })}
+          <div className="flex items-center justify-between text-[11px] font-semibold text-[#777777]">
+            <span>{t(`Étape ${reservationStep} sur 3`, `Step ${reservationStep} of 3`)}</span>
+            <span className="text-[#171717]">
+              {[t('Véhicule', 'Vehicle'), t('Date & horaire', 'Date & time'), t('Point de départ', 'Pickup')][
+                reservationStep - 1
+              ]}
+            </span>
           </div>
-        </div>
-
-        </>
-        )}
-
-{reservationStep === 2 && (
-        <>
-        {/* Duration & Schedule */}
-        <div className="space-y-3">
-          <div className="grid grid-cols-3 p-1 rounded-full bg-[#F3F3F3] gap-1">
-            {(
-              [
-                { id: 'window', label: t('Créneau', 'Window') },
-                { id: 'hours', label: t('Demi-journée', 'Half day') },
-                { id: 'full_day', label: t('Journée', 'Full day') },
-              ] as const
-            ).map((opt) => (
-              <button
-                key={opt.id}
-                type="button"
-                onClick={() => setDurationType(opt.id)}
-                className={`min-h-[38px] rounded-full text-xs font-semibold transition-all cursor-pointer ${
-                  durationType === opt.id
-                    ? 'bg-white text-[#171717] shadow-xs'
-                    : 'text-[#777777] hover:text-[#171717]'
+          <div className="grid grid-cols-3 gap-1.5" aria-hidden="true">
+            {[1, 2, 3].map((step) => (
+              <span
+                key={step}
+                className={`h-1 rounded-full transition-colors ${
+                  step <= reservationStep ? 'bg-[#E52B32]' : 'bg-[#E5E5E5]'
                 }`}
-              >
-                {opt.label}
-              </button>
+              />
             ))}
           </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div>
-              <label className="block text-xs font-medium text-[#171717] mb-1">
-                <span className="inline-flex items-center gap-1">
-                  <Calendar className="w-3.5 h-3.5 text-[#777777]" />
-                  {t('Date', 'Date')}
-                </span>
-              </label>
-              <input
-                type="date"
-                required
-                value={reservationDate}
-                onChange={(e) => setReservationDate(e.target.value)}
-                className={inputClass}
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-[#171717] mb-1">
-                {t('Début', 'Start time')}
-              </label>
-              <input
-                type="time"
-                required
-                value={startTime}
-                onChange={(e) => setStartTime(e.target.value)}
-                className={`${inputClass} font-mono`}
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-[#171717] mb-1">
-                {t('Fin', 'End time')}
-              </label>
-              <input
-                type="time"
-                required
-                value={endTime}
-                onChange={(e) => setEndTime(e.target.value)}
-                className={`${inputClass} font-mono`}
-              />
-            </div>
-          </div>
         </div>
 
-        </>
+        {reservationStep === 1 && (
+          <div className="space-y-2.5">
+            <label className="block text-xs font-medium text-[#171717]">
+              {t('Choisissez le format adapté à votre livraison', 'Choose the right vehicle for your delivery')}
+            </label>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+              {VEHICLE_CATALOG.map((v) => {
+                const active = vehicleCategory === v.id;
+                return (
+                  <button
+                    key={v.id}
+                    type="button"
+                    onClick={() => setVehicleCategory(v.id)}
+                    className={`p-3 rounded-2xl border text-left transition-all active:scale-[0.98] cursor-pointer flex flex-col justify-between ${
+                      active
+                        ? 'border-[#E52B32] bg-[#FEF2F2]/50 ring-1 ring-[#E52B32]/20'
+                        : 'border-[#E5E5E5] bg-[#F7F7F7] hover:border-[#171717]/30'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-1 mb-1">
+                      <div className="w-16 h-12 flex items-center justify-center overflow-hidden">
+                        <VehicleStudioImage
+                          category={v.id}
+                          alt={lang === 'fr' ? v.labelFr : v.label}
+                          className="w-full h-full object-contain"
+                        />
+                      </div>
+                      <span
+                        className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 mt-0.5 ${
+                          active ? 'border-[#E52B32] bg-[#E52B32] text-white' : 'border-[#D4D4D4] bg-white'
+                        }`}
+                      >
+                        {active && <Check className="w-2.5 h-2.5 stroke-[3]" />}
+                      </span>
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-[#171717] truncate">
+                        {lang === 'fr' ? v.labelFr : v.label}
+                      </p>
+                      <p className="text-[11px] font-mono text-[#777777]">≤ {v.maxWeightKg} kg</p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {reservationStep === 2 && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-3 p-1 rounded-full bg-[#F3F3F3] gap-1">
+              {(
+                [
+                  { id: 'window', label: t('Créneau', 'Window') },
+                  { id: 'hours', label: t('Demi-journée', 'Half day') },
+                  { id: 'full_day', label: t('Journée', 'Full day') },
+                ] as const
+              ).map((opt) => (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => setDurationType(opt.id)}
+                  className={`min-h-[40px] rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                    durationType === opt.id
+                      ? 'bg-white text-[#171717] shadow-xs'
+                      : 'text-[#777777] hover:text-[#171717]'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-[#171717] mb-1">
+                  <span className="inline-flex items-center gap-1">
+                    <Calendar className="w-3.5 h-3.5 text-[#777777]" />
+                    {t('Date', 'Date')}
+                  </span>
+                </label>
+                <input
+                  type="date"
+                  required
+                  value={reservationDate}
+                  onChange={(e) => setReservationDate(e.target.value)}
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-[#171717] mb-1">
+                  {t('Début', 'Start time')}
+                </label>
+                <input
+                  type="time"
+                  required
+                  value={startTime}
+                  onChange={(e) => setStartTime(e.target.value)}
+                  className={`${inputClass} font-mono`}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-[#171717] mb-1">
+                  {t('Fin', 'End time')}
+                </label>
+                <input
+                  type="time"
+                  required
+                  value={endTime}
+                  onChange={(e) => setEndTime(e.target.value)}
+                  className={`${inputClass} font-mono`}
+                />
+              </div>
+            </div>
+          </div>
         )}
 
         {reservationStep === 3 && (
-        <>
-        {/* Pickup address: map is available on demand from the address field. */}
-        <div className="space-y-2.5">
-          <label className="block text-xs font-medium text-[#171717]">{t('Point de départ du véhicule', 'Vehicle pickup location')}</label>
-          <LocationSearchField
-            value={pickupAddress}
-            center={[pickupCoords.lat, pickupCoords.lng]}
-            placeholder={t('Rechercher une adresse ou un quartier…', 'Search an address or area…')}
-            onSelect={(place) => {
-              setPickupAddress(place.shortName || place.displayName);
-              setPickupCoords({ lat: place.lat, lng: place.lng });
-            }}
-          />
-        </div>
+          <>
+            <div className="space-y-2.5">
+              <label className="block text-xs font-medium text-[#171717]">
+                {t('Point de départ de la livraison', 'Delivery pickup location')}
+              </label>
+              <LocationSearchField
+                value={pickupAddress}
+                center={[pickupCoords.lat, pickupCoords.lng]}
+                placeholder={t('Rechercher une adresse ou un quartier…', 'Search an address or area…')}
+                onChangeText={(text) => setPickupAddress(text)}
+                onSelect={(place) => {
+                  setPickupAddress(place.shortName || place.displayName);
+                  setPickupCoords({ lat: place.lat, lng: place.lng });
+                }}
+              />
+            </div>
 
-        {/* Optional Notes */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <input
-            type="text"
-            value={destinationsSummary}
-            onChange={(e) => setDestinationsSummary(e.target.value)}
-            placeholder={t('Zones à desservir (optionnel)', 'Delivery zones (optional)')}
-            className={inputClass}
-          />
-          <input
-            type="text"
-            value={cargoRequirements}
-            onChange={(e) => setCargoRequirements(e.target.value)}
-            placeholder={t('Besoins chargement (optionnel)', 'Cargo requirements (optional)')}
-            className={inputClass}
-          />
-        </div>
-        </>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <input
+                type="text"
+                value={destinationsSummary}
+                onChange={(e) => setDestinationsSummary(e.target.value)}
+                placeholder={t('Zones à desservir (optionnel)', 'Delivery zones (optional)')}
+                className={inputClass}
+              />
+              <input
+                type="text"
+                value={cargoRequirements}
+                onChange={(e) => setCargoRequirements(e.target.value)}
+                placeholder={t('Notes de chargement (optionnel)', 'Cargo notes (optional)')}
+                className={inputClass}
+              />
+            </div>
+          </>
         )}
       </form>
     </BottomSheet>

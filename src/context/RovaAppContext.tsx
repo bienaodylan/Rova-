@@ -165,7 +165,8 @@ interface RovaAppContextValue {
   openComposer: (
     mode?: 'single' | 'multi' | 'scheduled',
     presetStop?: SavedRecipient,
-    presetPickup?: { address: string; landmark?: string; lat: number; lng: number }
+    presetPickup?: { address: string; landmark?: string; lat: number; lng: number },
+    presetVehicle?: VehicleCategory
   ) => void;
   closeComposer: () => void;
 
@@ -617,10 +618,11 @@ export function RovaAppProvider({
     (
       mode?: 'single' | 'multi' | 'scheduled',
       presetStop?: SavedRecipient,
-      presetPickup?: { address: string; landmark?: string; lat: number; lng: number }
+      presetPickup?: { address: string; landmark?: string; lat: number; lng: number },
+      presetVehicle?: VehicleCategory
     ) => {
       setDraft((prev) => {
-        const next = { ...prev };
+        const next = { ...prev, step: 1 as const };
         if (mode) {
           next.mode = mode;
           next.timingType = mode === 'scheduled' ? 'scheduled' : 'instant';
@@ -641,6 +643,19 @@ export function RovaAppProvider({
             ];
           }
         }
+        if (presetVehicle) {
+          next.vehicleCategory = presetVehicle;
+          if (presetVehicle === 'truck') {
+            next.packageSize = 'bulk';
+            next.weightKg = Math.max(prev.weightKg, 250);
+          } else if (presetVehicle === 'cargo_van' || presetVehicle === 'commercial_van') {
+            next.packageSize = 'large';
+            next.weightKg = Math.max(prev.weightKg, 40);
+          } else if (presetVehicle === 'motorcycle' && prev.weightKg > 15) {
+            next.packageSize = 'small';
+            next.weightKg = 3;
+          }
+        }
         if (presetPickup) {
           next.pickup = {
             ...next.pickup,
@@ -649,7 +664,6 @@ export function RovaAppProvider({
             lat: presetPickup.lat,
             lng: presetPickup.lng,
           };
-          next.step = presetStop ? 2 : 1;
         }
         if (presetStop) {
           const stopObj: DraftStop = {
@@ -671,7 +685,6 @@ export function RovaAppProvider({
           } else {
             next.stops = [...next.stops, stopObj];
           }
-          next.step = next.pickup.address.trim() ? 2 : 1;
         }
         return next;
       });
@@ -1133,7 +1146,7 @@ export function RovaAppProvider({
           await refreshSupabaseWorkspace();
 
           if (confirmRes.paymentOutcome.reservationConfirmed) {
-            showToast(t('Réservation véhicule confirmée.', 'Vehicle reservation confirmed.'), 'success');
+            showToast(t('Livraison planifiée confirmée.', 'Scheduled delivery confirmed.'), 'success');
           } else {
             showToast(
               t(

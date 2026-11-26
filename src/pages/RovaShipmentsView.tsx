@@ -596,14 +596,14 @@ export function RovaShipmentsView({ onOpenPublicTracking }: RovaShipmentsViewPro
                 <Package className="w-6 h-6 text-[#777777] mx-auto" />
                 <p className="font-display text-base font-bold text-[#171717]">
                   {shipmentFilter === 'upcoming'
-                    ? t('Aucune réservation à venir', 'No upcoming reservations')
+                    ? t('Aucune livraison planifiée', 'No scheduled deliveries')
                     : t('Aucune expédition trouvée', 'No shipments found')}
                 </p>
                 <p className="text-xs text-[#777777] max-w-xs mx-auto leading-relaxed">
                   {shipmentFilter === 'upcoming'
                     ? t(
-                        'Planifiez un véhicule dédié à l’avance pour vos tournées commerciales.',
-                        'Reserve a dedicated vehicle ahead of time for your commercial runs.'
+                        'Planifiez une livraison à l’avance pour vos créneaux ou tournées commerciales.',
+                        'Schedule a delivery ahead of time for your upcoming runs.'
                       )
                     : t(
                         'Créez votre première livraison pour suivre vos colis en direct.',
@@ -617,7 +617,7 @@ export function RovaShipmentsView({ onOpenPublicTracking }: RovaShipmentsViewPro
                       onClick={openReservationSheet}
                       className="min-h-[42px] px-5 rounded-full bg-[#171717] text-white text-xs font-semibold hover:bg-neutral-800 transition-colors cursor-pointer"
                     >
-                      {t('Planifier un véhicule', 'Schedule a vehicle')}
+                      {t('Planifier une livraison', 'Schedule a delivery')}
                     </button>
                   ) : (
                     <button
@@ -700,7 +700,7 @@ export function RovaShipmentsView({ onOpenPublicTracking }: RovaShipmentsViewPro
                 {filteredReservations.length > 0 && (
                   <div className="space-y-2">
                     <p className="text-xs font-medium text-[#777777]">
-                      {t('Réservations de véhicules', 'Vehicle reservations')}
+                      {t('Livraisons planifiées', 'Scheduled deliveries')}
                     </p>
                     <div className="rounded-3xl border border-[#E5E5E5] bg-white overflow-hidden divide-y divide-[#E5E5E5]">
                       {filteredReservations.map((res) => (

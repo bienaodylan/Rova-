@@ -1310,7 +1310,7 @@ export function OperationsCenter({
                       : 'bg-white text-neutral-700 border-neutral-300'
                   }`}
                 >
-                  {t('Réservations de véhicules', 'Vehicle Reservations')} ({reservations.length})
+                  {t('Livraisons planifiées', 'Scheduled Deliveries')} ({reservations.length})
                 </button>
               </div>
 
