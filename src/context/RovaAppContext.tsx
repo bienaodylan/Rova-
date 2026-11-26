@@ -196,7 +196,12 @@ interface RovaAppContextValue {
   // Real Firestore actions
   busy: boolean;
   requestSignIn: () => Promise<void>;
-  submitDelivery: (routeDistanceKm: number, routeDurationMin: number, quotedTotal: number) => Promise<DeliveryRecord | null>;
+  submitDelivery: (
+    routeDistanceKm: number,
+    routeDurationMin: number,
+    quotedTotal: number,
+    options?: { stayInBookingPanel?: boolean; overrideDriverUid?: string }
+  ) => Promise<DeliveryRecord | null>;
   cancelDelivery: (deliveryId: string) => Promise<boolean>;
   repeatDelivery: (delivery: DeliveryRecord) => Promise<void>;
   submitReservation: (payload: {
@@ -677,13 +682,17 @@ export function RovaAppProvider({
             lat: presetStop.lat,
             lng: presetStop.lng,
           };
-          const firstEmpty = next.stops.findIndex((s) => !s.address.trim());
-          if (firstEmpty >= 0) {
-            const copy = [...next.stops];
-            copy[firstEmpty] = stopObj;
-            next.stops = copy;
+          if (next.mode === 'multi') {
+            const firstEmpty = next.stops.findIndex((s) => !s.address.trim());
+            if (firstEmpty >= 0) {
+              const copy = [...next.stops];
+              copy[firstEmpty] = stopObj;
+              next.stops = copy;
+            } else {
+              next.stops = [...next.stops, stopObj];
+            }
           } else {
-            next.stops = [...next.stops, stopObj];
+            next.stops = [stopObj];
           }
         }
         return next;
@@ -712,7 +721,8 @@ export function RovaAppProvider({
     async (
       routeDistanceKm: number,
       routeDurationMin: number,
-      quotedTotal: number
+      quotedTotal: number,
+      options?: { stayInBookingPanel?: boolean; overrideDriverUid?: string }
     ): Promise<DeliveryRecord | null> => {
       if (!requireAuth()) return null;
 
@@ -735,8 +745,9 @@ export function RovaAppProvider({
           draft.vehicleCategory,
           draft.weightKg
         );
+        const preferredDriverUid = options?.overrideDriverUid ?? draft.selectedDriverUid;
         const matched =
-          ranked.find((m) => m.driver.uid === draft.selectedDriverUid)?.driver ||
+          ranked.find((m) => m.driver.uid === preferredDriverUid)?.driver ||
           (draft.timingType === 'instant' && ranked[0]?.driver) ||
           null;
 
@@ -793,9 +804,11 @@ export function RovaAppProvider({
             }),
           });
           await refreshSupabaseWorkspace();
-          setComposerOpen(false);
-          resetDraft('single');
-          setSelectedDeliveryId(res.delivery.id);
+          if (!options?.stayInBookingPanel) {
+            setComposerOpen(false);
+            resetDraft('single');
+            setSelectedDeliveryId(res.delivery.id);
+          }
           showToast(
             t(`Livraison ${reference} créée avec succès.`, `Delivery ${reference} created successfully.`),
             'success'
@@ -939,9 +952,11 @@ export function RovaAppProvider({
         }).catch(() => {});
 
         const createdRecord = { id: deliveryRef.id, ...(deliveryPayload as Omit<DeliveryRecord, 'id'>) };
-        setComposerOpen(false);
-        resetDraft('single');
-        setSelectedDeliveryId(deliveryRef.id);
+        if (!options?.stayInBookingPanel) {
+          setComposerOpen(false);
+          resetDraft('single');
+          setSelectedDeliveryId(deliveryRef.id);
+        }
         showToast(
           t(`Livraison ${reference} créée avec succès.`, `Delivery ${reference} created successfully.`),
           'success'
