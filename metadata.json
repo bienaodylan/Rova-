@@ -1,6 +1,6 @@
 {
   "name": "Rovia. — Logistique & suivi de colis",
   "description": "Application moderne de suivi et d'expédition de colis en temps réel avec carte interactive, calcul de tarifs et messagerie livreur.",
-  "requestFramePermissions": [],
+  "requestFramePermissions": ["camera"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

@@ -216,6 +216,102 @@ const TEMPLATES: Record<string, TemplateEntry> = {
     }),
     defaultChannels: ['in_app', 'realtime', 'push'],
   },
+  'reservation.confirmed': {
+    fr: (v) => ({
+      title: `Réservation confirmée · ${v.reference}`,
+      message: `Votre véhicule est réservé${v.cityName ? ` à ${v.cityName}` : ''}. L’affectation du chauffeur démarrera automatiquement avant votre créneau.`,
+    }),
+    en: (v) => ({
+      title: `Reservation confirmed · ${v.reference}`,
+      message: `Your vehicle is booked${v.cityName ? ` in ${v.cityName}` : ''}. Courier assignment will start automatically ahead of your pickup window.`,
+    }),
+    defaultChannels: ['in_app', 'realtime', 'email'],
+  },
+  'reservation.payment_failed': {
+    fr: (v) => ({
+      title: `Paiement non finalisé · ${v.reference}`,
+      message: v.reason
+        ? `Le paiement de votre réservation n’a pas abouti (${v.reason}). Le créneau reste bloqué temporairement.`
+        : `Le paiement de votre réservation n’a pas abouti. Veuillez réessayer avant l’expiration du créneau.`,
+    }),
+    en: (v) => ({
+      title: `Payment unsuccessful · ${v.reference}`,
+      message: v.reason
+        ? `Payment for your reservation failed (${v.reason}). Your slot hold remains active temporarily.`
+        : `Payment for your reservation could not be completed. Please retry before your hold expires.`,
+    }),
+    defaultChannels: ['in_app', 'realtime'],
+  },
+  'reservation.reminder': {
+    fr: (v) => ({
+      title: `Rappel de prise en charge · ${v.reference}`,
+      message: `Votre créneau planifié approche${v.etaMinutes ? ` (dans environ ${v.etaMinutes} min)` : ''}. Préparez votre chargement.`,
+    }),
+    en: (v) => ({
+      title: `Upcoming scheduled pickup · ${v.reference}`,
+      message: `Your scheduled pickup window is approaching${v.etaMinutes ? ` (in ~${v.etaMinutes} min)` : ''}. Please have cargo ready.`,
+    }),
+    defaultChannels: ['in_app', 'realtime', 'push'],
+  },
+  'reservation.courier_assigned': {
+    fr: (v) => ({
+      title: `Chauffeur assigné · ${v.reference}`,
+      message: `${v.courierName || 'Un chauffeur ROVA'} est confirmé pour votre créneau planifié.`,
+    }),
+    en: (v) => ({
+      title: `Courier assigned · ${v.reference}`,
+      message: `${v.courierName || 'A ROVA courier'} is confirmed for your scheduled pickup.`,
+    }),
+    defaultChannels: ['in_app', 'realtime', 'push'],
+  },
+  'reservation.courier_reassigned': {
+    fr: (v) => ({
+      title: `Réaffectation de chauffeur · ${v.reference}`,
+      message: v.courierName
+        ? `${v.courierName} prend désormais en charge votre réservation planifiée.`
+        : `Nous réaffectons un nouveau chauffeur ROVA pour maintenir votre créneau.`,
+    }),
+    en: (v) => ({
+      title: `Courier reassignment · ${v.reference}`,
+      message: v.courierName
+        ? `${v.courierName} has been assigned to your scheduled reservation.`
+        : `We are assigning a replacement ROVA courier to keep your pickup window on track.`,
+    }),
+    defaultChannels: ['in_app', 'realtime', 'push'],
+  },
+  'reservation.rescheduled': {
+    fr: (v) => ({
+      title: `Réservation replanifiée · ${v.reference}`,
+      message: v.reason || `Votre créneau de prise en charge a été mis à jour avec succès.`,
+    }),
+    en: (v) => ({
+      title: `Reservation rescheduled · ${v.reference}`,
+      message: v.reason || `Your scheduled pickup window has been updated successfully.`,
+    }),
+    defaultChannels: ['in_app', 'realtime', 'email'],
+  },
+  'reservation.cancelled': {
+    fr: (v) => ({
+      title: `Réservation annulée · ${v.reference}`,
+      message: v.reason ? `Votre réservation a été annulée (${v.reason}).` : `Votre réservation a été annulée.`,
+    }),
+    en: (v) => ({
+      title: `Reservation cancelled · ${v.reference}`,
+      message: v.reason ? `Your reservation was cancelled (${v.reason}).` : `Your reservation has been cancelled.`,
+    }),
+    defaultChannels: ['in_app', 'realtime', 'email'],
+  },
+  'reservation.at_risk': {
+    fr: (v) => ({
+      title: `Alerte planification · ${v.reference}`,
+      message: v.reason || `La réservation nécessite une intervention opérationnelle urgente.`,
+    }),
+    en: (v) => ({
+      title: `Scheduling escalation · ${v.reference}`,
+      message: v.reason || `Scheduled reservation requires immediate operations intervention.`,
+    }),
+    defaultChannels: ['in_app', 'realtime'],
+  },
 };
 
 export function renderNotificationTemplate(

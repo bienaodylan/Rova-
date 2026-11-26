@@ -1,0 +1,1533 @@
+ROVA — SCHEDULED DELIVERY MASTER PROMPT
+
+Intelligent Scheduled Delivery, Vehicle Availability & Reservation System
+
+ROLE
+
+You are acting as a senior product engineer, backend architect, logistics systems engineer, UX engineer, and reliability specialist working on ROVA, an existing delivery application.
+
+Your mission is to analyze, improve, and implement the Scheduled Delivery / Planifier un véhicule feature in the existing ROVA application.
+
+This feature allows a customer to organize a delivery in advance rather than request an immediate pickup.
+
+You are not building a new application.
+
+You are not redesigning ROVA.
+
+You are improving the existing scheduled delivery experience, its underlying logic, its data flow, its validation, its scheduling reliability, and the operational mechanisms required to make scheduled deliveries genuinely usable in production.
+
+⸻
+
+1. ABSOLUTE PROJECT RULES
+
+Before making any changes:
+
+* Inspect the existing codebase.
+* Identify the current Scheduled Delivery entry point.
+* Identify its existing four-step flow.
+* Inspect each step, existing forms, components, dialogs, modals, bottom sheets, and transitions.
+* Identify the existing routing system.
+* Inspect the current database structure.
+* Inspect authentication and customer data.
+* Inspect existing vehicle data.
+* Inspect existing pricing logic.
+* Inspect existing address and map integration.
+* Inspect existing courier, delivery, order, and dispatch systems.
+* Inspect existing payment integration.
+* Inspect existing notification infrastructure.
+* Identify what is already functional, incomplete, duplicated, or missing.
+
+Do not assume that functionality is missing merely because it is not immediately visible in the UI.
+
+Do not replace working infrastructure unnecessarily.
+
+Design preservation is mandatory
+
+The current ROVA Scheduled Delivery design is already approved.
+
+You must:
+
+* Preserve the current visual design.
+* Preserve the existing four-step journey.
+* Preserve existing typography, spacing, colors, components, navigation, and design language.
+* Preserve the current mobile-first experience.
+* Preserve the existing page composition and structure wherever possible.
+* Avoid unnecessary UI changes.
+* Avoid redesigning the four steps.
+* Avoid replacing the current flow with a new wizard.
+* Avoid introducing generic cards, unnecessary banners, decorative illustrations, or redundant information.
+
+You may add a new element, contextual modal, bottom sheet, selection window, validation state, information panel, or confirmation dialog only when it materially improves the feature’s usability, clarity, reliability, or operational functionality.
+
+Any addition must visually integrate with the existing ROVA design system.
+
+This is a functional and architectural improvement task, not a redesign task.
+
+⸻
+
+2. FEATURE OBJECTIVE
+
+Scheduled Delivery must become a real reservation and delivery scheduling system.
+
+A customer must be able to:
+
+1. Enter a delivery request.
+2. Specify pickup and delivery locations.
+3. Select a future date and pickup time.
+4. Select an appropriate vehicle.
+5. Understand the delivery requirements.
+6. Receive a real price calculation.
+7. Review the complete delivery.
+8. Pay using the available payment system.
+9. Receive a real reservation confirmation.
+10. Know what happens next.
+11. Track the scheduled delivery when tracking becomes available.
+12. Manage the delivery according to the cancellation, modification, and operational rules.
+
+The system must ensure that a customer cannot reserve a delivery at a time when ROVA cannot reasonably service the request.
+
+Scheduling must be supported by real operational logic rather than simply storing a date and time.
+
+⸻
+
+3. THE EXISTING FOUR-STEP JOURNEY
+
+First, inspect the current four steps in the existing application.
+
+Do not rename, rearrange, merge, remove, or redesign the steps without a compelling technical or usability reason.
+
+Treat the existing four-step flow as the foundation.
+
+For each step, identify:
+
+* Its current purpose.
+* Its current inputs.
+* Its required inputs.
+* Its optional inputs.
+* Its validation rules.
+* Its existing backend connections.
+* Its missing business logic.
+* Its error states.
+* Its loading states.
+* Its interactions.
+* Its data passed to the next step.
+
+Ensure information entered in previous steps remains available when navigating backward and forward.
+
+Prevent unnecessary loss of user data when:
+
+* A customer goes back to a previous step.
+* A validation error occurs.
+* A modal is opened and closed.
+* The customer changes a vehicle.
+* The customer changes a time slot.
+* A pricing calculation is refreshed.
+* The application temporarily loses connectivity.
+
+The four steps must form one coherent transaction workflow rather than four disconnected screens.
+
+⸻
+
+4. PICKUP AND DESTINATION VALIDATION
+
+The scheduled delivery system must validate pickup and delivery locations before allowing a reservation to proceed.
+
+Address requirements
+
+Validate, as applicable:
+
+* Pickup address.
+* Delivery address.
+* City.
+* Service zone.
+* Geographic coordinates.
+* Address accuracy.
+* Location availability.
+* Whether the pickup location is within ROVA’s operational coverage.
+* Whether the destination is within the supported delivery coverage.
+* Whether the selected vehicle can access the relevant locations.
+* Whether the route is operationally feasible.
+
+Use the existing map and address integration.
+
+Do not replace the map provider without justification.
+
+Address interactions
+
+If the current interface supports address selection, preserve it.
+
+Add contextual interactions only where necessary, such as:
+
+* Selecting a saved address.
+* Editing an address.
+* Confirming an ambiguous address.
+* Correcting a location that cannot be verified.
+* Selecting a location directly on the map if this capability already exists or is genuinely needed.
+
+Do not force customers to repeat information unnecessarily.
+
+Validation
+
+Do not allow a scheduled delivery to proceed if:
+
+* Pickup is missing.
+* Destination is missing.
+* The locations are identical when the service requires distinct locations.
+* The route is outside the supported service area.
+* The route cannot be calculated and the system cannot safely price or validate it.
+* The selected service cannot operate on the requested route.
+
+Provide clear, actionable explanations rather than generic error messages.
+
+⸻
+
+5. SCHEDULE ENGINE
+
+Scheduling is one of the most important components of this feature.
+
+The system must support future delivery requests without creating impossible commitments.
+
+Date selection
+
+Implement or improve the existing date selector while preserving its design.
+
+Scheduling rules must be configurable.
+
+Potential configuration parameters include:
+
+* Minimum scheduling lead time.
+* Maximum scheduling horizon.
+* Available operating days.
+* Operating hours.
+* Holidays.
+* Special operating days.
+* City-specific scheduling policies.
+* Vehicle-specific scheduling policies.
+* Zone-specific scheduling restrictions.
+
+Do not hardcode arbitrary scheduling limits throughout the frontend.
+
+Scheduling limits must be controlled by the backend or a central configuration system.
+
+The system must prevent the customer from selecting:
+
+* Past dates.
+* Dates outside the supported booking horizon.
+* Dates on which the service is unavailable.
+* Dates with no operational capacity.
+* Invalid dates.
+* Unsupported times.
+
+The frontend must reflect the availability rules returned by the backend.
+
+Time selection
+
+The system must distinguish:
+
+* The customer’s requested pickup time.
+* The confirmed pickup time or pickup window.
+* The estimated courier arrival time.
+* The scheduled delivery completion estimate.
+
+These are not interchangeable.
+
+If ROVA uses pickup windows rather than exact pickup times, communicate this clearly to the customer.
+
+For example, a customer may request 10:00 AM and receive a confirmed pickup window of 10:00–10:20 AM, if the system supports such a policy.
+
+This example is illustrative. Do not hardcode this window.
+
+Pickup windows must be configurable and based on operational capabilities.
+
+Timezone
+
+Store scheduled timestamps in a reliable timezone-aware format.
+
+Use the correct local timezone for the city in which the delivery will take place.
+
+Do not assume that the customer’s device timezone is the delivery timezone.
+
+Prevent timezone conversion errors, especially for:
+
+* Booking confirmation.
+* Calendar displays.
+* Scheduled dispatch.
+* Notifications.
+* Admin operations.
+* Courier assignments.
+
+⸻
+
+6. REAL AVAILABILITY ENGINE
+
+The application must not present availability as real when it is merely a static list of hours.
+
+Availability should be calculated using real operational data when available.
+
+Consider:
+
+* Active couriers.
+* Couriers scheduled to work.
+* Courier availability.
+* Courier locations.
+* Vehicle compatibility.
+* Vehicle availability.
+* Existing delivery assignments.
+* Existing scheduled reservations.
+* Expected completion time of existing deliveries.
+* Travel time to the next pickup.
+* Geographic zones.
+* Operating hours.
+* Capacity per scheduling interval.
+* Safety buffers.
+* Vehicle-specific constraints.
+* Demand levels when real demand data exists.
+
+Availability response
+
+For each requested scheduling interval, the system should be able to determine:
+
+* Whether the interval is bookable.
+* Whether sufficient capacity exists.
+* Which vehicle types are eligible.
+* Whether the interval is restricted.
+* Whether the interval is full.
+* Whether a temporary capacity limit applies.
+* Whether the slot can still be booked.
+
+The customer-facing interface must only show slots that the backend considers eligible.
+
+Important
+
+Do not fabricate availability.
+
+If availability cannot be verified, the system must either:
+
+* Clearly indicate that availability cannot currently be confirmed.
+* Retry safely.
+* Offer another valid scheduling option.
+
+Do not silently allow a reservation that the backend cannot support.
+
+⸻
+
+7. CAPACITY PROTECTION & RESERVATION ENGINE
+
+A customer selecting a date and time does not automatically mean that capacity is reserved.
+
+The system must distinguish between:
+
+* Viewing availability.
+* Selecting a slot.
+* Temporarily holding capacity.
+* Completing payment.
+* Confirming the reservation.
+* Releasing capacity.
+
+Reservation workflow
+
+Implement a reliable reservation lifecycle.
+
+A recommended sequence:
+
+1. Customer selects a valid date and time.
+2. Backend revalidates availability.
+3. Backend calculates the reservation requirements.
+4. A temporary reservation or capacity hold is created if appropriate.
+5. The hold receives an expiration time.
+6. Customer completes payment.
+7. Payment is verified server-side.
+8. The reservation is confirmed.
+9. Capacity is committed.
+10. Customer receives confirmation.
+
+If payment fails, is abandoned, or expires:
+
+* The temporary reservation must expire safely.
+* Capacity must be released.
+* The system must not leave abandoned holds indefinitely.
+* Duplicate payment attempts must not create duplicate reservations.
+
+Concurrency
+
+Two customers must not be able to reserve the same remaining capacity simultaneously if doing so would exceed the configured limit.
+
+Use appropriate database transactions, locking, unique constraints, atomic operations, or another reliable concurrency strategy.
+
+Never rely exclusively on frontend validation for reservation integrity.
+
+Reservation expiration
+
+Temporary holds must:
+
+* Have a defined expiration.
+* Be handled by a reliable backend process.
+* Be released when expired.
+* Be protected against delayed or duplicate processing.
+* Be visible to operational monitoring when necessary.
+
+⸻
+
+8. VEHICLE SELECTION ENGINE
+
+The vehicle selection step must be connected to actual ROVA vehicle definitions and operational rules.
+
+The system must support vehicle types appropriate to ROVA’s markets, without assuming that every vehicle is available in every city.
+
+Vehicle eligibility must consider:
+
+* Vehicle category.
+* Maximum weight.
+* Capacity.
+* Package dimensions, where applicable.
+* Delivery route.
+* Pickup and destination access.
+* Availability.
+* Scheduling requirements.
+* Additional handling requirements.
+* Service restrictions.
+
+Vehicle information
+
+Use the existing ROVA vehicle interface.
+
+Where information is available, customers should be able to understand:
+
+* Vehicle type.
+* Capacity.
+* Suitable cargo.
+* Size or cargo characteristics.
+* Estimated delivery time.
+* Pricing.
+* Additional service requirements.
+
+Do not invent specifications.
+
+Do not show a vehicle as selectable if the backend determines it is incompatible with the delivery.
+
+Vehicle availability
+
+The selected vehicle category must be available for the requested scheduling period and service zone.
+
+Vehicle availability must not be treated as a static property.
+
+A vehicle can be:
+
+* Active.
+* Available.
+* Assigned.
+* On a delivery.
+* Reserved for a future job.
+* Temporarily unavailable.
+* Under maintenance.
+* Disabled.
+
+The system must respect these operational states.
+
+⸻
+
+9. DELIVERY REQUIREMENTS & PACKAGE INFORMATION
+
+Inspect the existing package information step.
+
+Determine which information is required to safely and accurately perform the scheduled delivery.
+
+Possible attributes include:
+
+* Package category.
+* Package description.
+* Quantity.
+* Approximate size.
+* Weight.
+* Fragility.
+* Special handling.
+* Pickup instructions.
+* Delivery instructions.
+* Recipient contact.
+* Sender contact.
+
+Do not introduce every field by default.
+
+Only collect information that is operationally necessary or useful.
+
+Validation
+
+Package requirements must be compatible with the selected vehicle and service.
+
+If the customer enters information that changes vehicle eligibility:
+
+* Explain the incompatibility.
+* Allow the customer to select another compatible vehicle.
+* Recalculate the delivery price if necessary.
+* Preserve the remaining delivery information.
+
+Do not silently change the vehicle or price.
+
+⸻
+
+10. PRICING ENGINE
+
+Scheduled deliveries must use the existing ROVA pricing infrastructure wherever possible.
+
+Inspect how prices are currently calculated.
+
+Do not create a second, disconnected pricing system.
+
+The price calculation should consider applicable factors, such as:
+
+* Pickup location.
+* Destination.
+* Road distance.
+* Estimated route duration.
+* Vehicle type.
+* Package requirements.
+* Additional stops, if supported.
+* Scheduling requirements.
+* City.
+* Service zone.
+* Applicable fees.
+* Discounts.
+* Taxes, where applicable.
+* Operational surcharges, where legitimately configured.
+
+The pricing system must be server-authoritative.
+
+The frontend may display calculated pricing but must not determine the final payable amount independently.
+
+Price recalculation
+
+Recalculate when a price-affecting value changes, including:
+
+* Pickup location.
+* Destination.
+* Vehicle.
+* Delivery date or scheduling conditions, if pricing depends on them.
+* Package characteristics.
+* Additional services.
+* Number of stops, if supported.
+
+If the price changes after the customer has reviewed it:
+
+* Show the updated price.
+* Explain that the price has changed when appropriate.
+* Require the customer to accept the new amount before proceeding.
+
+Do not silently charge a different price.
+
+Price breakdown
+
+If the existing design supports a price detail window, improve it.
+
+If a price detail window does not exist and the breakdown materially improves transparency, introduce a contextual window consistent with the existing design.
+
+Potential breakdown:
+
+* Base delivery charge.
+* Distance charge.
+* Vehicle charge.
+* Additional services.
+* Applicable fees.
+* Discounts.
+* Total.
+
+Only display actual pricing components used by the backend.
+
+⸻
+
+11. CONTEXTUAL WINDOWS & INTERACTIONS
+
+Preserve the existing four-step interface.
+
+Do not introduce unnecessary dialogs.
+
+Inspect the existing flow and determine which interactions genuinely need contextual windows.
+
+Potential windows include:
+
+A. Date selection
+
+Use the existing date selection interaction.
+
+Provide:
+
+* Valid dates.
+* Unavailable dates.
+* Loading state.
+* No availability state.
+* Clear selection.
+* Confirmation of the selected date.
+
+B. Time-slot selection
+
+Display only valid slots returned or confirmed by the scheduling backend.
+
+Where appropriate, communicate:
+
+* Requested pickup time.
+* Pickup window.
+* Availability.
+* Slot restrictions.
+
+Prevent invalid selections.
+
+C. Vehicle details
+
+A contextual window may display vehicle specifications and suitability.
+
+It must be informative without overwhelming the booking flow.
+
+D. Price details
+
+Allow the customer to understand the actual calculated price before confirming.
+
+E. Reservation changes
+
+If a slot becomes unavailable during the booking process, provide a contextual explanation and alternative valid slots.
+
+F. Booking confirmation
+
+After successful server-side reservation and payment verification, display a confirmation containing the actual booking information.
+
+Interaction rules
+
+Every contextual window must have:
+
+* A clear purpose.
+* A consistent ROVA appearance.
+* Correct dismissal behavior.
+* Correct back navigation.
+* State preservation.
+* Loading behavior.
+* Error behavior.
+* Accessible controls.
+* Appropriate mobile behavior.
+
+Avoid opening multiple overlapping dialogs.
+
+Do not use a modal to display information that can be integrated naturally into the existing step.
+
+⸻
+
+12. PAYMENT & BOOKING CONFIRMATION
+
+Inspect and reuse ROVA’s current payment provider and payment architecture.
+
+Do not invent a new payment provider.
+
+Do not simulate successful payments.
+
+Payment integrity
+
+The backend must verify the transaction using the payment provider’s trusted verification method.
+
+A redirect or client-side success message is not proof of payment.
+
+Implement or verify:
+
+* Payment initialization.
+* Correct amount.
+* Correct currency.
+* Reservation reference.
+* Payment reference.
+* Provider verification.
+* Webhook validation.
+* Idempotency.
+* Duplicate payment prevention.
+* Payment failure handling.
+* Expired payment handling.
+* Retry handling.
+* Payment reconciliation where supported.
+
+Booking confirmation
+
+A scheduled delivery must only be marked confirmed when the required conditions have been fulfilled.
+
+The system must clearly distinguish:
+
+* Booking pending.
+* Awaiting payment.
+* Payment processing.
+* Payment failed.
+* Reservation confirmed.
+* Reservation expired.
+* Reservation cancelled.
+
+Do not display a confirmed reservation prematurely.
+
+After confirmation, provide a booking reference and the relevant reservation details.
+
+⸻
+
+13. SCHEDULED DISPATCH ENGINE
+
+A confirmed future delivery does not necessarily have an assigned courier immediately.
+
+ROVA must distinguish between:
+
+* Reservation confirmed.
+* Courier search not started.
+* Courier search in progress.
+* Courier assigned.
+* Courier assignment confirmed.
+* Courier preparing for pickup.
+* Courier en route.
+* Pickup completed.
+* Delivery in progress.
+* Delivery completed.
+
+The system must not tell customers that a courier is assigned when no courier has actually accepted and been assigned.
+
+Assignment timing
+
+Inspect the existing dispatch system.
+
+Determine when scheduled deliveries should enter courier assignment.
+
+Potential strategies:
+
+* Assign in advance where operationally appropriate.
+* Dispatch closer to the scheduled pickup window.
+* Search earlier when the zone or vehicle category has limited capacity.
+* Reassign automatically if a courier cancels.
+* Escalate if no courier is found within the configured assignment deadline.
+
+The timing must be configurable.
+
+Do not assign couriers months or hours in advance without considering the operational consequences.
+
+Assignment eligibility
+
+A courier must meet the requirements of the scheduled delivery.
+
+Consider:
+
+* Courier status.
+* Courier availability.
+* Vehicle.
+* Vehicle capacity.
+* Location.
+* Estimated arrival at pickup.
+* Existing delivery assignments.
+* Schedule conflicts.
+* Expected completion of previous deliveries.
+* Rest or operating constraints where applicable.
+* Service area.
+* Delivery-specific requirements.
+
+Assignment must be atomic.
+
+Two concurrent assignment processes must not assign the same courier to conflicting missions.
+
+⸻
+
+14. COURIER SCHEDULE & CONFLICT PREVENTION
+
+The backend must prevent operational conflicts.
+
+A courier must not receive overlapping deliveries that cannot realistically be completed.
+
+Consider:
+
+* Existing assignments.
+* Scheduled deliveries.
+* Pickup windows.
+* Expected route duration.
+* Expected delivery duration.
+* Travel time between jobs.
+* Vehicle requirements.
+* Geographic distance.
+* Estimated completion.
+* Buffer time.
+* Current operational status.
+
+A courier who is expected to finish one delivery at 10:30 must not automatically become available for another pickup at 10:30 if travel and operational transition time make it impossible.
+
+The availability calculation must be realistic.
+
+Do not create scheduling logic based solely on a courier’s status being “online.”
+
+⸻
+
+15. DELIVERY STATE MANAGEMENT
+
+Inspect the existing delivery, order, reservation, payment, and courier state models.
+
+Do not introduce a second incompatible state system.
+
+If the current architecture mixes unrelated statuses, refactor only when necessary and preserve backward compatibility.
+
+Separate, where appropriate:
+
+Reservation state
+
+* Draft.
+* Pending.
+* Hold.
+* Confirmed.
+* Expired.
+* Cancelled.
+
+Payment state
+
+* Unpaid.
+* Pending.
+* Processing.
+* Paid.
+* Failed.
+* Refunded.
+* Partially refunded.
+
+Assignment state
+
+* Not requested.
+* Searching.
+* Offered.
+* Accepted.
+* Assigned.
+* Rejected.
+* Expired.
+* Reassignment required.
+
+Delivery execution state
+
+* Scheduled.
+* Preparing.
+* Courier en route.
+* Pickup completed.
+* In transit.
+* Delivered.
+* Failed.
+* Cancelled.
+
+These are conceptual states.
+
+Adapt them to the existing application rather than duplicating state fields unnecessarily.
+
+Every important state transition must:
+
+* Be validated by the backend.
+* Have a clear reason.
+* Be timestamped.
+* Be auditable.
+* Avoid duplicate processing.
+* Trigger the appropriate downstream action.
+
+⸻
+
+16. CANCELLATION & MODIFICATION
+
+Scheduled deliveries require carefully defined modification and cancellation rules.
+
+Inspect the existing cancellation system and business policies.
+
+Support, where appropriate:
+
+* Change pickup date.
+* Change pickup time.
+* Change pickup location.
+* Change destination.
+* Change vehicle.
+* Change package details.
+* Cancel reservation.
+
+Changes must trigger the necessary recalculations.
+
+If a change affects:
+
+* Availability.
+* Price.
+* Vehicle eligibility.
+* Courier assignment.
+* Route.
+* Capacity.
+
+Then the backend must revalidate the entire affected reservation.
+
+Do not allow a customer to modify a confirmed reservation in a way that creates an invalid operational state.
+
+Cancellation
+
+Cancellation must depend on the actual booking stage and configured policy.
+
+Consider:
+
+* Reservation not yet confirmed.
+* Confirmed but not assigned.
+* Courier assigned.
+* Courier en route.
+* Pickup completed.
+
+The cancellation policy may affect fees and refunds.
+
+Do not implement a blanket non-refundable policy.
+
+Do not promise refunds before the backend and payment provider confirm the refund.
+
+Display clear cancellation consequences before the customer confirms cancellation.
+
+⸻
+
+17. NOTIFICATIONS
+
+Scheduled deliveries require timely communication.
+
+Reuse the existing ROVA notification infrastructure.
+
+Notifications should be triggered by real backend events, not frontend assumptions.
+
+Potential notifications:
+
+* Reservation created.
+* Payment confirmed.
+* Reservation confirmed.
+* Reservation reminder.
+* Courier assignment confirmed.
+* Courier preparing for pickup.
+* Courier en route.
+* Pickup completed.
+* Delivery in progress.
+* Delivery completed.
+* Pickup delayed.
+* Courier assignment changed.
+* Reservation cancelled.
+* Refund initiated.
+* Refund completed.
+
+Use the notification channels already supported by ROVA.
+
+Do not send duplicate notifications when an event is retried.
+
+Use event identifiers or idempotency mechanisms.
+
+Notification timing must be configurable.
+
+⸻
+
+18. INCIDENT & RECOVERY LOGIC
+
+The scheduled delivery engine must not become stuck when something unexpected happens.
+
+Handle these scenarios:
+
+No courier available
+
+* Continue searching according to the configured policy.
+* Expand the eligible search where operationally safe.
+* Monitor the assignment deadline.
+* Escalate to operations when necessary.
+* Notify the customer if the reservation is at risk.
+* Offer alternative scheduling where appropriate.
+
+Courier cancellation
+
+* Remove or invalidate the previous assignment.
+* Prevent the courier from continuing to appear as assigned.
+* Initiate reassignment.
+* Protect the reservation from duplicate assignments.
+* Notify the customer according to the actual situation.
+
+Courier delay
+
+* Recalculate ETA using available real data.
+* Update the operational state.
+* Notify the customer when the delay is material.
+* Escalate severe delays.
+
+Vehicle unavailable
+
+* Search for compatible alternatives.
+* Do not automatically change the customer’s vehicle without permission if the change affects service, price, or expectations.
+* Offer an alternative where necessary.
+
+Payment failure
+
+* Do not confirm the reservation if payment is required and not verified.
+* Release expired holds.
+* Allow safe retries.
+
+Pickup address problem
+
+* Request a correction.
+* Revalidate the route.
+* Recalculate pricing and eligibility.
+
+Customer unavailable
+
+* Follow the actual delivery failure procedure.
+* Record the incident.
+* Notify relevant parties.
+* Do not mark the delivery complete.
+
+Application or service interruption
+
+* Preserve confirmed reservations.
+* Prevent duplicate processing after recovery.
+* Reconcile payment and booking state.
+* Recover scheduled tasks safely.
+
+⸻
+
+19. ADMIN & OPERATIONS VISIBILITY
+
+Inspect the existing ROVA admin dashboard and operational tools.
+
+Do not redesign the entire admin system.
+
+Add the operational visibility necessary to manage scheduled deliveries.
+
+Operators should be able to identify:
+
+* Scheduled deliveries today.
+* Scheduled deliveries tomorrow.
+* Future reservations.
+* Pending reservations.
+* Unpaid reservations.
+* Confirmed reservations.
+* Reservations without a courier.
+* Reservations awaiting assignment.
+* Assigned couriers.
+* Delayed deliveries.
+* Failed assignments.
+* Cancelled deliveries.
+* Payment issues.
+* Capacity problems.
+* Vehicle availability problems.
+* Operational incidents.
+
+Where appropriate, provide filtering by:
+
+* City.
+* Date.
+* Zone.
+* Vehicle.
+* Status.
+* Courier.
+* Customer.
+* Reservation reference.
+
+Operators must be able to inspect the reservation details and understand why the system made a scheduling or assignment decision.
+
+Operational actions
+
+Implement only actions supported by the existing permissions and architecture.
+
+Potential actions:
+
+* Assign courier.
+* Reassign courier.
+* Cancel reservation.
+* Reschedule.
+* Change vehicle.
+* Contact customer.
+* Contact courier.
+* Resolve incident.
+* Mark a reservation for manual review.
+
+Sensitive operational actions must require appropriate permissions.
+
+Record administrative actions in an audit log.
+
+⸻
+
+20. CITY & SERVICE CONFIGURATION
+
+The Scheduled Delivery system must not be tied to a single city.
+
+Scheduling and availability must respect the city in which the service operates.
+
+Configuration should support, where relevant:
+
+* City.
+* Country.
+* Timezone.
+* Operating hours.
+* Service zones.
+* Supported vehicle types.
+* Scheduling lead time.
+* Booking horizon.
+* Pickup windows.
+* Capacity limits.
+* Reservation rules.
+* Pricing configuration.
+* Cancellation policy.
+* Assignment policy.
+* Special days.
+* Temporary operational restrictions.
+
+Do not create unnecessary configuration complexity.
+
+Implement a clean structure that allows ROVA to expand to additional cities without rewriting the scheduling engine.
+
+Do not assume that all countries use the same:
+
+* Currency.
+* Timezone.
+* Vehicle types.
+* Payment methods.
+* Operating hours.
+* Service policies.
+
+⸻
+
+21. DATABASE & BACKEND INTEGRITY
+
+Inspect the existing database before proposing migrations.
+
+Use the existing database architecture and conventions.
+
+Determine whether existing tables can be extended safely.
+
+Avoid duplicate tables representing the same concept.
+
+If changes are needed, implement clean migrations.
+
+The database must support the required relationships between:
+
+* Customers.
+* Deliveries.
+* Reservations.
+* Pickup and delivery locations.
+* Vehicles.
+* Couriers.
+* Assignments.
+* Pricing records.
+* Payments.
+* Payment events.
+* Scheduling slots or capacity.
+* Notifications.
+* Incidents.
+* Audit logs.
+
+Integrity requirements
+
+Use appropriate:
+
+* Foreign keys.
+* Unique constraints.
+* Check constraints.
+* Indexes.
+* Transactions.
+* Atomic updates.
+* Server-side validation.
+* Access control.
+* Idempotency keys.
+
+Never trust client-submitted:
+
+* Prices.
+* Reservation status.
+* Payment status.
+* Availability.
+* Vehicle eligibility.
+* Courier assignment.
+* Delivery completion.
+
+The backend must remain authoritative.
+
+⸻
+
+22. API & DATA FLOW
+
+Inspect the existing API before creating new endpoints.
+
+Reuse existing services, endpoints, functions, and patterns whenever possible.
+
+The system must have clear responsibilities for:
+
+* Fetching availability.
+* Validating delivery details.
+* Calculating price.
+* Creating temporary reservation holds.
+* Confirming reservations.
+* Initializing payment.
+* Verifying payment.
+* Modifying reservations.
+* Cancelling reservations.
+* Retrieving booking details.
+* Retrieving delivery status.
+* Retrieving tracking information.
+* Managing courier assignment.
+* Releasing expired holds.
+
+Avoid creating unnecessary endpoints.
+
+Ensure APIs return structured, predictable responses.
+
+Handle:
+
+* Validation errors.
+* Availability changes.
+* Price changes.
+* Expired reservations.
+* Unauthorized actions.
+* Payment failures.
+* Network failures.
+* Rate limits.
+* Unexpected server errors.
+
+The frontend must not be responsible for implementing critical business rules.
+
+⸻
+
+23. BACKGROUND JOBS & AUTOMATION
+
+Scheduled deliveries require reliable backend tasks.
+
+Inspect whether ROVA already has a scheduling, cron, queue, or background processing system.
+
+Reuse it if suitable.
+
+Potential background tasks:
+
+* Expiring reservation holds.
+* Releasing capacity.
+* Sending reservation reminders.
+* Preparing courier assignment.
+* Starting scheduled dispatch.
+* Detecting overdue assignment.
+* Detecting delayed pickup.
+* Recalculating affected reservations.
+* Processing payment reconciliation.
+* Recovering interrupted operations.
+
+Background tasks must be:
+
+* Reliable.
+* Idempotent.
+* Observable.
+* Retryable.
+* Protected against duplicate execution.
+* Capable of recovering from temporary failures.
+
+Do not rely on the customer keeping the app open for a scheduled delivery to be processed.
+
+Do not rely on a frontend timer to trigger critical reservations or dispatch.
+
+⸻
+
+24. SECURITY & CUSTOMER DATA
+
+Protect customer, courier, and operational information.
+
+Ensure:
+
+* Customers can only access their own reservations.
+* Customers cannot modify another customer’s booking.
+* Couriers only access the assignments permitted to them.
+* Administrative actions are permission-controlled.
+* Payment information is not exposed.
+* Personal contact details are appropriately protected.
+* Backend credentials are not exposed to the client.
+* Webhooks are validated.
+* Sensitive changes are logged.
+* API access is authenticated and authorized.
+
+Review the existing Row Level Security policies if ROVA uses Supabase.
+
+Do not disable existing security policies to make functionality work.
+
+Do not introduce overly permissive policies.
+
+⸻
+
+25. ERROR, LOADING & EMPTY STATES
+
+The current design must remain visually consistent while supporting real states.
+
+Implement appropriate states for:
+
+* Loading availability.
+* Loading pricing.
+* Calculating route.
+* No available slots.
+* No compatible vehicles.
+* Invalid address.
+* Unsupported zone.
+* Price recalculation.
+* Slot expiration.
+* Reservation hold expiration.
+* Payment processing.
+* Payment failure.
+* Booking confirmation.
+* Network interruption.
+* Server failure.
+* Cancellation.
+* Rescheduling.
+
+Every failure must provide a useful next action whenever possible.
+
+Avoid generic errors such as “Something went wrong” when the actual reason can be safely communicated.
+
+Never leave a user stuck on a loading screen indefinitely.
+
+⸻
+
+26. PERFORMANCE & RELIABILITY
+
+Optimize the scheduling experience without sacrificing correctness.
+
+Avoid:
+
+* Excessive repeated API requests.
+* Unnecessary availability recalculations.
+* Expensive queries for every date.
+* Duplicate payment requests.
+* Duplicate reservations.
+* Duplicate dispatch jobs.
+* Uncontrolled polling.
+* Stale availability presented as guaranteed.
+
+Use appropriate caching only where safe.
+
+Availability cache must not override the authoritative booking check.
+
+Before confirming a reservation, revalidate the slot.
+
+If availability changes during booking, handle it gracefully and offer alternatives.
+
+⸻
+
+27. TESTING REQUIREMENTS
+
+Do not consider this feature complete merely because the UI works.
+
+Test the actual scheduling logic.
+
+Functional tests
+
+Test:
+
+* Successful scheduled delivery.
+* Pickup validation.
+* Destination validation.
+* Vehicle selection.
+* Package validation.
+* Date selection.
+* Time selection.
+* Pricing.
+* Reservation.
+* Payment.
+* Confirmation.
+* Cancellation.
+* Rescheduling.
+* Tracking.
+* Notifications.
+
+Edge cases
+
+Test:
+
+* Slot becomes unavailable during booking.
+* Two customers attempt to book the final slot.
+* Payment succeeds but the client disconnects.
+* Payment webhook arrives more than once.
+* Payment confirmation is delayed.
+* Reservation hold expires.
+* Courier rejects an assignment.
+* Courier cancels after assignment.
+* Courier is already assigned elsewhere.
+* Vehicle becomes unavailable.
+* Pickup is outside service coverage.
+* Destination is outside service coverage.
+* Invalid timezone.
+* Customer changes vehicle after price calculation.
+* Customer changes date after selecting a vehicle.
+* Customer returns to a previous step.
+* Network fails during reservation.
+* Background job executes twice.
+* Background job fails and retries.
+* Booking is cancelled after assignment.
+* Admin modifies a confirmed reservation.
+
+UI tests
+
+Verify:
+
+* Existing four-step flow remains intact.
+* Design has not been unnecessarily changed.
+* Responsive behavior works.
+* Modals and bottom sheets work.
+* Back navigation works.
+* Data is preserved.
+* Validation is clear.
+* Loading states work.
+* Error states work.
+* No duplicate actions occur.
+* Buttons are functional.
+* No fake data appears.
+
+⸻
+
+28. IMPLEMENTATION STRATEGY
+
+Do not attempt to rebuild the entire feature in one uncontrolled change.
+
+Use the following approach.
+
+Phase 1 — Audit
+
+Inspect the existing implementation.
+
+Document:
+
+* Current four-step journey.
+* Existing components.
+* Existing backend.
+* Existing database.
+* Existing payment system.
+* Existing vehicle system.
+* Existing scheduling logic.
+* Existing availability logic.
+* Existing courier assignment.
+* Existing notifications.
+* Existing admin capabilities.
+* Missing functionality.
+* Risks.
+
+Do not make destructive changes during the audit.
+
+Phase 2 — Core validation & scheduling
+
+Implement the most important scheduling and validation foundations.
+
+Prioritize:
+
+* Address validation.
+* City and zone validation.
+* Date and time validation.
+* Real availability.
+* Vehicle compatibility.
+* Route calculation.
+* Server-side pricing.
+
+Phase 3 — Reservation reliability
+
+Implement:
+
+* Capacity verification.
+* Temporary reservation holds.
+* Expiration.
+* Atomic confirmation.
+* Payment verification.
+* Duplicate prevention.
+* Reservation integrity.
+
+Phase 4 — Scheduled dispatch
+
+Implement:
+
+* Courier eligibility.
+* Future scheduling.
+* Assignment timing.
+* Conflict prevention.
+* Reassignment.
+* Assignment deadlines.
+
+Phase 5 — Customer experience integration
+
+Improve the existing four steps only where necessary.
+
+Add the contextual windows, states, explanations, and interactions needed to make the feature reliable.
+
+Preserve the approved design.
+
+Phase 6 — Operations integration
+
+Ensure administrators can identify and manage scheduled reservations, assignment problems, delays, and incidents.
+
+Phase 7 — Testing & production readiness
+
+Run functional, integration, security, concurrency, and UI tests.
+
+Fix actual issues.
+
+Document any limitations that cannot be resolved without external services, credentials, or operational data.
+
+⸻
+
+29. STRICTLY FORBIDDEN
+
+Do not:
+
+* Redesign the ROVA interface.
+* Rebuild the four-step flow from scratch.
+* Change the approved visual direction.
+* Remove existing functionality.
+* Replace the existing backend without justification.
+* Replace the payment provider.
+* Invent availability.
+* Invent couriers.
+* Invent vehicle inventory.
+* Invent prices.
+* Invent delivery estimates.
+* Simulate successful reservations.
+* Simulate payments.
+* Display fake booking confirmations.
+* Use static time slots as real availability.
+* Hardcode operational assumptions throughout the codebase.
+* Bypass backend validation.
+* Create duplicate delivery records.
+* Create duplicate reservations.
+* Create duplicate payment records.
+* Assign the same courier to conflicting jobs.
+* Mark a booking as confirmed before it is actually confirmed.
+* Mark a courier as assigned before assignment is actually completed.
+* Expose sensitive customer information.
+* Disable database security policies to simplify implementation.
+* Add unnecessary UI components.
+* Add unnecessary modals.
+* Add filler content.
+* Introduce mock data into production.
+* Leave buttons or controls non-functional.
+* Hide errors without handling them.
+* Claim the system is production-ready without testing.
+
+⸻
+
+30. DEFINITION OF DONE
+
+The Scheduled Delivery feature is considered complete only when:
+
+* The existing four-step experience remains recognizable and intact.
+* The customer can complete a valid scheduled delivery.
+* Addresses are validated.
+* Dates and times are validated.
+* Availability is real or explicitly identified as unverified.
+* Vehicle selection is operationally compatible.
+* Pricing is calculated by the backend.
+* Price changes are handled transparently.
+* Reservations are protected against concurrency.
+* Temporary holds expire safely.
+* Payment is verified server-side.
+* Duplicate reservations are prevented.
+* Duplicate payments are prevented.
+* Reservation status is accurate.
+* Courier assignment is separate from reservation confirmation.
+* Courier conflicts are prevented.
+* Scheduled dispatch works independently of the customer app.
+* Notifications are based on actual backend events.
+* Cancellation and rescheduling follow configured policies.
+* Operational teams can see relevant scheduled delivery problems.
+* The system handles failures and retries.
+* Security policies remain intact.
+* Existing functionality has not been broken.
+* The implementation has been tested.
+* No fake data or fake success states remain.
+
+⸻
+
+FINAL INSTRUCTION
+
+Start by auditing the existing ROVA Scheduled Delivery implementation and its four-step journey.
+
+Do not begin with a redesign.
+
+Do not begin by creating new tables or services without understanding the existing architecture.
+
+Identify what already exists, what can be reused, what must be corrected, and what genuinely needs to be added.
+
+Then implement the necessary improvements progressively.
+
+The objective is to make ROVA’s scheduled delivery system reliable, intelligent, operationally realistic, and ready to scale across cities while preserving the current approved UI and user experience.
+
+Improve what exists. Add what is necessary. Preserve what already works. Never fabricate functionality.

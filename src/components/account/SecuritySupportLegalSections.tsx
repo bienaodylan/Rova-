@@ -102,7 +102,7 @@ export function SecuritySection() {
       </div>
 
       {!firebaseUser ? (
-        <div className="py-8 space-y-3 border-b border-neutral-200/70">
+        <div className="rounded-3xl border border-[#E5E5E5] bg-white p-6 space-y-3">
           <p className="text-sm text-neutral-600">
             {t('Connectez-vous pour gérer la sécurité de votre compte.', 'Sign in to manage account security.')}
           </p>
@@ -115,7 +115,7 @@ export function SecuritySection() {
           </button>
         </div>
       ) : (
-        <div className="divide-y divide-neutral-200/70 border-b border-neutral-200/70">
+        <div className="rounded-3xl border border-[#E5E5E5] bg-white divide-y divide-neutral-200/70 px-5">
           {/* Authentication Method & Verification */}
           <div className="py-5 flex flex-wrap items-center justify-between gap-4">
             <div className="space-y-0.5">
@@ -149,8 +149,8 @@ export function SecuritySection() {
                       'Receive a secure email link to set a new password.'
                     )
                   : t(
-                      `Votre accès est protégé directement par ${providerLabels.join(' / ') || 'votre fournisseur SSO'}. Aucun mot de passe ROVA distinct n’est requis.`,
-                      `Your sign-in is secured directly by ${providerLabels.join(' / ') || 'your SSO provider'}. No separate ROVA password is needed.`
+                      `Votre accès est protégé directement par ${providerLabels.join(' / ') || 'votre fournisseur SSO'}. Aucun mot de passe Rovia distinct n’est requis.`,
+                      `Your sign-in is secured directly by ${providerLabels.join(' / ') || 'your SSO provider'}. No separate Rovia password is needed.`
                     )}
               </p>
             </div>
@@ -194,8 +194,8 @@ export function SecuritySection() {
             </p>
             <p className="text-xs text-neutral-500 leading-relaxed max-w-2xl">
               {t(
-                'Les liens de suivi destinataires sont strictement isolés : ils n’exposent ni vos autres commandes, ni votre carnet d’adresses, ni vos informations de facturation. Les codes OTP de remise et coordonnées GPS sont protégés par les règles d’accès serveur ROVA.',
-                'Recipient tracking links are strictly isolated: they never expose your other orders, saved addresses, or billing records. Delivery OTP codes and GPS coordinates are enforced by ROVA server access rules.'
+                'Les liens de suivi destinataires sont strictement isolés : ils n’exposent ni vos autres commandes, ni votre carnet d’adresses, ni vos informations de facturation. Les codes OTP de remise et coordonnées GPS sont protégés par les règles d’accès serveur Rovia.',
+                'Recipient tracking links are strictly isolated: they never expose your other orders, saved addresses, or billing records. Delivery OTP codes and GPS coordinates are enforced by Rovia server access rules.'
               )}
             </p>
           </div>
@@ -262,12 +262,12 @@ export function SecuritySection() {
         }
       >
         <div className="space-y-4">
-          <div className="flex items-start gap-2.5 p-3.5 rounded-xl bg-red-50 border border-red-200 text-xs text-red-800">
+          <div className="flex items-start gap-2.5 p-3.5 rounded-2xl bg-red-50 border border-red-200 text-xs text-red-800">
             <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
             <p className="leading-relaxed">
               {t(
-                'Cette action transmet une demande irréversible de clôture de votre compte ROVA et ferme immédiatement votre session.',
-                'This submits a permanent ROVA account closure request and immediately signs you out.'
+                'Cette action transmet une demande irréversible de clôture de votre compte Rovia et ferme immédiatement votre session.',
+                'This submits a permanent Rovia account closure request and immediately signs you out.'
               )}
             </p>
           </div>
@@ -280,7 +280,7 @@ export function SecuritySection() {
               value={deleteConfirmText}
               onChange={(e) => setDeleteConfirmText(e.target.value)}
               placeholder="SUPPRIMER"
-              className="w-full rounded-xl border border-neutral-300 px-3.5 py-2.5 text-sm font-mono focus:outline-none focus:border-red-600"
+              className="w-full rounded-2xl border border-neutral-300 px-3.5 py-2.5 text-sm font-mono focus:outline-none focus:border-red-600"
             />
           </div>
         </div>
@@ -336,24 +336,24 @@ export function SupportSection() {
         </h2>
         <p className="text-xs text-neutral-500 mt-1">
           {t(
-            'Centre d’aide, questions fréquentes et contact direct avec les opérations ROVA.',
-            'Help center, frequently asked questions, and direct ROVA Operations support.'
+            'Centre d’aide, questions fréquentes et contact direct avec les opérations Rovia.',
+            'Help center, frequently asked questions, and direct Rovia Operations support.'
           )}
         </p>
       </div>
 
       {/* Direct Support Actions */}
-      <div className="divide-y divide-neutral-200/70 border-b border-neutral-200/70">
+      <div className="rounded-3xl border border-[#E5E5E5] bg-white divide-y divide-neutral-200/70 overflow-hidden">
         <button
           type="button"
           onClick={() => openSupportSheet()}
-          className="w-full py-4 px-1 text-left flex items-center justify-between gap-4 hover:bg-neutral-100/60 transition-colors cursor-pointer"
+          className="w-full py-4 px-5 text-left flex items-center justify-between gap-4 hover:bg-neutral-100/60 transition-colors cursor-pointer"
         >
           <div className="flex items-center gap-3.5 min-w-0">
             <MessageSquare className="w-4 h-4 text-neutral-700 shrink-0" />
             <div className="min-w-0">
               <p className="text-sm font-semibold text-neutral-950">
-                {t('Contacter le support ROVA', 'Contact ROVA support')}
+                {t('Contacter le support Rovia', 'Contact Rovia support')}
               </p>
               <p className="text-xs text-neutral-500 mt-0.5">
                 {t('Une question sur votre compte, un tarif ou une commande en cours.', 'Questions about your account, pricing, or an active order.')}
@@ -366,7 +366,7 @@ export function SupportSection() {
         <button
           type="button"
           onClick={() => openSupportSheet()}
-          className="w-full py-4 px-1 text-left flex items-center justify-between gap-4 hover:bg-neutral-100/60 transition-colors cursor-pointer"
+          className="w-full py-4 px-5 text-left flex items-center justify-between gap-4 hover:bg-neutral-100/60 transition-colors cursor-pointer"
         >
           <div className="flex items-center gap-3.5 min-w-0">
             <HelpCircle className="w-4 h-4 text-red-600 shrink-0" />
@@ -388,7 +388,7 @@ export function SupportSection() {
         <h3 className="text-xs font-mono uppercase tracking-wider text-neutral-500">
           {t('Questions fréquentes', 'Frequently asked questions')}
         </h3>
-        <div className="divide-y divide-neutral-200/70 border-y border-neutral-200/70">
+        <div className="rounded-3xl border border-[#E5E5E5] bg-white divide-y divide-neutral-200/70 px-5">
           {faqs.map((item, idx) => {
             const expanded = openFaq === idx;
             return (
@@ -438,14 +438,14 @@ export function LegalSection({
         </h2>
         <p className="text-xs text-neutral-500 mt-1">
           {t(
-            'Conditions d’utilisation, politique de confidentialité et informations sur ROVA.',
-            'Terms of service, privacy policy, and information about ROVA.'
+            'Conditions d’utilisation, politique de confidentialité et informations sur Rovia.',
+            'Terms of service, privacy policy, and information about Rovia.'
           )}
         </p>
       </div>
 
       {/* Legal Documents */}
-      <div className="divide-y divide-neutral-200/70 border-b border-neutral-200/70">
+      <div className="rounded-3xl border border-[#E5E5E5] bg-white divide-y divide-neutral-200/70 overflow-hidden">
         {[
           {
             id: 'terms' as const,
@@ -459,7 +459,7 @@ export function LegalSection({
           },
           {
             id: 'about' as const,
-            title: t('À propos de ROVA', 'About ROVA'),
+            title: t('À propos de Rovia', 'About Rovia'),
             subtitle: t(`Plateforme logistique urbaine · Région active : ${region.countryName}`, `Urban logistics platform · Active region: ${region.countryName}`),
           },
         ].map((docItem) => (
@@ -467,7 +467,7 @@ export function LegalSection({
             key={docItem.id}
             type="button"
             onClick={() => setActiveDoc(docItem.id)}
-            className="w-full py-4 px-1 text-left flex items-center justify-between gap-4 hover:bg-neutral-100/60 transition-colors cursor-pointer"
+            className="w-full py-4 px-5 text-left flex items-center justify-between gap-4 hover:bg-neutral-100/60 transition-colors cursor-pointer"
           >
             <div className="min-w-0">
               <p className="text-sm font-semibold text-neutral-950">{docItem.title}</p>
@@ -478,12 +478,12 @@ export function LegalSection({
         ))}
       </div>
 
-      {/* Dedicated ROVA Workspaces (Preserved cleanly without clutter) */}
+      {/* Dedicated Rovia Workspaces (Preserved cleanly without clutter) */}
       <div className="space-y-2">
         <h3 className="text-xs font-mono uppercase tracking-wider text-neutral-500">
-          {t('Autres espaces ROVA', 'Other ROVA workspaces')}
+          {t('Autres espaces Rovia', 'Other Rovia workspaces')}
         </h3>
-        <div className="divide-y divide-neutral-200/70 border-y border-neutral-200/70">
+        <div className="rounded-3xl border border-[#E5E5E5] bg-white divide-y divide-neutral-200/70 overflow-hidden">
           {[
             {
               id: 'driver' as const,
@@ -504,7 +504,7 @@ export function LegalSection({
                 key={ws.id}
                 type="button"
                 onClick={() => onOpenWorkspace(ws.id)}
-                className="w-full py-4 px-1 text-left flex items-center justify-between gap-4 hover:bg-neutral-100/60 transition-colors cursor-pointer"
+                className="w-full py-4 px-5 text-left flex items-center justify-between gap-4 hover:bg-neutral-100/60 transition-colors cursor-pointer"
               >
                 <div className="flex items-center gap-3.5 min-w-0">
                   <Icon className="w-4 h-4 text-neutral-600 shrink-0" />
@@ -530,7 +530,7 @@ export function LegalSection({
             ? t('Conditions générales d’utilisation', 'Terms of Service')
             : activeDoc === 'privacy'
             ? t('Politique de confidentialité', 'Privacy Policy')
-            : t('À propos de ROVA', 'About ROVA')
+            : t('À propos de Rovia', 'About Rovia')
         }
       >
         <div className="space-y-4 text-xs text-neutral-600 leading-relaxed">
@@ -538,8 +538,8 @@ export function LegalSection({
             <>
               <p>
                 {t(
-                  'ROVA met en relation les expéditeurs, commerçants et livreurs partenaires pour l’acheminement de colis et la réservation de véhicules dédiés.',
-                  'ROVA connects senders, merchants, and partner drivers for parcel delivery and dedicated vehicle bookings.'
+                  'Rovia met en relation les expéditeurs, commerçants et livreurs partenaires pour l’acheminement de colis et la réservation de véhicules dédiés.',
+                  'Rovia connects senders, merchants, and partner drivers for parcel delivery and dedicated vehicle bookings.'
                 )}
               </p>
               <p>
@@ -561,8 +561,8 @@ export function LegalSection({
             <>
               <p>
                 {t(
-                  'ROVA collecte uniquement les données nécessaires à l’exécution des livraisons : identité, coordonnées de contact, adresses de collecte/livraison, positions GPS lors des courses actives et preuves de remise.',
-                  'ROVA collects only the information needed to fulfill deliveries: account identity, contact details, pickup/drop-off addresses, active trip GPS positions, and handover proofs.'
+                  'Rovia collecte uniquement les données nécessaires à l’exécution des livraisons : identité, coordonnées de contact, adresses de collecte/livraison, positions GPS lors des courses actives et preuves de remise.',
+                  'Rovia collects only the information needed to fulfill deliveries: account identity, contact details, pickup/drop-off addresses, active trip GPS positions, and handover proofs.'
                 )}
               </p>
               <p>
@@ -576,7 +576,7 @@ export function LegalSection({
 
           {activeDoc === 'about' && (
             <>
-              <p className="font-display text-sm font-bold text-neutral-950">ROVA Logistics Platform</p>
+              <p className="font-display text-sm font-bold text-neutral-950">Rovia Logistics Platform</p>
               <p>
                 {t(
                   'Infrastructure de livraison urbaine et de gestion de tournées conçue pour les clients, commerçants et livreurs.',

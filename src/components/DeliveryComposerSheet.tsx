@@ -376,7 +376,7 @@ export function DeliveryComposerSheet() {
       : t('Nouvelle livraison', 'New delivery');
 
   const inputClass =
-    'w-full rounded-xl bg-white border border-[#E5E5E5] px-3.5 py-2.5 text-sm text-[#171717] placeholder:text-[#777777] focus:outline-none focus:border-[#171717] transition-colors';
+    'w-full rounded-2xl bg-white border border-[#E5E5E5] px-4 py-2.5 text-sm text-[#171717] placeholder:text-[#777777] focus:outline-none focus:border-[#171717] transition-colors';
 
   return (
     <>
@@ -395,17 +395,24 @@ export function DeliveryComposerSheet() {
                 onClick={() =>
                   setDraft((p) => ({ ...p, step: Math.max(1, p.step - 1) as DeliveryDraftStep }))
                 }
-                className="min-h-[44px] inline-flex items-center gap-1.5 px-4 rounded-xl border border-[#E5E5E5] text-sm font-medium text-[#171717] hover:border-[#171717] transition-colors cursor-pointer"
+                className="min-h-[46px] inline-flex items-center gap-1.5 px-5 rounded-full border border-[#E5E5E5] bg-white text-sm font-semibold text-[#171717] hover:border-[#171717] hover:bg-[#F3F3F3]/60 transition-colors cursor-pointer whitespace-nowrap"
               >
                 <ArrowLeft className="w-4 h-4" />
                 <span>{t('Retour', 'Back')}</span>
               </button>
             ) : (
-              <div className="text-xs text-[#777777]">
-                {routeDistanceKm > 0 && (
-                  <span className="font-mono tabular-nums">
-                    {routeDistanceKm.toFixed(1)} km · ~{routeDurationMin} min
-                  </span>
+              <div className="min-w-0">
+                {routeDistanceKm > 0 ? (
+                  <>
+                    <p className="text-[11px] text-[#777777]">{t('Trajet estimé', 'Estimated route')}</p>
+                    <p className="font-mono text-sm font-bold text-[#171717] tabular-nums">
+                      {routeDistanceKm.toFixed(1)} km · ~{routeDurationMin} min
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-xs text-[#777777]">
+                    {t('Tarif calculé selon l’itinéraire', 'Fare calculated by route')}
+                  </p>
                 )}
               </div>
             )}
@@ -417,7 +424,7 @@ export function DeliveryComposerSheet() {
                 onClick={() =>
                   setDraft((p) => ({ ...p, step: Math.min(5, p.step + 1) as DeliveryDraftStep }))
                 }
-                className="min-h-[46px] inline-flex items-center gap-2 px-6 rounded-xl bg-[#171717] text-white text-sm font-semibold hover:bg-neutral-800 disabled:opacity-40 transition-all active:scale-[0.98] cursor-pointer"
+                className="min-h-[46px] inline-flex items-center gap-2 px-6 rounded-full bg-[#171717] text-white text-sm font-semibold hover:bg-neutral-800 disabled:opacity-40 transition-all active:scale-[0.98] cursor-pointer whitespace-nowrap"
               >
                 <span>{t('Continuer', 'Continue')}</span>
                 <ArrowRight className="w-4 h-4" />
@@ -433,7 +440,7 @@ export function DeliveryComposerSheet() {
                     quote?.total ?? getEffectivePricingRule(pricingRules, draft.vehicleCategory).minimumFare
                   )
                 }
-                className="min-h-[48px] inline-flex items-center gap-2 px-6 rounded-xl bg-[#E52B32] text-white text-sm font-semibold hover:bg-[#CC2229] disabled:opacity-40 transition-all active:scale-[0.98] cursor-pointer"
+                className="min-h-[48px] inline-flex items-center gap-2 px-6 rounded-full bg-[#E52B32] text-white text-sm font-semibold hover:bg-[#CC2229] disabled:opacity-40 transition-all active:scale-[0.98] cursor-pointer whitespace-nowrap"
               >
                 {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
                 <span>
@@ -510,26 +517,40 @@ export function DeliveryComposerSheet() {
                 </p>
               </div>
 
-              <LocationSearchField
-                value={draft.pickup.address}
-                center={[draft.pickup.lat, draft.pickup.lng]}
-                placeholder={t(
-                  'Rechercher une adresse, un quartier ou un repère...',
-                  'Search an address, area, or landmark...'
-                )}
-                onSelect={(place) =>
-                  setDraft((p) => ({
-                    ...p,
-                    pickup: {
-                      ...p.pickup,
-                      address: place.shortName || place.displayName,
-                      landmark: place.landmark || p.pickup.landmark,
-                      lat: place.lat,
-                      lng: place.lng,
-                    },
-                  }))
-                }
-              />
+              <div className="space-y-1.5">
+                <label className="block text-xs font-medium text-[#171717]">
+                  {t('Adresse de collecte', 'Pickup address')}
+                </label>
+                <LocationSearchField
+                  value={draft.pickup.address}
+                  center={[draft.pickup.lat, draft.pickup.lng]}
+                  placeholder={t(
+                    'Rechercher une adresse, un quartier ou un repère...',
+                    'Search an address, area, or landmark...'
+                  )}
+                  onChangeText={(text) =>
+                    setDraft((p) => ({
+                      ...p,
+                      pickup: {
+                        ...p.pickup,
+                        address: text,
+                      },
+                    }))
+                  }
+                  onSelect={(place) =>
+                    setDraft((p) => ({
+                      ...p,
+                      pickup: {
+                        ...p.pickup,
+                        address: place.shortName || place.displayName,
+                        landmark: place.landmark || p.pickup.landmark,
+                        lat: place.lat,
+                        lng: place.lng,
+                      },
+                    }))
+                  }
+                />
+              </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
@@ -585,7 +606,7 @@ export function DeliveryComposerSheet() {
                             },
                           }))
                         }
-                        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-[#E5E5E5] bg-white hover:border-[#171717] text-xs font-medium text-[#171717] whitespace-nowrap shrink-0 transition-colors cursor-pointer"
+                        className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full border border-[#E5E5E5] bg-white hover:border-[#171717] text-xs font-medium text-[#171717] whitespace-nowrap shrink-0 transition-colors cursor-pointer"
                       >
                         <Bookmark className="w-3.5 h-3.5 text-[#777777]" />
                         <span>{rec.name}</span>
@@ -618,7 +639,7 @@ export function DeliveryComposerSheet() {
                       type="button"
                       disabled={optimizing}
                       onClick={handleOptimizeRoute}
-                      className="min-h-[36px] inline-flex items-center gap-1.5 px-3 rounded-xl border border-[#E5E5E5] hover:border-[#171717] text-xs font-medium text-[#171717] whitespace-nowrap cursor-pointer disabled:opacity-50"
+                      className="min-h-[36px] inline-flex items-center gap-1.5 px-3.5 rounded-full border border-[#E5E5E5] hover:border-[#171717] text-xs font-medium text-[#171717] whitespace-nowrap cursor-pointer disabled:opacity-50"
                     >
                       {optimizing ? (
                         <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -628,7 +649,7 @@ export function DeliveryComposerSheet() {
                       <span>{t('Optimiser', 'Optimize')}</span>
                     </button>
                   )}
-                  <label className="min-h-[36px] inline-flex items-center gap-1.5 px-3 rounded-xl border border-[#E5E5E5] hover:border-[#171717] text-xs font-medium text-[#777777] hover:text-[#171717] cursor-pointer whitespace-nowrap">
+                  <label className="min-h-[36px] inline-flex items-center gap-1.5 px-3.5 rounded-full border border-[#E5E5E5] hover:border-[#171717] text-xs font-medium text-[#777777] hover:text-[#171717] cursor-pointer whitespace-nowrap">
                     <Upload className="w-3.5 h-3.5" />
                     <span>CSV</span>
                     <input type="file" accept=".csv,text/csv" onChange={handleCsvImport} className="hidden" />
@@ -636,22 +657,30 @@ export function DeliveryComposerSheet() {
                 </div>
               </div>
 
-              <LocationSearchField
-                value={currentStop.address}
-                center={[currentStop.lat, currentStop.lng]}
-                placeholder={t(
-                  `Rechercher la destination #${safeStopIdx + 1}...`,
-                  `Search drop-off location #${safeStopIdx + 1}...`
-                )}
-                onSelect={(place) =>
-                  updateStop(safeStopIdx, {
-                    address: place.shortName || place.displayName,
-                    landmark: place.landmark || currentStop.landmark,
-                    lat: place.lat,
-                    lng: place.lng,
-                  })
-                }
-              />
+              <div className="space-y-1.5">
+                <label className="block text-xs font-medium text-[#171717]">
+                  {draft.stops.length > 1
+                    ? t(`Adresse de destination #${safeStopIdx + 1}`, `Drop-off address #${safeStopIdx + 1}`)
+                    : t('Adresse de livraison', 'Drop-off address')}
+                </label>
+                <LocationSearchField
+                  value={currentStop.address}
+                  center={[currentStop.lat, currentStop.lng]}
+                  placeholder={t(
+                    `Rechercher la destination #${safeStopIdx + 1}...`,
+                    `Search drop-off location #${safeStopIdx + 1}...`
+                  )}
+                  onChangeText={(text) => updateStop(safeStopIdx, { address: text })}
+                  onSelect={(place) =>
+                    updateStop(safeStopIdx, {
+                      address: place.shortName || place.displayName,
+                      landmark: place.landmark || currentStop.landmark,
+                      lat: place.lat,
+                      lng: place.lng,
+                    })
+                  }
+                />
+              </div>
 
               {/* Multi-Stop Tabs */}
               <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
@@ -660,7 +689,7 @@ export function DeliveryComposerSheet() {
                     key={s.id}
                     type="button"
                     onClick={() => setActiveStopIdx(idx)}
-                    className={`min-h-[36px] inline-flex items-center gap-1.5 px-3 rounded-xl text-xs font-medium whitespace-nowrap shrink-0 transition-colors cursor-pointer ${
+                    className={`min-h-[36px] inline-flex items-center gap-1.5 px-3.5 rounded-full text-xs font-medium whitespace-nowrap shrink-0 transition-colors cursor-pointer ${
                       idx === safeStopIdx
                         ? 'bg-[#171717] text-white'
                         : 'bg-[#F3F3F3] text-[#171717] hover:bg-[#E5E5E5]'
@@ -675,7 +704,7 @@ export function DeliveryComposerSheet() {
                 <button
                   type="button"
                   onClick={addStop}
-                  className="min-h-[36px] inline-flex items-center gap-1 px-3 rounded-xl border border-dashed border-[#E5E5E5] hover:border-[#171717] text-xs font-medium text-[#777777] hover:text-[#171717] whitespace-nowrap shrink-0 cursor-pointer"
+                  className="min-h-[36px] inline-flex items-center gap-1 px-3.5 rounded-full border border-dashed border-[#E5E5E5] hover:border-[#171717] text-xs font-medium text-[#777777] hover:text-[#171717] whitespace-nowrap shrink-0 cursor-pointer"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   <span>{t('Ajouter un arrêt', 'Add stop')}</span>
@@ -683,7 +712,7 @@ export function DeliveryComposerSheet() {
               </div>
 
               {/* Recipient Form */}
-              <div className="rounded-2xl border border-[#E5E5E5] p-4 space-y-3 bg-white">
+              <div className="rounded-3xl border border-[#E5E5E5] p-5 space-y-3 bg-white">
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-xs font-semibold text-[#171717]">
                     {t(`Destinataire #${safeStopIdx + 1}`, `Recipient #${safeStopIdx + 1}`)}
@@ -771,7 +800,7 @@ export function DeliveryComposerSheet() {
                             lng: rec.lng,
                           })
                         }
-                        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-[#E5E5E5] bg-white hover:border-[#171717] text-xs font-medium text-[#171717] whitespace-nowrap shrink-0 transition-colors cursor-pointer"
+                        className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full border border-[#E5E5E5] bg-white hover:border-[#171717] text-xs font-medium text-[#171717] whitespace-nowrap shrink-0 transition-colors cursor-pointer"
                       >
                         <MapPin className="w-3.5 h-3.5 text-[#777777]" />
                         <span>{rec.name}</span>
@@ -816,7 +845,7 @@ export function DeliveryComposerSheet() {
                       key={v.id}
                       type="button"
                       onClick={() => setDraft((p) => ({ ...p, vehicleCategory: v.id }))}
-                      className={`w-full text-left px-4 py-3.5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3.5 ${
+                      className={`w-full text-left px-4 py-3.5 rounded-3xl border transition-all cursor-pointer flex items-center justify-between gap-3.5 ${
                         selected
                           ? 'border-[#E52B32] bg-[#FEF2F2]/40 ring-1 ring-[#E52B32]/20'
                           : 'border-[#E5E5E5] bg-white hover:border-[#171717]/40'
@@ -889,11 +918,11 @@ export function DeliveryComposerSheet() {
                 <label className="block text-xs font-medium text-[#171717]">
                   {t('Quand expédier ?', 'Dispatch timing')}
                 </label>
-                <div className="grid grid-cols-2 p-1 rounded-xl bg-[#F3F3F3] gap-1">
+                <div className="grid grid-cols-2 p-1 rounded-full bg-[#F3F3F3] gap-1">
                   <button
                     type="button"
                     onClick={() => setDraft((p) => ({ ...p, timingType: 'instant', scheduledFor: '' }))}
-                    className={`min-h-[40px] rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                    className={`min-h-[40px] rounded-full text-xs font-semibold transition-all cursor-pointer ${
                       draft.timingType === 'instant'
                         ? 'bg-white text-[#171717] shadow-xs'
                         : 'text-[#777777] hover:text-[#171717]'
@@ -904,7 +933,7 @@ export function DeliveryComposerSheet() {
                   <button
                     type="button"
                     onClick={() => setDraft((p) => ({ ...p, timingType: 'scheduled' }))}
-                    className={`min-h-[40px] rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                    className={`min-h-[40px] rounded-full text-xs font-semibold transition-all cursor-pointer ${
                       draft.timingType === 'scheduled'
                         ? 'bg-white text-[#171717] shadow-xs'
                         : 'text-[#777777] hover:text-[#171717]'
@@ -993,7 +1022,7 @@ export function DeliveryComposerSheet() {
                 </div>
 
                 <div className="flex items-end">
-                  <label className="w-full min-h-[44px] flex items-center justify-between px-3.5 py-2.5 rounded-xl border border-[#E5E5E5] bg-[#F3F3F3]/50 cursor-pointer">
+                  <label className="w-full min-h-[44px] flex items-center justify-between px-4 py-2.5 rounded-2xl border border-[#E5E5E5] bg-[#F3F3F3]/50 cursor-pointer">
                     <span className="text-sm font-medium text-[#171717]">
                       {t('Colis fragile', 'Fragile cargo')}
                     </span>
@@ -1031,7 +1060,7 @@ export function DeliveryComposerSheet() {
           {draft.step === 5 && (
             <div className="space-y-5">
               {/* Clean Route Ledger */}
-              <div className="border-y border-[#E5E5E5] divide-y divide-[#E5E5E5]">
+              <div className="rounded-3xl border border-[#E5E5E5] bg-white px-4 divide-y divide-[#E5E5E5]">
                 <div className="py-3.5 flex items-start gap-3">
                   <span className="mt-1.5 w-2.5 h-2.5 rounded-full bg-[#171717] shrink-0" aria-hidden="true" />
                   <div className="min-w-0">
@@ -1087,7 +1116,7 @@ export function DeliveryComposerSheet() {
 
               {/* Geospatial / City-Isolation Rejection Banner */}
               {quoteError && (
-                <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-800 leading-relaxed">
+                <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-800 leading-relaxed">
                   <p className="font-semibold text-red-900">
                     {t('Zone de livraison non desservie', 'Delivery route not supported')}
                   </p>
@@ -1097,7 +1126,7 @@ export function DeliveryComposerSheet() {
 
               {/* Stripe-Clarity Fare Breakdown */}
               {!quoteError && (
-                <div className="rounded-2xl bg-[#F3F3F3]/60 border border-[#E5E5E5] p-4 space-y-2.5">
+                <div className="rounded-3xl bg-[#F3F3F3]/60 border border-[#E5E5E5] p-5 space-y-2.5">
                   <div className="flex items-center justify-between text-xs text-[#777777]">
                     <span>{t('Détail du tarif', 'Fare breakdown')}</span>
                     {quoteMeta && (
@@ -1153,7 +1182,7 @@ export function DeliveryComposerSheet() {
                           key={m.driver.uid}
                           type="button"
                           onClick={() => setDraft((p) => ({ ...p, selectedDriverUid: m.driver.uid }))}
-                          className={`px-3.5 py-2 rounded-xl border text-left text-xs shrink-0 transition-colors cursor-pointer ${
+                          className={`px-4 py-2.5 rounded-2xl border text-left text-xs shrink-0 transition-colors cursor-pointer ${
                             picked
                               ? 'border-[#171717] bg-[#171717] text-white'
                               : 'border-[#E5E5E5] bg-white text-[#171717] hover:border-[#171717]/40'
@@ -1176,7 +1205,7 @@ export function DeliveryComposerSheet() {
                 <button
                   type="button"
                   onClick={() => setPaymentModalOpen(true)}
-                  className="w-full min-h-[60px] px-4 py-3 rounded-2xl border border-[#E5E5E5] hover:border-[#171717] bg-white flex items-center justify-between gap-3 transition-colors cursor-pointer text-left"
+                  className="w-full min-h-[60px] px-4 py-3 rounded-3xl border border-[#E5E5E5] hover:border-[#171717] bg-white flex items-center justify-between gap-3 transition-colors cursor-pointer text-left"
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="w-10 h-10 rounded-xl bg-[#F3F3F3] text-[#171717] flex items-center justify-center shrink-0">

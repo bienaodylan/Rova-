@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <rect x="2" y="2" width="60" height="60" rx="16" fill="#FFFFFF" stroke="#E5E5E5" stroke-width="2.5"/>
+  <!-- Bold geometric R matching Rovia. display wordmark -->
+  <path
+    d="M15 47V17H29.2C36.6 17 41.2 20.9 41.2 26.8C41.2 31.3 38.7 34.4 34.4 35.7L42 47H33.8L27.1 36.7H22.4V47H15ZM22.4 30.7H28.5C31.9 30.7 33.8 29.2 33.8 26.8C33.8 24.4 31.9 23 28.5 23H22.4V30.7Z"
+    fill="#171717"
+  />
+  <!-- Signature Rovia red dot -->
+  <circle cx="48.5" cy="43.5" r="4.5" fill="#E52B32"/>
+</svg>

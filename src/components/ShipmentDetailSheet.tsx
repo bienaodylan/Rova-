@@ -135,7 +135,7 @@ export function ShipmentDetailContent({
         lat: delivery.driverLat,
         lng: delivery.driverLng,
         kind: 'driver',
-        label: delivery.driverName || t('Livreur ROVA', 'ROVA Driver'),
+        label: delivery.driverName || t('Livreur Rovia', 'Rovia Driver'),
       });
     }
     return list;
@@ -172,12 +172,13 @@ export function ShipmentDetailContent({
   return (
     <div className="space-y-6">
       {/* Map-First Operational View */}
-      <div className="overflow-hidden rounded-2xl border border-[#E5E5E5]">
+      <div className="overflow-hidden rounded-3xl border border-[#E5E5E5]">
         <RovaMap
           center={[delivery.pickupLat, delivery.pickupLng]}
           markers={markers}
           routeCoordinates={routeCoords}
           heightClass="h-[230px] sm:h-[260px]"
+          className="rounded-3xl border-0"
         />
       </div>
 
@@ -283,7 +284,7 @@ export function ShipmentDetailContent({
           {t('Itinéraire & destinataires', 'Route & recipients')}
         </h3>
 
-        <div className="border-y border-[#E5E5E5] divide-y divide-[#E5E5E5]">
+        <div className="rounded-3xl border border-[#E5E5E5] bg-white px-4 divide-y divide-[#E5E5E5]">
           <div className="py-3.5 flex items-start gap-3">
             <span className="mt-1.5 w-2.5 h-2.5 rounded-full bg-[#171717] shrink-0" aria-hidden="true" />
             <div className="min-w-0">
@@ -317,7 +318,7 @@ export function ShipmentDetailContent({
                       </p>
                     </div>
                   </div>
-                  <span className="font-mono text-xs font-bold text-[#171717] bg-[#F3F3F3] px-2.5 py-1 rounded-lg shrink-0 tabular-nums">
+                  <span className="font-mono text-xs font-bold text-[#171717] bg-[#F3F3F3] px-3 py-1 rounded-full shrink-0 tabular-nums">
                     OTP {stop.otpCode}
                   </span>
                 </div>
@@ -336,7 +337,7 @@ export function ShipmentDetailContent({
                   {stop.recipientPhone && (
                     <a
                       href={`tel:${stop.recipientPhone}`}
-                      className="min-h-[34px] inline-flex items-center gap-1.5 px-3 rounded-lg border border-[#E5E5E5] hover:border-[#171717] text-xs font-medium text-[#171717] transition-colors"
+                      className="min-h-[34px] inline-flex items-center gap-1.5 px-3.5 rounded-full border border-[#E5E5E5] hover:border-[#171717] text-xs font-medium text-[#171717] transition-colors"
                     >
                       <Phone className="w-3 h-3" />
                       <span>{t('Appeler', 'Call')}</span>
@@ -345,7 +346,7 @@ export function ShipmentDetailContent({
                   <button
                     type="button"
                     onClick={() => onOpenPublicTracking(stop.trackingToken)}
-                    className="min-h-[34px] inline-flex items-center gap-1.5 px-3 rounded-lg bg-[#F3F3F3] hover:bg-[#E5E5E5] text-xs font-medium text-[#171717] transition-colors cursor-pointer"
+                    className="min-h-[34px] inline-flex items-center gap-1.5 px-3.5 rounded-full bg-[#F3F3F3] hover:bg-[#E5E5E5] text-xs font-medium text-[#171717] transition-colors cursor-pointer"
                   >
                     <Eye className="w-3 h-3" />
                     <span>{t('Vue destinataire', 'Recipient view')}</span>
@@ -359,7 +360,7 @@ export function ShipmentDetailContent({
 
       {/* Post-pickup Policy Notice */}
       {isPostPickup && (
-        <div className="rounded-xl border border-[#E5E5E5] bg-[#F3F3F3]/70 px-4 py-3 text-xs text-[#777777] leading-relaxed">
+        <div className="rounded-2xl border border-[#E5E5E5] bg-[#F3F3F3]/70 px-4 py-3 text-xs text-[#777777] leading-relaxed">
           {t(
             'Le colis est déjà pris en charge par le livreur. Contactez le support pour initier un retour expéditeur sécurisé.',
             'Parcel is in courier custody. Contact support to initiate a secure return to sender.'

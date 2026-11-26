@@ -86,7 +86,7 @@ export function SupportSheet() {
       open={supportSheetOpen}
       onClose={closeSupportSheet}
       size="sm"
-      title={t('Support ROVA', 'ROVA Support')}
+      title={t('Support Rovia', 'Rovia Support')}
       subtitle={t(
         'Signalez un incident ou posez une question à notre équipe opérations.',
         'Report an issue or reach our operations support team.'
@@ -100,7 +100,7 @@ export function SupportSheet() {
           <select
             value={category}
             onChange={(e) => setCategory(e.target.value as typeof category)}
-            className="w-full rounded-xl border border-neutral-300 bg-white px-3.5 py-2.5 text-sm focus:outline-none focus:border-neutral-950"
+            className="w-full rounded-2xl border border-neutral-300 bg-white px-4 py-2.5 text-sm focus:outline-none focus:border-neutral-950"
           >
             <option value="delay">{t('Retard ou suivi en cours', 'Delay or active tracking')}</option>
             <option value="failed_delivery">{t('Échec de livraison', 'Failed delivery')}</option>
@@ -121,7 +121,7 @@ export function SupportSheet() {
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder={t('Décrivez votre besoin en quelques mots...', 'Describe how we can help...')}
-            className="w-full rounded-xl border border-neutral-300 px-3.5 py-2.5 text-sm focus:outline-none focus:border-neutral-950"
+            className="w-full rounded-2xl border border-neutral-300 px-4 py-3 text-sm focus:outline-none focus:border-neutral-950"
           />
         </div>
 

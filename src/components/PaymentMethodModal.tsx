@@ -99,7 +99,7 @@ export function PaymentMethodModal({
       }
     >
       <div className="space-y-4">
-        <div className="divide-y divide-[#E5E5E5] border-y border-[#E5E5E5]">
+        <div className="rounded-3xl border border-[#E5E5E5] bg-white overflow-hidden divide-y divide-[#E5E5E5]">
           {PAYMENT_METHODS_EN.map((pm) => {
             const Icon = METHOD_ICONS[pm.id] || CreditCard;
             const isSelected = selected === pm.id;
@@ -118,7 +118,7 @@ export function PaymentMethodModal({
                   onSelect(pm.id);
                   onClose();
                 }}
-                className={`w-full py-4 px-2 -mx-2 rounded-xl text-left flex items-center justify-between gap-3.5 transition-colors cursor-pointer ${
+                className={`w-full py-4 px-4 text-left flex items-center justify-between gap-3.5 transition-colors cursor-pointer ${
                   isSelected ? 'bg-[#F3F3F3]/80' : 'hover:bg-[#F3F3F3]/50'
                 }`}
               >

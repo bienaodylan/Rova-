@@ -146,7 +146,7 @@ export function RovaHomeView({ onNavigateTab }: RovaHomeViewProps) {
         </div>
 
         {/* Dominant Primary Action — Single Focal Dispatch Entry */}
-        <div className="rounded-2xl bg-[#171717] text-white p-5 sm:p-7 flex flex-col sm:flex-row sm:items-center justify-between gap-5">
+        <div className="rounded-[28px] bg-[#171717] text-white p-5 sm:p-7 flex flex-col sm:flex-row sm:items-center justify-between gap-5">
           <div className="space-y-1.5 min-w-0">
             <h2 className="font-display text-lg sm:text-xl font-bold tracking-tight text-white">
               {t('Nouvelle livraison', 'New delivery')}
@@ -162,7 +162,7 @@ export function RovaHomeView({ onNavigateTab }: RovaHomeViewProps) {
           <button
             type="button"
             onClick={() => openComposer('single')}
-            className="min-h-[48px] px-6 rounded-xl bg-[#E52B32] hover:bg-[#CC2229] text-white text-sm font-semibold inline-flex items-center justify-center gap-2.5 transition-all active:scale-[0.98] cursor-pointer whitespace-nowrap shrink-0"
+            className="min-h-[48px] px-6 rounded-full bg-[#E52B32] hover:bg-[#CC2229] text-white text-sm font-semibold inline-flex items-center justify-center gap-2.5 transition-all active:scale-[0.98] cursor-pointer whitespace-nowrap shrink-0"
           >
             <span>{t('Créer une livraison', 'Create delivery')}</span>
             <ArrowRight className="w-4 h-4" />
@@ -170,7 +170,7 @@ export function RovaHomeView({ onNavigateTab }: RovaHomeViewProps) {
         </div>
 
         {/* Secondary Actions — Clean, Restrained Hairline Utility Rows (Not competing hero cards) */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-[#E5E5E5] border border-[#E5E5E5] rounded-2xl bg-white overflow-hidden">
+        <div className="grid grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-[#E5E5E5] border border-[#E5E5E5] rounded-[28px] bg-white overflow-hidden">
           <button
             type="button"
             onClick={openReservationSheet}
@@ -243,12 +243,12 @@ export function RovaHomeView({ onNavigateTab }: RovaHomeViewProps) {
         </div>
 
         {loadingData ? (
-          <div className="border-y border-[#E5E5E5] py-5 space-y-3 animate-pulse">
-            <div className="h-4 w-36 bg-[#F3F3F3] rounded" />
-            <div className="h-3.5 w-72 bg-[#F3F3F3] rounded" />
+          <div className="rounded-3xl border border-[#E5E5E5] bg-white p-5 space-y-3 animate-pulse">
+            <div className="h-4 w-36 bg-[#F3F3F3] rounded-full" />
+            <div className="h-3.5 w-72 bg-[#F3F3F3] rounded-full" />
           </div>
         ) : activeDeliveries.length === 0 ? (
-          <div className="border-y border-[#E5E5E5] py-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="rounded-3xl border border-[#E5E5E5] bg-white px-5 py-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="space-y-1">
               <p className="text-sm font-semibold text-[#171717]">
                 {t('Aucune expédition en cours', 'No active shipments')}
@@ -263,13 +263,13 @@ export function RovaHomeView({ onNavigateTab }: RovaHomeViewProps) {
             <button
               type="button"
               onClick={() => openComposer('single')}
-              className="min-h-[40px] px-4 rounded-xl border border-[#E5E5E5] hover:border-[#171717] text-xs font-semibold text-[#171717] transition-colors whitespace-nowrap self-start sm:self-auto cursor-pointer"
+              className="min-h-[40px] px-5 rounded-full border border-[#E5E5E5] hover:border-[#171717] text-xs font-semibold text-[#171717] transition-colors whitespace-nowrap self-start sm:self-auto cursor-pointer"
             >
               {t('Démarrer une livraison', 'Start a delivery')}
             </button>
           </div>
         ) : (
-          <div className="border-y border-[#E5E5E5] divide-y divide-[#E5E5E5]">
+          <div className="rounded-3xl border border-[#E5E5E5] bg-white overflow-hidden divide-y divide-[#E5E5E5]">
             {activeDeliveries.slice(0, 4).map((del) => {
               const hasLiveGps =
                 typeof del.driverLat === 'number' && typeof del.driverLng === 'number';
@@ -278,7 +278,7 @@ export function RovaHomeView({ onNavigateTab }: RovaHomeViewProps) {
                   key={del.id}
                   type="button"
                   onClick={() => openShipmentDetail(del.id)}
-                  className="w-full py-4 px-2 -mx-2 rounded-xl hover:bg-[#F3F3F3]/60 transition-colors cursor-pointer flex items-center justify-between gap-4 text-left"
+                  className="w-full py-4 px-5 hover:bg-[#F3F3F3]/60 transition-colors cursor-pointer flex items-center justify-between gap-4 text-left"
                 >
                   <div className="flex items-start gap-3.5 min-w-0">
                     <div className="w-10 h-10 rounded-xl bg-[#F3F3F3] flex items-center justify-center shrink-0 mt-0.5">
@@ -335,7 +335,7 @@ export function RovaHomeView({ onNavigateTab }: RovaHomeViewProps) {
                     <span className="hidden sm:inline font-mono text-xs font-semibold text-[#171717] tabular-nums">
                       {formatLocalMoney(del.quotedPrice, del.currency)}
                     </span>
-                    <span className="px-3.5 py-2 rounded-lg bg-[#171717] text-white text-xs font-medium whitespace-nowrap">
+                    <span className="px-4 py-2 rounded-full bg-[#171717] text-white text-xs font-medium whitespace-nowrap">
                       {t('Suivre', 'Track')}
                     </span>
                   </div>
@@ -370,9 +370,9 @@ export function RovaHomeView({ onNavigateTab }: RovaHomeViewProps) {
             </button>
           </div>
 
-          <div className="border-y border-[#E5E5E5] divide-y divide-[#E5E5E5]">
+          <div className="rounded-3xl border border-[#E5E5E5] bg-white overflow-hidden divide-y divide-[#E5E5E5]">
             {upcomingReservations.slice(0, 3).map((res) => (
-              <div key={res.id} className="py-3.5 flex items-center justify-between gap-4">
+              <div key={res.id} className="px-5 py-4 flex items-center justify-between gap-4">
                 <div className="flex items-center gap-3.5 min-w-0">
                   <div className="w-10 h-10 rounded-xl bg-[#F3F3F3] flex items-center justify-center shrink-0">
                     <Calendar className="w-4 h-4 text-[#171717]" />
@@ -431,7 +431,7 @@ export function RovaHomeView({ onNavigateTab }: RovaHomeViewProps) {
                 key={item.label}
                 type="button"
                 onClick={item.onClick}
-                className="min-h-[48px] px-3.5 py-3 rounded-xl bg-[#F3F3F3]/75 hover:bg-[#F3F3F3] text-left flex items-center justify-between gap-2 transition-colors cursor-pointer"
+                className="min-h-[48px] px-4 py-3 rounded-2xl bg-[#F3F3F3]/75 hover:bg-[#F3F3F3] text-left flex items-center justify-between gap-2 transition-colors cursor-pointer"
               >
                 <span className="inline-flex items-center gap-2.5 min-w-0">
                   <Icon className="w-4 h-4 text-[#171717] shrink-0" />
@@ -477,7 +477,7 @@ export function RovaHomeView({ onNavigateTab }: RovaHomeViewProps) {
                   }
                 }}
                 className={`py-3.5 space-y-0.5 ${
-                  n.deliveryId ? 'cursor-pointer hover:bg-[#F3F3F3]/60 -mx-2 px-2 rounded-xl' : ''
+                  n.deliveryId ? 'cursor-pointer hover:bg-[#F3F3F3]/60 -mx-2 px-3 rounded-2xl' : ''
                 }`}
               >
                 <p className="text-sm font-semibold text-[#171717] flex items-center gap-2">

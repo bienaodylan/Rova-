@@ -69,7 +69,7 @@ export function ReservationSheet() {
   };
 
   const inputClass =
-    'w-full rounded-xl bg-white border border-[#E5E5E5] px-3.5 py-2.5 text-sm text-[#171717] placeholder:text-[#777777] focus:outline-none focus:border-[#171717] transition-colors';
+    'w-full rounded-2xl bg-white border border-[#E5E5E5] px-4 py-2.5 text-sm text-[#171717] placeholder:text-[#777777] focus:outline-none focus:border-[#171717] transition-colors';
 
   return (
     <BottomSheet
@@ -88,11 +88,11 @@ export function ReservationSheet() {
             <p className="font-mono text-base font-bold text-[#171717] tabular-nums">{formatLocalMoney(quotedPrice, rule.currency || 'GHS')}</p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            {reservationStep > 1 && <button type="button" onClick={() => setReservationStep((step) => (step - 1) as 1 | 2 | 3)} className="min-h-[46px] rounded-xl border border-[#E5E5E5] px-4 text-sm font-semibold text-[#171717] hover:border-[#171717]">{t('Retour', 'Back')}</button>}
+            {reservationStep > 1 && <button type="button" onClick={() => setReservationStep((step) => (step - 1) as 1 | 2 | 3)} className="min-h-[46px] rounded-full border border-[#E5E5E5] px-5 text-sm font-semibold text-[#171717] hover:border-[#171717] cursor-pointer">{t('Retour', 'Back')}</button>}
             {reservationStep < 3 ? (
-              <button type="button" onClick={() => setReservationStep((step) => (step + 1) as 1 | 2 | 3)} disabled={reservationStep === 2 && (!reservationDate || !startTime || !endTime || endTime <= startTime)} className="min-h-[46px] inline-flex items-center gap-2 rounded-xl bg-[#171717] px-6 text-sm font-semibold text-white hover:bg-neutral-800">{t('Continuer', 'Continue')}</button>
+              <button type="button" onClick={() => setReservationStep((step) => (step + 1) as 1 | 2 | 3)} disabled={reservationStep === 2 && (!reservationDate || !startTime || !endTime || endTime <= startTime)} className="min-h-[46px] inline-flex items-center gap-2 rounded-full bg-[#171717] px-6 text-sm font-semibold text-white hover:bg-neutral-800 cursor-pointer">{t('Continuer', 'Continue')}</button>
             ) : (
-              <button type="submit" form="rova-reservation-form" disabled={busy || !pickupAddress.trim() || !reservationDate || !startTime || !endTime || endTime <= startTime} className="min-h-[46px] inline-flex items-center gap-2 rounded-xl bg-[#E52B32] px-6 text-sm font-semibold text-white hover:bg-[#CC2229] disabled:opacity-40 transition-all active:scale-[0.98] cursor-pointer">
+              <button type="submit" form="rova-reservation-form" disabled={busy || !pickupAddress.trim() || !reservationDate || !startTime || !endTime || endTime <= startTime} className="min-h-[46px] inline-flex items-center gap-2 rounded-full bg-[#E52B32] px-6 text-sm font-semibold text-white hover:bg-[#CC2229] disabled:opacity-40 transition-all active:scale-[0.98] cursor-pointer">
                 {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
                 <span>{t('Confirmer la réservation', 'Confirm reservation')}</span>
               </button>
@@ -121,7 +121,7 @@ export function ReservationSheet() {
                   key={v.id}
                   type="button"
                   onClick={() => setVehicleCategory(v.id)}
-                  className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                  className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer ${
                     active
                       ? 'border-[#E52B32] bg-[#FEF2F2]/40 ring-1 ring-[#E52B32]/20'
                       : 'border-[#E5E5E5] bg-white hover:border-[#171717]/40'
@@ -154,7 +154,7 @@ export function ReservationSheet() {
         <>
         {/* Duration & Schedule */}
         <div className="space-y-3">
-          <div className="grid grid-cols-3 p-1 rounded-xl bg-[#F3F3F3] gap-1">
+          <div className="grid grid-cols-3 p-1 rounded-full bg-[#F3F3F3] gap-1">
             {(
               [
                 { id: 'window', label: t('Créneau', 'Window') },
@@ -166,7 +166,7 @@ export function ReservationSheet() {
                 key={opt.id}
                 type="button"
                 onClick={() => setDurationType(opt.id)}
-                className={`min-h-[38px] rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                className={`min-h-[38px] rounded-full text-xs font-semibold transition-all cursor-pointer ${
                   durationType === opt.id
                     ? 'bg-white text-[#171717] shadow-xs'
                     : 'text-[#777777] hover:text-[#171717]'

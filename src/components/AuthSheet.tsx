@@ -79,7 +79,7 @@ export function AuthSheet({ open, onClose }: AuthSheetProps) {
       open={open}
       onClose={handleClose}
       size="sm"
-      title={t('Connexion à ROVA', 'Sign in to ROVA')}
+      title={t('Connexion à Rovia', 'Sign in to Rovia')}
       subtitle={t(
         'Synchronisez vos expéditions, adresses et suivis en temps réel.',
         'Sync your shipments, saved addresses, and live tracking.'
@@ -87,10 +87,10 @@ export function AuthSheet({ open, onClose }: AuthSheetProps) {
     >
       <div className="space-y-4">
         {/* Brand Identity Header */}
-        <div className="rounded-2xl bg-neutral-50 border border-neutral-200/80 p-4 flex items-center justify-between gap-3">
+        <div className="rounded-3xl bg-neutral-50 border border-neutral-200/80 p-4 flex items-center justify-between gap-3">
           <div className="space-y-0.5">
-            <span className="font-display text-lg font-extrabold tracking-[0.22em] text-neutral-950 inline-flex items-baseline">
-              ROVA<span className="text-red-600 tracking-normal">.</span>
+            <span className="font-display text-lg font-extrabold tracking-tight text-neutral-950 inline-flex items-baseline">
+              Rovia<span className="text-[#E52B32]">.</span>
             </span>
             <p className="text-xs text-neutral-500">
               {t('Accès rapide et sécurisé en un geste', 'Fast, secure one-tap access')}

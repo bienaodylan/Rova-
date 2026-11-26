@@ -306,25 +306,93 @@ export interface PublicTrackingRecord {
   updatedAt?: Timestamp;
 }
 
+export interface ReservationBreakdownItem {
+  code: string;
+  labelFr: string;
+  labelEn: string;
+  amount: number;
+}
+
+export type ReservationLifecycleStatus =
+  | 'draft'
+  | 'hold'
+  | 'pending_payment'
+  | 'confirmed'
+  | 'expired'
+  | 'cancelled';
+
+export type ReservationPaymentStatus =
+  | 'unpaid'
+  | 'pending'
+  | 'processing'
+  | 'authorized'
+  | 'paid'
+  | 'invoiced'
+  | 'failed'
+  | 'refunded'
+  | 'partially_refunded';
+
+export type ReservationAssignmentStatus =
+  | 'not_requested'
+  | 'searching'
+  | 'offered'
+  | 'assigned'
+  | 'reassignment_required'
+  | 'failed';
+
+export type ReservationExecutionStatus =
+  | 'scheduled'
+  | 'preparing'
+  | 'courier_en_route'
+  | 'pickup_completed'
+  | 'in_transit'
+  | 'completed'
+  | 'failed'
+  | 'cancelled';
+
 export interface ReservationRecord {
   id: string;
+  reference?: string;
   businessId?: string;
   merchantUid: string;
   merchantName: string;
+  cityId?: string;
+  cityName?: string;
+  timezone?: string;
   vehicleId?: string;
   vehicleCategory: VehicleCategory;
   driverUid: string;
+  assignedDriverName?: string;
   reservationDate: string;
   startTime: string;
   endTime: string;
+  pickupWindowStart?: string;
+  pickupWindowEnd?: string;
+  serviceEndAt?: string;
   durationType: 'window' | 'hours' | 'full_day';
   pickupAddress: string;
   pickupLat: number;
   pickupLng: number;
+  destinationAddress?: string;
+  destinationLat?: number;
+  destinationLng?: number;
   destinationsSummary?: string;
   cargoRequirements?: string;
+  estimatedWeightKg?: number;
+  fragile?: boolean;
   quotedPrice: number;
   currency: string;
+  pricingBreakdown?: ReservationBreakdownItem[];
+  paymentMethod?: PaymentMethod;
+  paymentReference?: string;
+  reservationStatus?: ReservationLifecycleStatus;
+  paymentStatus?: ReservationPaymentStatus;
+  assignmentStatus?: ReservationAssignmentStatus;
+  executionStatus?: ReservationExecutionStatus;
+  holdExpiresAt?: string | null;
+  cancellationFee?: number;
+  refundAmount?: number;
+  escalationReason?: string | null;
   status: 'pending_approval' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled';
   createdAt?: Timestamp;
   updatedAt?: Timestamp;

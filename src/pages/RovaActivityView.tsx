@@ -145,8 +145,8 @@ export function RovaActivityView() {
         </p>
       </header>
 
-      {/* Hairline-Divided Metric Summary Strip (Linear precision, no decorative card grid) */}
-      <div className="grid grid-cols-3 divide-x divide-[#E5E5E5] border-y border-[#E5E5E5] py-4">
+      {/* Hairline-Divided Metric Summary Strip */}
+      <div className="grid grid-cols-3 divide-x divide-[#E5E5E5] rounded-3xl border border-[#E5E5E5] bg-white px-5 py-4">
         <div className="pr-3">
           <p className="text-xs text-[#777777]">{t('Livrées', 'Delivered')}</p>
           <p className="font-mono text-xl font-bold text-[#171717] mt-1 tabular-nums">
@@ -168,7 +168,7 @@ export function RovaActivityView() {
       </div>
 
       {/* Filters */}
-      <div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
+      <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
         {filters.map((f) => {
           const isActive = activityFilter === f.id;
           return (
@@ -176,7 +176,7 @@ export function RovaActivityView() {
               key={f.id}
               type="button"
               onClick={() => setActivityFilter(f.id)}
-              className={`min-h-[36px] px-3.5 rounded-lg text-xs whitespace-nowrap shrink-0 transition-colors cursor-pointer ${
+              className={`min-h-[36px] px-4 rounded-full text-xs whitespace-nowrap shrink-0 transition-colors cursor-pointer ${
                 isActive
                   ? 'bg-[#171717] text-white font-semibold'
                   : 'text-[#777777] hover:text-[#171717] hover:bg-[#F3F3F3] font-medium'
@@ -190,7 +190,7 @@ export function RovaActivityView() {
 
       {/* Activity Ledger */}
       {timelineItems.length === 0 ? (
-        <div className="border-y border-[#E5E5E5] py-12 text-center space-y-3">
+        <div className="rounded-3xl border border-[#E5E5E5] bg-white px-6 py-12 text-center space-y-3">
           <Package className="w-6 h-6 text-[#777777] mx-auto" />
           <p className="font-display text-base font-bold text-[#171717]">
             {t('Aucune activité enregistrée', 'No activity recorded yet')}
@@ -205,19 +205,19 @@ export function RovaActivityView() {
             <button
               type="button"
               onClick={() => openComposer('single')}
-              className="min-h-[42px] px-5 rounded-xl bg-[#E52B32] text-white text-xs font-semibold hover:bg-[#CC2229] transition-colors cursor-pointer"
+              className="min-h-[42px] px-5 rounded-full bg-[#E52B32] text-white text-xs font-semibold hover:bg-[#CC2229] transition-colors cursor-pointer"
             >
               {t('Créer une livraison', 'Create a delivery')}
             </button>
           </div>
         </div>
       ) : (
-        <div className="border-y border-[#E5E5E5] divide-y divide-[#E5E5E5]">
+        <div className="rounded-3xl border border-[#E5E5E5] bg-white overflow-hidden divide-y divide-[#E5E5E5]">
           {timelineItems.map((item) => (
             <div
               key={item.id}
               onClick={() => item.deliveryObj && openShipmentDetail(item.deliveryObj.id)}
-              className={`py-4 px-2 -mx-2 rounded-xl flex items-center justify-between gap-4 transition-colors ${
+              className={`py-4 px-5 flex items-center justify-between gap-4 transition-colors ${
                 item.deliveryObj ? 'hover:bg-[#F3F3F3]/60 cursor-pointer' : ''
               }`}
             >

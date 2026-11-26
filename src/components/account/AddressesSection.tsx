@@ -14,7 +14,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { useRovaApp } from '../../context/RovaAppContext';
 import { BottomSheet } from '../BottomSheet';
-import { RovaMap } from '../RovaMap';
+import { LocationSearchField } from '../LocationSearchField';
 import { SavedRecipient } from '../../types/rova';
 import {
   AddressCategory,
@@ -117,7 +117,7 @@ export function AddressesSection() {
 
   const handleSetAsDefault = async (rec: SavedRecipient) => {
     await saveBusinessProfile({
-      name: business?.name || profile?.displayName || 'ROVA',
+      name: business?.name || profile?.displayName || 'Rovia',
       city: business?.city || region.city,
       country: business?.country || region.countryName,
       defaultPickupAddress: rec.address,
@@ -170,9 +170,9 @@ export function AddressesSection() {
         </button>
       </div>
 
-      {/* Default Address Hairline Block */}
+      {/* Default Address Card */}
       {business?.defaultPickupAddress && (
-        <div className="pb-6 border-b border-neutral-200/70 space-y-2">
+        <div className="rounded-3xl border border-[#E5E5E5] bg-white p-5 space-y-2">
           <p className="text-[11px] font-mono uppercase tracking-wider text-neutral-500 flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-red-600" aria-hidden="true" />
             <span>{t('Adresse principale par défaut', 'Default primary address')}</span>
@@ -204,9 +204,9 @@ export function AddressesSection() {
         </div>
       )}
 
-      {/* Saved Addresses Hairline List */}
+      {/* Saved Addresses Card */}
       {!firebaseUser ? (
-        <div className="py-10 text-center space-y-3 border-b border-neutral-200/70">
+        <div className="rounded-3xl border border-[#E5E5E5] bg-white py-10 px-6 text-center space-y-3">
           <p className="text-sm font-semibold text-neutral-900">
             {t('Connectez-vous pour retrouver vos adresses', 'Sign in to access saved addresses')}
           </p>
@@ -219,7 +219,7 @@ export function AddressesSection() {
           </button>
         </div>
       ) : recipients.length === 0 ? (
-        <div className="py-12 text-center space-y-3 border-b border-neutral-200/70">
+        <div className="rounded-3xl border border-[#E5E5E5] bg-white py-12 px-6 text-center space-y-3">
           <p className="text-sm font-semibold text-neutral-950">
             {t('Aucune adresse enregistrée', 'No saved addresses yet')}
           </p>
@@ -238,7 +238,7 @@ export function AddressesSection() {
           </button>
         </div>
       ) : (
-        <div className="divide-y divide-neutral-200/70 border-b border-neutral-200/70">
+        <div className="rounded-3xl border border-[#E5E5E5] bg-white divide-y divide-neutral-200/70 px-5 overflow-hidden">
           {recipients.map((rec) => {
             const parsed = parseAddressTag(rec.landmark);
             const isDefault =
@@ -337,7 +337,7 @@ export function AddressesSection() {
       >
         <form id="rova-account-address-form" onSubmit={handleSave} className="space-y-4">
           {formError && (
-            <div className="px-3.5 py-2.5 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700">
+            <div className="px-3.5 py-2.5 rounded-2xl bg-red-50 border border-red-200 text-xs text-red-700">
               {formError}
             </div>
           )}
@@ -364,32 +364,30 @@ export function AddressesSection() {
             })}
           </div>
 
-          <RovaMap
-            center={[form.lat, form.lng]}
-            markers={[
-              {
-                id: 'addr_edit_pin',
-                lat: form.lat,
-                lng: form.lng,
-                kind: 'selected',
-                label: form.address || t('Emplacement', 'Location'),
-                draggable: true,
-              },
-            ]}
-            interactivePick
-            showSearchBar
-            initialSearchText={form.address}
-            heightClass="h-[220px]"
-            onLocationSelected={(place) =>
-              setForm((p) => ({
-                ...p,
-                address: place.shortName || place.displayName,
-                landmark: place.landmark || p.landmark,
-                lat: place.lat,
-                lng: place.lng,
-              }))
-            }
-          />
+          {/* Address Search with On-Demand Full-Screen Map Icon */}
+          <div className="space-y-1.5">
+            <label className="block text-xs font-medium text-[#171717]">
+              {t('Adresse complète *', 'Full address *')}
+            </label>
+            <LocationSearchField
+              value={form.address}
+              center={[form.lat, form.lng]}
+              placeholder={t(
+                'Rechercher une adresse ou cliquer sur l’icône carte...',
+                'Search an address or tap the map icon...'
+              )}
+              onChangeText={(text) => setForm((p) => ({ ...p, address: text }))}
+              onSelect={(place) =>
+                setForm((p) => ({
+                  ...p,
+                  address: place.shortName || place.displayName,
+                  landmark: place.landmark || p.landmark,
+                  lat: place.lat,
+                  lng: place.lng,
+                }))
+              }
+            />
+          </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <input
@@ -398,38 +396,28 @@ export function AddressesSection() {
               value={form.name}
               onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
               placeholder={t('Intitulé (ex. Maison, Boutique, Entrepôt)', 'Label (e.g. Home, Store, Warehouse)')}
-              className="w-full rounded-xl border border-neutral-300 px-3.5 py-2.5 text-sm focus:outline-none focus:border-neutral-950"
+              className="w-full rounded-2xl border border-[#E5E5E5] px-3.5 py-2.5 text-sm text-[#171717] focus:outline-none focus:border-[#171717]"
             />
             <input
               type="tel"
               value={form.phone}
               onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))}
               placeholder={t('Téléphone de contact', 'Contact phone')}
-              className="w-full rounded-xl border border-neutral-300 px-3.5 py-2.5 text-sm focus:outline-none focus:border-neutral-950"
+              className="w-full rounded-2xl border border-[#E5E5E5] px-3.5 py-2.5 text-sm text-[#171717] focus:outline-none focus:border-[#171717]"
             />
-            <div className="sm:col-span-2">
-              <input
-                type="text"
-                required
-                value={form.address}
-                onChange={(e) => setForm((p) => ({ ...p, address: e.target.value }))}
-                placeholder={t('Adresse complète *', 'Full address *')}
-                className="w-full rounded-xl border border-neutral-300 px-3.5 py-2.5 text-sm focus:outline-none focus:border-neutral-950"
-              />
-            </div>
             <input
               type="text"
               value={form.landmark}
               onChange={(e) => setForm((p) => ({ ...p, landmark: e.target.value }))}
               placeholder={t('Repère (optionnel)', 'Landmark (optional)')}
-              className="w-full rounded-xl border border-neutral-300 px-3.5 py-2.5 text-sm focus:outline-none focus:border-neutral-950"
+              className="w-full rounded-2xl border border-neutral-300 px-3.5 py-2.5 text-sm focus:outline-none focus:border-neutral-950"
             />
             <input
               type="text"
               value={form.instructions}
               onChange={(e) => setForm((p) => ({ ...p, instructions: e.target.value }))}
               placeholder={t('Instructions d’accès', 'Access instructions')}
-              className="w-full rounded-xl border border-neutral-300 px-3.5 py-2.5 text-sm focus:outline-none focus:border-neutral-950"
+              className="w-full rounded-2xl border border-neutral-300 px-3.5 py-2.5 text-sm focus:outline-none focus:border-neutral-950"
             />
           </div>
         </form>

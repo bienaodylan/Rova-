@@ -156,7 +156,7 @@ export function PaymentsSection() {
         <button
           type="button"
           onClick={() => setPaymentModalOpen(true)}
-          className="w-full min-h-[68px] px-4 py-3.5 rounded-2xl border border-[#E5E5E5] hover:border-[#171717] bg-white flex items-center justify-between gap-4 text-left transition-colors cursor-pointer"
+          className="w-full min-h-[68px] px-5 py-3.5 rounded-3xl border border-[#E5E5E5] hover:border-[#171717] bg-white flex items-center justify-between gap-4 text-left transition-colors cursor-pointer"
         >
           <div className="flex items-center gap-3.5 min-w-0">
             <div className="w-10 h-10 rounded-xl bg-[#F3F3F3] text-[#171717] flex items-center justify-center shrink-0">
@@ -180,7 +180,7 @@ export function PaymentsSection() {
       </div>
 
       {/* 2. Balances & Corporate Billing Eligibility (Separated Clearly) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-[#E5E5E5] border border-[#E5E5E5] rounded-2xl overflow-hidden bg-white">
+      <div className="grid grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-[#E5E5E5] border border-[#E5E5E5] rounded-3xl overflow-hidden bg-white">
         <div className="p-4 space-y-1.5">
           <div className="flex items-center gap-2 text-xs text-[#777777]">
             <Wallet className="w-3.5 h-3.5 text-[#171717]" />
@@ -229,7 +229,7 @@ export function PaymentsSection() {
         </div>
 
         {ledger.length === 0 ? (
-          <div className="py-10 text-center border-y border-[#E5E5E5] space-y-1.5">
+          <div className="rounded-3xl border border-[#E5E5E5] bg-white py-10 px-6 text-center space-y-1.5">
             <Receipt className="w-5 h-5 text-[#777777] mx-auto" />
             <p className="text-sm font-semibold text-[#171717]">
               {t('Aucune transaction enregistrée', 'No transactions yet')}
@@ -242,7 +242,7 @@ export function PaymentsSection() {
             </p>
           </div>
         ) : (
-          <div className="divide-y divide-[#E5E5E5] border-y border-[#E5E5E5]">
+          <div className="rounded-3xl border border-[#E5E5E5] bg-white divide-y divide-[#E5E5E5] overflow-hidden">
             {ledger.slice(0, 20).map((item) => {
               const showConverted = item.currency.toUpperCase() !== currency.toUpperCase();
               const statusInfo = paymentStatusMeta(item.paymentStatus);
@@ -251,7 +251,7 @@ export function PaymentsSection() {
                   key={item.id}
                   type="button"
                   onClick={() => setActiveReceipt(item)}
-                  className="w-full py-4 px-2 -mx-2 rounded-xl text-left flex items-start justify-between gap-4 hover:bg-[#F3F3F3]/60 transition-colors cursor-pointer"
+                  className="w-full py-4 px-5 text-left flex items-start justify-between gap-4 hover:bg-[#F3F3F3]/60 transition-colors cursor-pointer"
                 >
                   <div className="min-w-0 space-y-0.5">
                     <div className="flex items-center gap-2 text-xs text-[#777777] flex-wrap">
@@ -322,7 +322,7 @@ export function PaymentsSection() {
             <button
               type="button"
               onClick={() => copyReference(activeReceipt.reference)}
-              className="w-full min-h-[44px] rounded-xl bg-[#171717] text-white text-xs font-semibold hover:bg-neutral-800 transition-colors cursor-pointer inline-flex items-center justify-center gap-1.5"
+              className="w-full min-h-[44px] rounded-full bg-[#171717] text-white text-xs font-semibold hover:bg-neutral-800 transition-colors cursor-pointer inline-flex items-center justify-center gap-1.5"
             >
               <Copy className="w-3.5 h-3.5" />
               <span>{t('Copier la référence du reçu', 'Copy receipt reference')}</span>
@@ -331,7 +331,7 @@ export function PaymentsSection() {
         }
       >
         {activeReceipt && (
-          <div className="divide-y divide-[#E5E5E5] border-y border-[#E5E5E5] text-xs">
+          <div className="rounded-3xl border border-[#E5E5E5] bg-white divide-y divide-[#E5E5E5] px-4 text-xs">
             <div className="py-3 flex justify-between gap-4">
               <span className="text-[#777777]">{t('Référence', 'Reference')}</span>
               <span className="font-mono font-semibold text-[#171717]">{activeReceipt.reference}</span>

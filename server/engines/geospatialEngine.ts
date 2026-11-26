@@ -34,6 +34,28 @@ export interface CityOperatingHours {
   days: number[]; // 0 (Sun) - 6 (Sat)
 }
 
+export interface CitySchedulingCancellationPolicy {
+  freeCancelHoursBeforePickup: number;
+  lateCancelFeePercent: number;
+  assignedCancelFeePercent: number;
+  enRouteCancelFeePercent: number;
+  allowRescheduleHoursBeforePickup: number;
+}
+
+export interface CitySchedulingPolicy {
+  minLeadTimeMin: number;
+  maxBookingHorizonDays: number;
+  slotIntervalMin: number;
+  pickupWindowMinutes: number;
+  holdTtlSeconds: number;
+  dispatchLeadTimeMin: number;
+  assignmentDeadlineMin: number;
+  transitionBufferMin: number;
+  holidays: string[]; // YYYY-MM-DD in city timezone
+  capacityPerSlotByVehicle: Record<string, number>;
+  cancellationPolicy: CitySchedulingCancellationPolicy;
+}
+
 export interface CityConfig {
   id: string;
   countryCode: string;
@@ -57,6 +79,47 @@ export interface CityConfig {
   dispatchConfig: CityDispatchConfig;
   cancellationPolicy: CityCancellationPolicy;
   gpsPolicy: CityGpsPolicy;
+  schedulingPolicy?: CitySchedulingPolicy;
+}
+
+export function getCitySchedulingPolicy(city: CityConfig): CitySchedulingPolicy {
+  if (city.schedulingPolicy) return city.schedulingPolicy;
+  const isPrimaryHub = city.id === 'abidjan' || city.id === 'accra' || city.id === 'dakar';
+  return {
+    minLeadTimeMin: 60,
+    maxBookingHorizonDays: 30,
+    slotIntervalMin: 60,
+    pickupWindowMinutes: 30,
+    holdTtlSeconds: 600, // 10 minutes temporary hold
+    dispatchLeadTimeMin: 90, // start scheduled dispatch 90 min before pickup
+    assignmentDeadlineMin: 30, // escalate to ops if unassigned 30 min before pickup
+    transitionBufferMin: 30, // minimum travel/turnaround buffer between courier jobs
+    holidays: [],
+    capacityPerSlotByVehicle: isPrimaryHub
+      ? {
+          motorcycle: 8,
+          cargo_motorcycle: 6,
+          tricycle: 5,
+          cargo_van: 4,
+          commercial_van: 3,
+          truck: 2,
+        }
+      : {
+          motorcycle: 4,
+          cargo_motorcycle: 3,
+          tricycle: 3,
+          cargo_van: 2,
+          commercial_van: 1,
+          truck: 1,
+        },
+    cancellationPolicy: {
+      freeCancelHoursBeforePickup: 24,
+      lateCancelFeePercent: 15,
+      assignedCancelFeePercent: 30,
+      enRouteCancelFeePercent: 50,
+      allowRescheduleHoursBeforePickup: 2,
+    },
+  };
 }
 
 export type DistanceSource = 'google_routes' | 'osrm' | 'haversine_fallback';

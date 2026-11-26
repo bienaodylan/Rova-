@@ -1,13 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { doc, onSnapshot, serverTimestamp, updateDoc } from 'firebase/firestore';
-import { Check, Loader2, MapPin, ShieldCheck, Smartphone } from 'lucide-react';
+import { Check, Loader2, ShieldCheck, Smartphone } from 'lucide-react';
 import { db } from '../../lib/firebase';
 import { isSupabaseConfigured } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { useRovaApp } from '../../context/RovaAppContext';
-import { BottomSheet } from '../BottomSheet';
-import { RovaMap } from '../RovaMap';
+import { LocationSearchField } from '../LocationSearchField';
 import { DriverRecord, VehicleCategory } from '../../types/rova';
 import { VEHICLE_CATALOG } from '../../lib/logistics';
 import {
@@ -40,7 +39,6 @@ export function ProfileSection({ onOpenWorkspace }: ProfileSectionProps) {
   const [primaryLat, setPrimaryLat] = useState(business?.defaultPickupLat ?? region.lat);
   const [primaryLng, setPrimaryLng] = useState(business?.defaultPickupLng ?? region.lng);
   const [validationError, setValidationError] = useState<string | null>(null);
-  const [mapPickerOpen, setMapPickerOpen] = useState(false);
 
   // Driver-specific Firestore record (loaded only when user is a driver)
   const [driverDoc, setDriverDoc] = useState<DriverRecord | null>(null);
@@ -226,7 +224,7 @@ export function ProfileSection({ onOpenWorkspace }: ProfileSectionProps) {
         )}
         <div className="min-w-0 space-y-0.5">
           <p className="font-display text-base font-bold text-neutral-950 truncate">
-            {fullName || t('Utilisateur ROVA', 'ROVA User')}
+            {fullName || t('Utilisateur Rovia', 'Rovia User')}
           </p>
           <p className="text-xs text-neutral-500 truncate">{firebaseUser.email}</p>
           <p className="text-[11px] text-neutral-500 inline-flex items-center gap-1.5 pt-0.5">
@@ -243,7 +241,7 @@ export function ProfileSection({ onOpenWorkspace }: ProfileSectionProps) {
       {/* Main Editable Profile Form */}
       <form onSubmit={handleSavePersonal} className="space-y-6">
         {validationError && (
-          <div className="px-4 py-3 rounded-xl border border-red-200 bg-red-50 text-xs text-red-700">
+          <div className="px-4 py-3 rounded-2xl border border-red-200 bg-red-50 text-xs text-red-700">
             {validationError}
           </div>
         )}
@@ -259,7 +257,7 @@ export function ProfileSection({ onOpenWorkspace }: ProfileSectionProps) {
               value={firstName}
               onChange={(e) => setFirstName(e.target.value)}
               placeholder={t('Votre prénom', 'Your first name')}
-              className="w-full rounded-xl bg-white border border-neutral-300 px-3.5 py-2.5 text-sm text-neutral-950 focus:outline-none focus:border-neutral-950 transition-colors"
+              className="w-full rounded-2xl bg-white border border-neutral-300 px-3.5 py-2.5 text-sm text-neutral-950 focus:outline-none focus:border-neutral-950 transition-colors"
             />
           </div>
 
@@ -272,7 +270,7 @@ export function ProfileSection({ onOpenWorkspace }: ProfileSectionProps) {
               value={lastName}
               onChange={(e) => setLastName(e.target.value)}
               placeholder={t('Votre nom', 'Your last name')}
-              className="w-full rounded-xl bg-white border border-neutral-300 px-3.5 py-2.5 text-sm text-neutral-950 focus:outline-none focus:border-neutral-950 transition-colors"
+              className="w-full rounded-2xl bg-white border border-neutral-300 px-3.5 py-2.5 text-sm text-neutral-950 focus:outline-none focus:border-neutral-950 transition-colors"
             />
           </div>
 
@@ -284,7 +282,7 @@ export function ProfileSection({ onOpenWorkspace }: ProfileSectionProps) {
               type="email"
               value={firebaseUser.email || ''}
               disabled
-              className="w-full rounded-xl bg-neutral-100/80 border border-neutral-200 px-3.5 py-2.5 text-sm text-neutral-500 cursor-not-allowed"
+              className="w-full rounded-2xl bg-neutral-100/80 border border-neutral-200 px-3.5 py-2.5 text-sm text-neutral-500 cursor-not-allowed"
             />
           </div>
 
@@ -297,7 +295,7 @@ export function ProfileSection({ onOpenWorkspace }: ProfileSectionProps) {
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               placeholder="+225 07 00 00 00 00"
-              className="w-full rounded-xl bg-white border border-neutral-300 px-3.5 py-2.5 text-sm text-neutral-950 focus:outline-none focus:border-neutral-950 transition-colors"
+              className="w-full rounded-2xl bg-white border border-neutral-300 px-3.5 py-2.5 text-sm text-neutral-950 focus:outline-none focus:border-neutral-950 transition-colors"
             />
           </div>
 
@@ -310,7 +308,7 @@ export function ProfileSection({ onOpenWorkspace }: ProfileSectionProps) {
               value={city}
               onChange={(e) => setCity(e.target.value)}
               placeholder={region.city}
-              className="w-full rounded-xl bg-white border border-neutral-300 px-3.5 py-2.5 text-sm text-neutral-950 focus:outline-none focus:border-neutral-950 transition-colors"
+              className="w-full rounded-2xl bg-white border border-neutral-300 px-3.5 py-2.5 text-sm text-neutral-950 focus:outline-none focus:border-neutral-950 transition-colors"
             />
           </div>
 
@@ -323,30 +321,27 @@ export function ProfileSection({ onOpenWorkspace }: ProfileSectionProps) {
               value={country}
               onChange={(e) => setCountry(e.target.value)}
               placeholder={region.countryName}
-              className="w-full rounded-xl bg-white border border-neutral-300 px-3.5 py-2.5 text-sm text-neutral-950 focus:outline-none focus:border-neutral-950 transition-colors"
+              className="w-full rounded-2xl bg-white border border-neutral-300 px-3.5 py-2.5 text-sm text-neutral-950 focus:outline-none focus:border-neutral-950 transition-colors"
             />
           </div>
 
           <div className="sm:col-span-2">
-            <div className="flex items-center justify-between gap-2 mb-1.5">
-              <label className="block text-[11px] font-mono uppercase tracking-wider text-neutral-500">
-                {t('Adresse principale / collecte par défaut', 'Primary / default pickup address')}
-              </label>
-              <button
-                type="button"
-                onClick={() => setMapPickerOpen(true)}
-                className="inline-flex items-center gap-1 text-xs font-medium text-neutral-950 hover:text-red-600 transition-colors cursor-pointer"
-              >
-                <MapPin className="w-3.5 h-3.5" />
-                <span>{t('Choisir sur la carte', 'Pick on map')}</span>
-              </button>
-            </div>
-            <input
-              type="text"
+            <label className="block text-[11px] font-mono uppercase tracking-wider text-[#777777] mb-1.5">
+              {t('Adresse principale / collecte par défaut', 'Primary / default pickup address')}
+            </label>
+            <LocationSearchField
               value={primaryAddress}
-              onChange={(e) => setPrimaryAddress(e.target.value)}
-              placeholder={t('Rue, quartier ou point de repère principal', 'Street, district or main landmark')}
-              className="w-full rounded-xl bg-white border border-neutral-300 px-3.5 py-2.5 text-sm text-neutral-950 focus:outline-none focus:border-neutral-950 transition-colors"
+              center={[primaryLat, primaryLng]}
+              placeholder={t(
+                'Rue, quartier ou cliquez sur l’icône carte...',
+                'Street, district or tap the map icon...'
+              )}
+              onChangeText={(text) => setPrimaryAddress(text)}
+              onSelect={(place) => {
+                setPrimaryAddress(place.shortName || place.displayName);
+                setPrimaryLat(place.lat);
+                setPrimaryLng(place.lng);
+              }}
             />
           </div>
 
@@ -381,7 +376,7 @@ export function ProfileSection({ onOpenWorkspace }: ProfileSectionProps) {
                   value={businessName}
                   onChange={(e) => setBusinessName(e.target.value)}
                   placeholder={t('Nom de votre boutique ou société', 'Store or company name')}
-                  className="w-full rounded-xl bg-white border border-neutral-300 px-3.5 py-2.5 text-sm text-neutral-950 focus:outline-none focus:border-neutral-950 transition-colors"
+                  className="w-full rounded-2xl bg-white border border-neutral-300 px-3.5 py-2.5 text-sm text-neutral-950 focus:outline-none focus:border-neutral-950 transition-colors"
                 />
               </div>
             </div>
@@ -410,8 +405,8 @@ export function ProfileSection({ onOpenWorkspace }: ProfileSectionProps) {
               </h3>
               <p className="text-xs text-neutral-500 mt-0.5">
                 {t(
-                  'Informations de véhicule et statut de validation sur le réseau ROVA.',
-                  'Vehicle details and approval status on the ROVA network.'
+                  'Informations de véhicule et statut de validation sur le réseau Rovia.',
+                  'Vehicle details and approval status on the Rovia network.'
                 )}
               </p>
             </div>
@@ -427,7 +422,7 @@ export function ProfileSection({ onOpenWorkspace }: ProfileSectionProps) {
 
           {driverDoc ? (
             <form onSubmit={handleSaveDriver} className="space-y-4">
-              <div className="flex items-center justify-between py-3 border-y border-neutral-200/70 text-xs">
+              <div className="flex items-center justify-between px-4 py-3.5 rounded-2xl border border-neutral-200/80 bg-white text-xs">
                 <span className="text-neutral-500">{t('Statut d’agrément', 'Approval status')}</span>
                 <span className="inline-flex items-center gap-1.5 font-medium text-neutral-950">
                   <span
@@ -455,7 +450,7 @@ export function ProfileSection({ onOpenWorkspace }: ProfileSectionProps) {
                     disabled={!canEditDriverDetails}
                     value={driverVehicle}
                     onChange={(e) => setDriverVehicle(e.target.value as VehicleCategory)}
-                    className="w-full rounded-xl bg-white border border-neutral-300 px-3.5 py-2.5 text-sm text-neutral-950 disabled:bg-neutral-100 disabled:text-neutral-500 focus:outline-none focus:border-neutral-950"
+                    className="w-full rounded-2xl bg-white border border-neutral-300 px-3.5 py-2.5 text-sm text-neutral-950 disabled:bg-neutral-100 disabled:text-neutral-500 focus:outline-none focus:border-neutral-950"
                   >
                     {VEHICLE_CATALOG.map((v) => (
                       <option key={v.id} value={v.id}>
@@ -473,7 +468,7 @@ export function ProfileSection({ onOpenWorkspace }: ProfileSectionProps) {
                     disabled={!canEditDriverDetails}
                     value={driverPlate}
                     onChange={(e) => setDriverPlate(e.target.value)}
-                    className="w-full rounded-xl bg-white border border-neutral-300 px-3.5 py-2.5 text-sm font-mono text-neutral-950 disabled:bg-neutral-100 disabled:text-neutral-500 focus:outline-none focus:border-neutral-950"
+                    className="w-full rounded-2xl bg-white border border-neutral-300 px-3.5 py-2.5 text-sm font-mono text-neutral-950 disabled:bg-neutral-100 disabled:text-neutral-500 focus:outline-none focus:border-neutral-950"
                   />
                 </div>
                 <div>
@@ -485,7 +480,7 @@ export function ProfileSection({ onOpenWorkspace }: ProfileSectionProps) {
                     disabled={!canEditDriverDetails}
                     value={driverLicense}
                     onChange={(e) => setDriverLicense(e.target.value)}
-                    className="w-full rounded-xl bg-white border border-neutral-300 px-3.5 py-2.5 text-sm font-mono text-neutral-950 disabled:bg-neutral-100 disabled:text-neutral-500 focus:outline-none focus:border-neutral-950"
+                    className="w-full rounded-2xl bg-white border border-neutral-300 px-3.5 py-2.5 text-sm font-mono text-neutral-950 disabled:bg-neutral-100 disabled:text-neutral-500 focus:outline-none focus:border-neutral-950"
                   />
                 </div>
                 <div>
@@ -497,7 +492,7 @@ export function ProfileSection({ onOpenWorkspace }: ProfileSectionProps) {
                     disabled={!canEditDriverDetails}
                     value={driverArea}
                     onChange={(e) => setDriverArea(e.target.value)}
-                    className="w-full rounded-xl bg-white border border-neutral-300 px-3.5 py-2.5 text-sm text-neutral-950 disabled:bg-neutral-100 disabled:text-neutral-500 focus:outline-none focus:border-neutral-950"
+                    className="w-full rounded-2xl bg-white border border-neutral-300 px-3.5 py-2.5 text-sm text-neutral-950 disabled:bg-neutral-100 disabled:text-neutral-500 focus:outline-none focus:border-neutral-950"
                   />
                 </div>
               </div>
@@ -516,14 +511,14 @@ export function ProfileSection({ onOpenWorkspace }: ProfileSectionProps) {
               ) : (
                 <p className="text-xs text-neutral-500">
                   {t(
-                    'Votre profil véhicule est verrouillé après validation. Contactez les opérations ROVA pour modifier votre immatriculation.',
-                    'Your vehicle details are locked after verification. Contact ROVA Operations to update your plate.'
+                    'Votre profil véhicule est verrouillé après validation. Contactez les opérations Rovia pour modifier votre immatriculation.',
+                    'Your vehicle details are locked after verification. Contact Rovia Operations to update your plate.'
                   )}
                 </p>
               )}
             </form>
           ) : (
-            <div className="py-4 border-y border-neutral-200/70 flex flex-wrap items-center justify-between gap-3">
+            <div className="px-4 py-4 rounded-2xl border border-neutral-200/80 bg-white flex flex-wrap items-center justify-between gap-3">
               <p className="text-xs text-neutral-600">
                 {t(
                   'Complétez votre inscription véhicule dans l’Application Livreur pour recevoir des courses.',
@@ -542,53 +537,6 @@ export function ProfileSection({ onOpenWorkspace }: ProfileSectionProps) {
         </div>
       )}
 
-      {/* Map Picker Sheet for Primary Address */}
-      <BottomSheet
-        open={mapPickerOpen}
-        onClose={() => setMapPickerOpen(false)}
-        size="md"
-        title={t('Adresse principale sur la carte', 'Primary address on map')}
-        footer={
-          <button
-            type="button"
-            onClick={() => setMapPickerOpen(false)}
-            className="w-full py-3 rounded-full bg-neutral-950 text-white text-sm font-semibold hover:bg-neutral-800 transition-colors cursor-pointer"
-          >
-            {t('Valider cet emplacement', 'Confirm location')}
-          </button>
-        }
-      >
-        <div className="space-y-3">
-          <RovaMap
-            center={[primaryLat, primaryLng]}
-            markers={[
-              {
-                id: 'profile_primary',
-                lat: primaryLat,
-                lng: primaryLng,
-                kind: 'pickup',
-                label: primaryAddress || t('Adresse principale', 'Primary address'),
-                draggable: true,
-              },
-            ]}
-            interactivePick
-            showSearchBar
-            initialSearchText={primaryAddress}
-            heightClass="h-[260px]"
-            onLocationSelected={(place) => {
-              setPrimaryAddress(place.shortName || place.displayName);
-              setPrimaryLat(place.lat);
-              setPrimaryLng(place.lng);
-            }}
-          />
-          {primaryAddress && (
-            <p className="text-xs text-neutral-600 px-1">
-              <span className="font-medium text-neutral-950">{t('Sélectionné :', 'Selected:')}</span>{' '}
-              {primaryAddress}
-            </p>
-          )}
-        </div>
-      </BottomSheet>
     </div>
   );
 }

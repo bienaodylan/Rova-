@@ -239,7 +239,7 @@ export function RovaAccountView({
           <button
             type="button"
             onClick={() => selectSection('profile')}
-            className="min-h-[40px] px-4 rounded-xl border border-[#E5E5E5] hover:border-[#171717] text-xs font-semibold text-[#171717] transition-colors cursor-pointer"
+            className="min-h-[40px] px-5 rounded-full border border-[#E5E5E5] hover:border-[#171717] text-xs font-semibold text-[#171717] transition-colors cursor-pointer"
           >
             {t('Modifier le profil', 'Edit profile')}
           </button>
@@ -248,7 +248,7 @@ export function RovaAccountView({
             <button
               type="button"
               onClick={() => void signInWithGoogle().catch(() => {})}
-              className="min-h-[40px] inline-flex items-center gap-2 px-4 rounded-xl bg-white border border-[#E5E5E5] hover:border-[#171717] text-xs font-semibold text-[#171717] transition-colors cursor-pointer"
+              className="min-h-[40px] inline-flex items-center gap-2 px-5 rounded-full bg-white border border-[#E5E5E5] hover:border-[#171717] text-xs font-semibold text-[#171717] transition-colors cursor-pointer"
             >
               <GoogleLogo className="w-3.5 h-3.5" />
               <span>Google</span>
@@ -256,7 +256,7 @@ export function RovaAccountView({
             <button
               type="button"
               onClick={() => void signInWithApple().catch(() => {})}
-              className="min-h-[40px] inline-flex items-center gap-2 px-4 rounded-xl bg-[#171717] text-white text-xs font-semibold hover:bg-neutral-800 transition-colors cursor-pointer"
+              className="min-h-[40px] inline-flex items-center gap-2 px-5 rounded-full bg-[#171717] text-white text-xs font-semibold hover:bg-neutral-800 transition-colors cursor-pointer"
             >
               <AppleLogo className="w-3.5 h-3.5" />
               <span>Apple</span>
@@ -302,7 +302,7 @@ export function RovaAccountView({
                   key={item.id}
                   type="button"
                   onClick={() => selectSection(item.id)}
-                  className={`group relative w-full text-left pl-4 pr-3 py-3 rounded-xl transition-colors cursor-pointer flex items-center justify-between gap-3 ${
+                  className={`group relative w-full text-left pl-4 pr-3 py-3 rounded-2xl transition-colors cursor-pointer flex items-center justify-between gap-3 ${
                     isActive
                       ? 'bg-[#F3F3F3] text-[#171717]'
                       : 'text-[#777777] hover:text-[#171717] hover:bg-[#F3F3F3]/60'
@@ -341,7 +341,7 @@ export function RovaAccountView({
               <button
                 type="button"
                 onClick={() => void logout()}
-                className="w-full px-3 py-2.5 rounded-xl text-left text-xs font-medium text-[#777777] hover:text-[#E52B32] hover:bg-[#F3F3F3]/70 transition-colors cursor-pointer inline-flex items-center gap-2.5"
+                className="w-full px-4 py-2.5 rounded-full text-left text-xs font-medium text-[#777777] hover:text-[#E52B32] hover:bg-[#F3F3F3]/70 transition-colors cursor-pointer inline-flex items-center gap-2.5"
               >
                 <LogOut className="w-3.5 h-3.5" />
                 <span>{t('Se déconnecter', 'Sign out')}</span>
@@ -350,7 +350,7 @@ export function RovaAccountView({
           )}
         </aside>
 
-        <section className="lg:col-span-8 xl:col-span-9 bg-white border border-[#E5E5E5] rounded-2xl p-8">
+        <section className="lg:col-span-8 xl:col-span-9 bg-white border border-[#E5E5E5] rounded-3xl p-8">
           <AnimatePresence mode="wait" initial={false}>
             <motion.div
               key={activeSection}
@@ -389,7 +389,7 @@ export function RovaAccountView({
               </p>
             </header>
 
-            <section className="pb-6 border-b border-[#E5E5E5] space-y-4">
+            <section className="rounded-3xl border border-[#E5E5E5] bg-white p-5 space-y-4">
               <div className="flex items-center gap-4">
                 {firebaseUser?.photoURL ? (
                   <img
@@ -427,7 +427,7 @@ export function RovaAccountView({
                 <button
                   type="button"
                   onClick={() => selectSection('profile')}
-                  className="w-full min-h-[44px] rounded-xl border border-[#E5E5E5] bg-white hover:border-[#171717] text-xs font-semibold text-[#171717] transition-colors cursor-pointer"
+                  className="w-full min-h-[44px] rounded-full border border-[#E5E5E5] bg-white hover:border-[#171717] text-xs font-semibold text-[#171717] transition-colors cursor-pointer"
                 >
                   {t('Modifier le profil', 'Edit profile')}
                 </button>
@@ -436,7 +436,7 @@ export function RovaAccountView({
                   <button
                     type="button"
                     onClick={() => void signInWithGoogle().catch(() => {})}
-                    className="min-h-[44px] inline-flex items-center justify-center gap-2 px-3 rounded-xl bg-white border border-[#E5E5E5] hover:border-[#171717] text-xs font-semibold text-[#171717] transition-colors cursor-pointer"
+                    className="min-h-[44px] inline-flex items-center justify-center gap-2 px-3 rounded-full bg-white border border-[#E5E5E5] hover:border-[#171717] text-xs font-semibold text-[#171717] transition-colors cursor-pointer"
                   >
                     <GoogleLogo className="w-3.5 h-3.5" />
                     <span>Google</span>
@@ -444,7 +444,7 @@ export function RovaAccountView({
                   <button
                     type="button"
                     onClick={() => void signInWithApple().catch(() => {})}
-                    className="min-h-[44px] inline-flex items-center justify-center gap-2 px-3 rounded-xl bg-[#171717] text-white text-xs font-semibold hover:bg-neutral-800 transition-colors cursor-pointer"
+                    className="min-h-[44px] inline-flex items-center justify-center gap-2 px-3 rounded-full bg-[#171717] text-white text-xs font-semibold hover:bg-neutral-800 transition-colors cursor-pointer"
                   >
                     <AppleLogo className="w-3.5 h-3.5" />
                     <span>Apple</span>
@@ -455,22 +455,22 @@ export function RovaAccountView({
 
             {firebaseUser && (
               <section className="space-y-2">
-                <h2 className="text-xs font-medium text-[#777777]">
+                <h2 className="text-xs font-medium text-[#777777] px-1">
                   {t('Informations personnelles', 'Personal details')}
                 </h2>
-                <div className="border-y border-[#E5E5E5] divide-y divide-[#E5E5E5] text-xs">
-                  <div className="py-3 flex items-center justify-between gap-4">
+                <div className="rounded-3xl border border-[#E5E5E5] bg-white px-5 divide-y divide-[#E5E5E5] text-xs">
+                  <div className="py-3.5 flex items-center justify-between gap-4">
                     <span className="text-[#777777]">{t('Téléphone', 'Phone')}</span>
                     <span className="font-medium text-[#171717] truncate">{phoneDisplay}</span>
                   </div>
-                  <div className="py-3 flex items-center justify-between gap-4">
+                  <div className="py-3.5 flex items-center justify-between gap-4">
                     <span className="text-[#777777]">{t('Localisation', 'Location')}</span>
                     <span className="font-medium text-[#171717] truncate">
                       {business?.city || region.city}, {business?.country || region.countryName}
                     </span>
                   </div>
                   {business?.defaultPickupAddress && (
-                    <div className="py-3 flex items-center justify-between gap-4">
+                    <div className="py-3.5 flex items-center justify-between gap-4">
                       <span className="text-[#777777] shrink-0">{t('Adresse', 'Address')}</span>
                       <span className="font-medium text-[#171717] truncate text-right">
                         {business.defaultPickupAddress}
@@ -482,12 +482,12 @@ export function RovaAccountView({
             )}
 
             <section className="space-y-2">
-              <h2 className="text-xs font-medium text-[#777777]">
+              <h2 className="text-xs font-medium text-[#777777] px-1">
                 {t('Paramètres', 'Settings')}
               </h2>
               <nav
                 aria-label={t('Paramètres du compte', 'Account settings')}
-                className="border-y border-[#E5E5E5] divide-y divide-[#E5E5E5]"
+                className="rounded-3xl border border-[#E5E5E5] bg-white overflow-hidden divide-y divide-[#E5E5E5]"
               >
                 {navItems.map((item) => {
                   const Icon = item.icon;
@@ -496,7 +496,7 @@ export function RovaAccountView({
                       key={item.id}
                       type="button"
                       onClick={() => selectSection(item.id)}
-                      className="w-full py-4 text-left flex items-center justify-between gap-3 active:bg-[#F3F3F3]/80 transition-colors cursor-pointer"
+                      className="w-full px-5 py-4 text-left flex items-center justify-between gap-3 active:bg-[#F3F3F3]/80 transition-colors cursor-pointer"
                     >
                       <div className="flex items-center gap-3.5 min-w-0">
                         <Icon className="w-4 h-4 text-[#171717] shrink-0" />
@@ -519,7 +519,7 @@ export function RovaAccountView({
                 <button
                   type="button"
                   onClick={() => void logout()}
-                  className="w-full min-h-[44px] rounded-xl border border-[#E5E5E5] bg-white hover:border-red-300 text-xs font-semibold text-[#777777] hover:text-[#E52B32] transition-colors cursor-pointer inline-flex items-center justify-center gap-2"
+                  className="w-full min-h-[44px] rounded-full border border-[#E5E5E5] bg-white hover:border-red-300 text-xs font-semibold text-[#777777] hover:text-[#E52B32] transition-colors cursor-pointer inline-flex items-center justify-center gap-2"
                 >
                   <LogOut className="w-3.5 h-3.5" />
                   <span>{t('Se déconnecter', 'Sign out')}</span>

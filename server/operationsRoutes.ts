@@ -52,6 +52,7 @@ import {
   runReconciliationCycle,
 } from './engines/reconciliationEngine.ts';
 import { createCorrelationId, logOperationalEvent } from './engines/observability.ts';
+import { reconcileAllScheduledReservations } from './scheduledRoutes.ts';
 
 // Bounded server quote store (augments Supabase delivery_quotes for fast verification & preview resilience)
 const quoteMemoryStore = new Map<string, AuthoritativeQuote>();
@@ -1359,7 +1360,9 @@ export function createOperationsRouter(): express.Router {
     const admin = getSupabaseAdmin();
     const cities = await loadActiveCities();
     if (!admin) {
-      return runReconciliationCycle({ offers: [], couriers: [], deliveries: [], cities });
+      const baseReport = await runReconciliationCycle({ offers: [], couriers: [], deliveries: [], cities });
+      const scheduledReport = await reconcileAllScheduledReservations();
+      return { ...baseReport, scheduled: scheduledReport };
     }
 
     const [offersRes, driversRes, deliveriesRes] = await Promise.all([
@@ -1434,7 +1437,8 @@ export function createOperationsRouter(): express.Router {
         .in('uid', staleCourierIds);
     }
 
-    return report;
+    const scheduledReport = await reconcileAllScheduledReservations();
+    return { ...report, scheduled: scheduledReport };
   }
 
   router.post(

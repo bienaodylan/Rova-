@@ -244,7 +244,7 @@ export function RovaShipmentsView({ onOpenPublicTracking }: RovaShipmentsViewPro
           lat: activeSelection.driverLat,
           lng: activeSelection.driverLng,
           kind: 'driver',
-          label: activeSelection.driverName || t('Livreur ROVA', 'ROVA Driver'),
+          label: activeSelection.driverName || t('Livreur Rovia', 'Rovia Driver'),
           meta: activeSelection.id,
         });
       }
@@ -326,12 +326,12 @@ export function RovaShipmentsView({ onOpenPublicTracking }: RovaShipmentsViewPro
           <div
             role="group"
             aria-label={t('Mode d’affichage', 'View mode')}
-            className="inline-flex items-center rounded-xl bg-[#F3F3F3] p-1 gap-0.5"
+            className="inline-flex items-center rounded-full bg-[#F3F3F3] p-1 gap-0.5"
           >
             <button
               type="button"
               onClick={() => setViewMode('list')}
-              className={`min-h-[34px] inline-flex items-center gap-1.5 px-3 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+              className={`min-h-[34px] inline-flex items-center gap-1.5 px-3.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
                 viewMode === 'list'
                   ? 'bg-white text-[#171717] shadow-xs'
                   : 'text-[#777777] hover:text-[#171717]'
@@ -343,7 +343,7 @@ export function RovaShipmentsView({ onOpenPublicTracking }: RovaShipmentsViewPro
             <button
               type="button"
               onClick={() => setViewMode('map')}
-              className={`min-h-[34px] inline-flex items-center gap-1.5 px-3 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+              className={`min-h-[34px] inline-flex items-center gap-1.5 px-3.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
                 viewMode === 'map'
                   ? 'bg-white text-[#171717] shadow-xs'
                   : 'text-[#777777] hover:text-[#171717]'
@@ -357,7 +357,7 @@ export function RovaShipmentsView({ onOpenPublicTracking }: RovaShipmentsViewPro
           <button
             type="button"
             onClick={() => openComposer('single')}
-            className="min-h-[40px] inline-flex items-center gap-1.5 px-4 rounded-xl bg-[#E52B32] text-white text-xs font-semibold hover:bg-[#CC2229] transition-colors cursor-pointer whitespace-nowrap"
+            className="min-h-[40px] inline-flex items-center gap-1.5 px-4 rounded-full bg-[#E52B32] text-white text-xs font-semibold hover:bg-[#CC2229] transition-colors cursor-pointer whitespace-nowrap"
           >
             <Plus className="w-4 h-4" />
             <span className="hidden sm:inline">{t('Nouvelle livraison', 'New delivery')}</span>
@@ -368,7 +368,7 @@ export function RovaShipmentsView({ onOpenPublicTracking }: RovaShipmentsViewPro
 
       {/* Filters + Search */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#E5E5E5]">
-        <div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
           {filters.map((f) => {
             const active = shipmentFilter === f.id;
             return (
@@ -376,7 +376,7 @@ export function RovaShipmentsView({ onOpenPublicTracking }: RovaShipmentsViewPro
                 key={f.id}
                 type="button"
                 onClick={() => setShipmentFilter(f.id)}
-                className={`min-h-[36px] inline-flex items-center gap-1.5 px-3 rounded-lg text-xs whitespace-nowrap shrink-0 transition-colors cursor-pointer ${
+                className={`min-h-[36px] inline-flex items-center gap-1.5 px-3.5 rounded-full text-xs whitespace-nowrap shrink-0 transition-colors cursor-pointer ${
                   active
                     ? 'bg-[#171717] text-white font-semibold'
                     : 'text-[#777777] hover:text-[#171717] hover:bg-[#F3F3F3] font-medium'
@@ -398,13 +398,13 @@ export function RovaShipmentsView({ onOpenPublicTracking }: RovaShipmentsViewPro
         </div>
 
         <div className="relative sm:w-64 shrink-0">
-          <Search className="w-4 h-4 text-[#777777] absolute left-3 top-1/2 -translate-y-1/2" />
+          <Search className="w-4 h-4 text-[#777777] absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder={t('Référence, adresse, livreur...', 'Reference, address, driver...')}
-            className="w-full min-h-[38px] pl-9 pr-3.5 py-2 rounded-xl bg-[#F3F3F3]/75 border border-transparent focus:bg-white focus:border-[#171717] text-xs text-[#171717] placeholder:text-[#777777] focus:outline-none transition-colors"
+            className="w-full min-h-[38px] pl-10 pr-4 py-2 rounded-full bg-[#F3F3F3]/75 border border-transparent focus:bg-white focus:border-[#171717] text-xs text-[#171717] placeholder:text-[#777777] focus:outline-none transition-colors"
           />
         </div>
       </div>
@@ -415,7 +415,7 @@ export function RovaShipmentsView({ onOpenPublicTracking }: RovaShipmentsViewPro
       {viewMode === 'map' ? (
         <section className="space-y-4">
           <div className="space-y-3">
-            <div className="overflow-hidden rounded-2xl border border-[#E5E5E5]">
+            <div className="overflow-hidden rounded-3xl border border-[#E5E5E5]">
               <RovaMap
                 center={mapCenter}
                 zoom={13}
@@ -430,6 +430,7 @@ export function RovaShipmentsView({ onOpenPublicTracking }: RovaShipmentsViewPro
                   `Search an address in ${region.city}...`
                 )}
                 heightClass="h-[360px] sm:h-[460px]"
+                className="rounded-3xl border-0"
                 onLocationSelected={(place) => setPickedOrigin(place)}
                 onMarkerClick={(marker) => {
                   if (marker.meta) {
@@ -441,7 +442,7 @@ export function RovaShipmentsView({ onOpenPublicTracking }: RovaShipmentsViewPro
             </div>
 
             {pickedOrigin && (
-              <div className="px-4 py-3 rounded-xl bg-[#F3F3F3] border border-[#E5E5E5] flex items-center justify-between gap-3">
+              <div className="px-4 py-3.5 rounded-3xl bg-[#F3F3F3] border border-[#E5E5E5] flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2.5 min-w-0">
                   <MapPin className="w-4 h-4 text-[#E52B32] shrink-0" />
                   <div className="min-w-0">
@@ -457,7 +458,7 @@ export function RovaShipmentsView({ onOpenPublicTracking }: RovaShipmentsViewPro
                   <button
                     type="button"
                     onClick={() => setPickedOrigin(null)}
-                    className="text-xs text-[#777777] hover:text-[#171717] px-2 py-1 cursor-pointer"
+                    className="text-xs text-[#777777] hover:text-[#171717] px-2.5 py-1.5 rounded-full cursor-pointer"
                   >
                     {t('Fermer', 'Clear')}
                   </button>
@@ -471,7 +472,7 @@ export function RovaShipmentsView({ onOpenPublicTracking }: RovaShipmentsViewPro
                         lng: pickedOrigin.lng,
                       })
                     }
-                    className="min-h-[36px] px-3.5 rounded-lg bg-[#E52B32] hover:bg-[#CC2229] text-white text-xs font-semibold transition-colors whitespace-nowrap cursor-pointer"
+                    className="min-h-[36px] px-4 rounded-full bg-[#E52B32] hover:bg-[#CC2229] text-white text-xs font-semibold transition-colors whitespace-nowrap cursor-pointer"
                   >
                     {t('Expédier d’ici', 'Ship from here')}
                   </button>
@@ -491,7 +492,7 @@ export function RovaShipmentsView({ onOpenPublicTracking }: RovaShipmentsViewPro
                         setSelectedId(del.id);
                         setPickedOrigin(null);
                       }}
-                      className={`min-h-[36px] inline-flex items-center gap-2 px-3 rounded-lg text-xs font-medium whitespace-nowrap shrink-0 transition-colors cursor-pointer ${
+                      className={`min-h-[36px] inline-flex items-center gap-2 px-3.5 rounded-full text-xs font-medium whitespace-nowrap shrink-0 transition-colors cursor-pointer ${
                         isSelected
                           ? 'bg-[#171717] text-white'
                           : 'bg-[#F3F3F3] text-[#171717] hover:bg-[#E5E5E5]'
@@ -509,7 +510,7 @@ export function RovaShipmentsView({ onOpenPublicTracking }: RovaShipmentsViewPro
           </div>
 
           {activeSelection ? (
-            <div className="border-y border-[#E5E5E5] py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="rounded-3xl border border-[#E5E5E5] bg-white px-5 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="flex items-start gap-3.5 min-w-0">
                 <div className="w-11 h-10 rounded-xl bg-[#F3F3F3] flex items-center justify-center shrink-0">
                   <VehicleIllustration
@@ -549,13 +550,13 @@ export function RovaShipmentsView({ onOpenPublicTracking }: RovaShipmentsViewPro
               <button
                 type="button"
                 onClick={() => openShipmentDetail(activeSelection.id)}
-                className="min-h-[40px] px-4 rounded-xl bg-[#171717] hover:bg-neutral-800 text-white text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap self-start sm:self-auto"
+                className="min-h-[40px] px-5 rounded-full bg-[#171717] hover:bg-neutral-800 text-white text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap self-start sm:self-auto"
               >
                 {t('Gérer l’expédition', 'Manage shipment')}
               </button>
             </div>
           ) : (
-            <div className="border-y border-[#E5E5E5] py-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="rounded-3xl border border-[#E5E5E5] bg-white px-5 py-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
                 <p className="text-sm font-semibold text-[#171717]">
                   {t('Aucune expédition active sur la carte', 'No active shipments on the map')}
@@ -570,7 +571,7 @@ export function RovaShipmentsView({ onOpenPublicTracking }: RovaShipmentsViewPro
               <button
                 type="button"
                 onClick={() => openComposer('single')}
-                className="min-h-[40px] px-4 rounded-xl bg-[#E52B32] hover:bg-[#CC2229] text-white text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap self-start sm:self-auto"
+                className="min-h-[40px] px-5 rounded-full bg-[#E52B32] hover:bg-[#CC2229] text-white text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap self-start sm:self-auto"
               >
                 {t('Nouvelle livraison', 'New delivery')}
               </button>
@@ -584,14 +585,14 @@ export function RovaShipmentsView({ onOpenPublicTracking }: RovaShipmentsViewPro
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
           <div className="xl:col-span-5 space-y-6">
             {loadingData ? (
-              <div className="border-y border-[#E5E5E5] py-5 space-y-4 animate-pulse">
-                <div className="h-4 w-36 bg-[#F3F3F3] rounded" />
-                <div className="h-3.5 w-full bg-[#F3F3F3] rounded" />
-                <div className="h-4 w-32 bg-[#F3F3F3] rounded pt-2" />
-                <div className="h-3.5 w-4/5 bg-[#F3F3F3] rounded" />
+              <div className="rounded-3xl border border-[#E5E5E5] bg-white p-5 space-y-4 animate-pulse">
+                <div className="h-4 w-36 bg-[#F3F3F3] rounded-full" />
+                <div className="h-3.5 w-full bg-[#F3F3F3] rounded-full" />
+                <div className="h-4 w-32 bg-[#F3F3F3] rounded-full pt-2" />
+                <div className="h-3.5 w-4/5 bg-[#F3F3F3] rounded-full" />
               </div>
             ) : filteredDeliveries.length === 0 && filteredReservations.length === 0 ? (
-              <div className="border-y border-[#E5E5E5] py-12 text-center space-y-3">
+              <div className="rounded-3xl border border-[#E5E5E5] bg-white px-6 py-12 text-center space-y-3">
                 <Package className="w-6 h-6 text-[#777777] mx-auto" />
                 <p className="font-display text-base font-bold text-[#171717]">
                   {shipmentFilter === 'upcoming'
@@ -614,7 +615,7 @@ export function RovaShipmentsView({ onOpenPublicTracking }: RovaShipmentsViewPro
                     <button
                       type="button"
                       onClick={openReservationSheet}
-                      className="min-h-[42px] px-5 rounded-xl bg-[#171717] text-white text-xs font-semibold hover:bg-neutral-800 transition-colors cursor-pointer"
+                      className="min-h-[42px] px-5 rounded-full bg-[#171717] text-white text-xs font-semibold hover:bg-neutral-800 transition-colors cursor-pointer"
                     >
                       {t('Planifier un véhicule', 'Schedule a vehicle')}
                     </button>
@@ -622,7 +623,7 @@ export function RovaShipmentsView({ onOpenPublicTracking }: RovaShipmentsViewPro
                     <button
                       type="button"
                       onClick={() => openComposer('single')}
-                      className="min-h-[42px] px-5 rounded-xl bg-[#E52B32] text-white text-xs font-semibold hover:bg-[#CC2229] transition-colors cursor-pointer"
+                      className="min-h-[42px] px-5 rounded-full bg-[#E52B32] text-white text-xs font-semibold hover:bg-[#CC2229] transition-colors cursor-pointer"
                     >
                       {t('Créer une livraison', 'Create a delivery')}
                     </button>
@@ -632,7 +633,7 @@ export function RovaShipmentsView({ onOpenPublicTracking }: RovaShipmentsViewPro
             ) : (
               <>
                 {filteredDeliveries.length > 0 && (
-                  <div className="divide-y divide-[#E5E5E5] border-b border-[#E5E5E5]">
+                  <div className="rounded-3xl border border-[#E5E5E5] bg-white overflow-hidden divide-y divide-[#E5E5E5]">
                     {filteredDeliveries.map((del) => {
                       const selected = activeSelection?.id === del.id;
                       const createdLabel = del.createdAt?.toDate
@@ -646,7 +647,7 @@ export function RovaShipmentsView({ onOpenPublicTracking }: RovaShipmentsViewPro
                           key={del.id}
                           type="button"
                           onClick={() => handleSelectRow(del.id)}
-                          className={`w-full text-left py-4 px-2.5 -mx-2.5 rounded-xl transition-colors cursor-pointer flex items-start justify-between gap-3 ${
+                          className={`w-full text-left py-4 px-5 transition-colors cursor-pointer flex items-start justify-between gap-3 ${
                             selected ? 'xl:bg-[#F3F3F3]/90 hover:bg-[#F3F3F3]/70' : 'hover:bg-[#F3F3F3]/50'
                           }`}
                         >
@@ -701,9 +702,9 @@ export function RovaShipmentsView({ onOpenPublicTracking }: RovaShipmentsViewPro
                     <p className="text-xs font-medium text-[#777777]">
                       {t('Réservations de véhicules', 'Vehicle reservations')}
                     </p>
-                    <div className="border-y border-[#E5E5E5] divide-y divide-[#E5E5E5]">
+                    <div className="rounded-3xl border border-[#E5E5E5] bg-white overflow-hidden divide-y divide-[#E5E5E5]">
                       {filteredReservations.map((res) => (
-                        <div key={res.id} className="py-4 flex items-center justify-between gap-3">
+                        <div key={res.id} className="px-5 py-4 flex items-center justify-between gap-3">
                           <div className="flex items-start gap-3 min-w-0">
                             <div className="w-10 h-10 rounded-xl bg-[#F3F3F3] flex items-center justify-center shrink-0">
                               <Calendar className="w-4 h-4 text-[#171717]" />
@@ -754,7 +755,7 @@ export function RovaShipmentsView({ onOpenPublicTracking }: RovaShipmentsViewPro
 
           {/* Desktop Inline Inspector */}
           <div className="hidden xl:block xl:col-span-7 sticky top-6">
-            <div className="rounded-2xl bg-white border border-[#E5E5E5] p-6">
+            <div className="rounded-3xl bg-white border border-[#E5E5E5] p-6">
               {activeSelection ? (
                 <ShipmentDetailContent
                   delivery={activeSelection}

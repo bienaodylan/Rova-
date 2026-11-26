@@ -124,7 +124,7 @@ export function QrScannerSheet({ open, onClose, onDetected }: QrScannerSheetProp
 
   return (
     <div className="fixed inset-0 z-[110] flex items-end sm:items-center justify-center bg-[#171717]/55 backdrop-blur-sm p-0 sm:p-5" role="dialog" aria-modal="true" aria-label={t('Scanner un colis', 'Scan a package')}>
-      <div className="w-full max-w-lg overflow-hidden rounded-t-3xl sm:rounded-3xl bg-white shadow-2xl">
+      <div className="w-full max-w-lg overflow-hidden rounded-t-[32px] sm:rounded-[32px] bg-white shadow-2xl">
         <header className="flex items-center justify-between border-b border-[#E5E5E5] px-5 py-4">
           <div className="flex items-center gap-3">
             <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#FEF2F2] text-[#E52B32]"><QrCode className="h-5 w-5" /></span>
@@ -137,7 +137,7 @@ export function QrScannerSheet({ open, onClose, onDetected }: QrScannerSheetProp
         </header>
 
         <div className="space-y-4 p-5">
-          <div className="relative aspect-[4/3] overflow-hidden rounded-2xl bg-[#171717]">
+          <div className="relative aspect-[4/3] overflow-hidden rounded-3xl bg-[#171717]">
             <video ref={videoRef} autoPlay muted playsInline className="h-full w-full object-cover" />
             <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
               <div className="relative h-44 w-44 rounded-2xl border-2 border-white/90 shadow-[0_0_0_999px_rgba(0,0,0,0.28)]">
@@ -151,14 +151,14 @@ export function QrScannerSheet({ open, onClose, onDetected }: QrScannerSheetProp
             {!cameraReady && !starting && <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-[#171717]/85 px-6 text-center text-white"><Camera className="h-7 w-7" /><span className="text-sm font-semibold">{t('Caméra indisponible', 'Camera unavailable')}</span></div>}
           </div>
 
-          {cameraError && <p className="flex items-start gap-2 rounded-xl bg-[#FEF2F2] px-3.5 py-3 text-xs leading-relaxed text-[#991B1B]" role="alert"><AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />{cameraError}</p>}
+          {cameraError && <p className="flex items-start gap-2 rounded-2xl bg-[#FEF2F2] px-4 py-3 text-xs leading-relaxed text-[#991B1B]" role="alert"><AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />{cameraError}</p>}
           {cameraReady && <p className="flex items-center gap-2 text-xs text-[#15803D]"><CheckCircle2 className="h-4 w-4" />{t('Caméra active · lecture automatique du QR code', 'Camera active · QR code will be detected automatically')}</p>}
 
           <form onSubmit={submitManualCode} className="space-y-2.5">
             <label htmlFor="rovia-manual-tracking-code" className="block text-xs font-semibold text-[#171717]">{t('Ou saisir le code de suivi', 'Or enter a tracking code')}</label>
             <div className="flex gap-2">
-              <input id="rovia-manual-tracking-code" value={manualCode} onChange={(event) => setManualCode(event.target.value)} placeholder={t('Code ou lien de suivi', 'Tracking code or link')} className="min-w-0 flex-1 rounded-xl border border-[#E5E5E5] px-3.5 py-3 text-sm outline-none focus:border-[#171717]" />
-              <button type="submit" disabled={!manualCode.trim()} className="min-h-11 rounded-xl bg-[#E52B32] px-4 text-sm font-semibold text-white transition hover:bg-[#CC2229] disabled:opacity-40">{t('Suivre', 'Track')}</button>
+              <input id="rovia-manual-tracking-code" value={manualCode} onChange={(event) => setManualCode(event.target.value)} placeholder={t('Code ou lien de suivi', 'Tracking code or link')} className="min-w-0 flex-1 rounded-2xl border border-[#E5E5E5] px-4 py-3 text-sm outline-none focus:border-[#171717]" />
+              <button type="submit" disabled={!manualCode.trim()} className="min-h-11 rounded-full bg-[#E52B32] px-5 text-sm font-semibold text-white transition hover:bg-[#CC2229] disabled:opacity-40 cursor-pointer">{t('Suivre', 'Track')}</button>
             </div>
           </form>
         </div>

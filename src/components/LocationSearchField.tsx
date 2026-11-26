@@ -9,9 +9,16 @@ interface LocationSearchFieldProps {
   center: [number, number];
   placeholder: string;
   onSelect: (place: GeoPlace) => void;
+  onChangeText?: (text: string) => void;
 }
 
-export function LocationSearchField({ value, center, placeholder, onSelect }: LocationSearchFieldProps) {
+export function LocationSearchField({
+  value,
+  center,
+  placeholder,
+  onSelect,
+  onChangeText,
+}: LocationSearchFieldProps) {
   const { t } = useLanguage();
   const [query, setQuery] = useState(value);
   const [results, setResults] = useState<GeoPlace[]>([]);
@@ -173,13 +180,17 @@ export function LocationSearchField({ value, center, placeholder, onSelect }: Lo
   return (
     <>
       <div className="relative">
-        <div className="flex items-center rounded-xl border border-neutral-300 bg-white shadow-sm transition focus-within:border-neutral-950 focus-within:ring-2 focus-within:ring-neutral-950/5">
-          <Search className="ml-3.5 h-4 w-4 shrink-0 text-neutral-400" />
+        <div className="flex min-h-[46px] items-center rounded-2xl border border-[#E5E5E5] bg-white transition focus-within:border-[#171717] focus-within:ring-1 focus-within:ring-[#171717]/10">
+          <Search className="ml-3.5 h-4 w-4 shrink-0 text-[#777777]" />
           <input
             value={query}
-            onChange={(event) => setQuery(event.target.value)}
+            onChange={(event) => {
+              const nextVal = event.target.value;
+              setQuery(nextVal);
+              onChangeText?.(nextVal);
+            }}
             placeholder={placeholder}
-            className="min-w-0 flex-1 bg-transparent px-3 py-3 text-sm text-neutral-950 outline-none placeholder:text-neutral-400"
+            className="min-w-0 flex-1 bg-transparent px-3 py-2.5 text-sm text-[#171717] outline-none placeholder:text-[#777777]"
             type="search"
             inputMode="search"
             enterKeyHint="search"
@@ -188,14 +199,14 @@ export function LocationSearchField({ value, center, placeholder, onSelect }: Lo
             spellCheck={false}
             autoComplete="off"
           />
-          {searching && <Loader2 className="mr-2 h-4 w-4 animate-spin text-neutral-400" />}
+          {searching && <Loader2 className="mr-2 h-4 w-4 animate-spin text-[#777777]" />}
           <button
             type="button"
             onClick={useGps}
             disabled={gpsLoading}
             aria-label={t('Rechercher près de moi', 'Search near me')}
             title={t('Rechercher près de moi', 'Search near me')}
-            className="mr-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-neutral-600 transition hover:bg-neutral-100 disabled:opacity-50"
+            className="mr-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-[#777777] transition hover:bg-[#F3F3F3] hover:text-[#171717] disabled:opacity-50 cursor-pointer"
           >
             {gpsLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Crosshair className="h-4 w-4" />}
           </button>
@@ -204,20 +215,20 @@ export function LocationSearchField({ value, center, placeholder, onSelect }: Lo
             onClick={openPicker}
             aria-label={t('Choisir sur la carte', 'Choose location on map')}
             title={t('Choisir sur la carte', 'Choose on map')}
-            className="mr-1.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-neutral-950 text-white transition hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+            className="mr-1.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#171717] text-white transition hover:bg-[#E52B32] focus:outline-none focus:ring-2 focus:ring-[#E52B32] focus:ring-offset-2 cursor-pointer"
           >
             <MapIcon className="h-4 w-4" />
           </button>
         </div>
-        {locationMessage && <p className="mt-1.5 px-1 text-xs text-neutral-500" role="status">{locationMessage}</p>}
+        {locationMessage && <p className="mt-1.5 px-1 text-xs text-[#777777]" role="status">{locationMessage}</p>}
         {results.length > 0 && (
-          <div className="absolute left-0 right-0 top-full z-[80] mt-1.5 max-h-60 overflow-y-auto rounded-xl border border-neutral-200 bg-white shadow-xl">
+          <div className="absolute left-0 right-0 top-full z-[80] mt-1.5 max-h-60 overflow-y-auto rounded-2xl border border-[#E5E5E5] bg-white shadow-xl">
             {results.map((place, index) => (
-              <button key={`${place.lat}-${place.lng}-${index}`} type="button" onClick={() => chooseSearchResult(place)} className="flex w-full items-start gap-3 border-b border-neutral-100 px-3.5 py-3 text-left last:border-0 hover:bg-neutral-50">
-                <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-red-600" />
+              <button key={`${place.lat}-${place.lng}-${index}`} type="button" onClick={() => chooseSearchResult(place)} className="flex w-full items-start gap-3 border-b border-[#E5E5E5] px-3.5 py-3 text-left last:border-0 hover:bg-[#F3F3F3]/60 cursor-pointer">
+                <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[#E52B32]" />
                 <span className="min-w-0">
-                  <span className="block truncate text-sm font-medium text-neutral-950">{place.shortName}</span>
-                  <span className="block truncate text-xs text-neutral-500">{place.displayName}</span>
+                  <span className="block truncate text-sm font-medium text-[#171717]">{place.shortName}</span>
+                  <span className="block truncate text-xs text-[#777777]">{place.displayName}</span>
                 </span>
               </button>
             ))}
@@ -227,16 +238,16 @@ export function LocationSearchField({ value, center, placeholder, onSelect }: Lo
 
       {pickerOpen && (
         <div className="fixed inset-0 z-[1000] flex h-[100dvh] min-h-0 w-screen max-w-[100vw] flex-col overflow-hidden overscroll-none bg-white" role="dialog" aria-modal="true" aria-label={t('Choisir un emplacement', 'Choose a location')}>
-          <header className="relative z-[20] flex h-[calc(3.5rem+env(safe-area-inset-top))] shrink-0 items-center justify-between border-b border-neutral-200 bg-white px-4 pt-[env(safe-area-inset-top)]">
-            <button type="button" onClick={() => setPickerOpen(false)} className="flex h-10 w-10 items-center justify-center rounded-full hover:bg-neutral-100" aria-label={t('Retour', 'Back')}>
-              <ArrowLeft className="h-5 w-5" />
+          <header className="relative z-[20] flex h-[calc(3.5rem+env(safe-area-inset-top))] shrink-0 items-center justify-between border-b border-[#E5E5E5] bg-white px-4 pt-[env(safe-area-inset-top)]">
+            <button type="button" onClick={() => setPickerOpen(false)} className="flex h-10 w-10 items-center justify-center rounded-full hover:bg-[#F3F3F3] cursor-pointer" aria-label={t('Retour', 'Back')}>
+              <ArrowLeft className="h-5 w-5 text-[#171717]" />
             </button>
             <div className="text-center">
-              <p className="text-sm font-semibold text-neutral-950">{t('Positionner le point', 'Pin your location')}</p>
-              <p className="text-[11px] text-neutral-500">{t('Déplacez la carte sous le repère', 'Move the map under the marker')}</p>
+              <p className="text-sm font-semibold text-[#171717]">{t('Positionner le point', 'Pin your location')}</p>
+              <p className="text-[11px] text-[#777777]">{t('Déplacez la carte sous le repère', 'Move the map under the marker')}</p>
             </div>
-            <button type="button" onClick={() => setPickerOpen(false)} className="flex h-10 w-10 items-center justify-center rounded-full hover:bg-neutral-100" aria-label={t('Fermer', 'Close')}>
-              <X className="h-5 w-5" />
+            <button type="button" onClick={() => setPickerOpen(false)} className="flex h-10 w-10 items-center justify-center rounded-full hover:bg-[#F3F3F3] cursor-pointer" aria-label={t('Fermer', 'Close')}>
+              <X className="h-5 w-5 text-[#171717]" />
             </button>
           </header>
           <div className="relative min-h-0 flex-1 overflow-hidden rova-map-gesture-surface">
@@ -249,19 +260,19 @@ export function LocationSearchField({ value, center, placeholder, onSelect }: Lo
               centerMarker
               onMapCenterChanged={handleMapCenter}
             />
-            <button type="button" onClick={useGps} disabled={gpsLoading} className="absolute right-4 top-4 z-[500] flex h-11 w-11 items-center justify-center rounded-full border border-neutral-200 bg-white text-neutral-950 shadow-lg disabled:opacity-60" aria-label={t('Ma position GPS', 'My GPS location')}>
+            <button type="button" onClick={useGps} disabled={gpsLoading} className="absolute right-4 top-4 z-[500] flex h-11 w-11 items-center justify-center rounded-full border border-[#E5E5E5] bg-white text-[#171717] shadow-lg disabled:opacity-60 cursor-pointer" aria-label={t('Ma position GPS', 'My GPS location')}>
               {gpsLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Crosshair className="h-5 w-5" />}
             </button>
-            <div className="pointer-events-none absolute left-4 right-4 top-4 z-[400] rounded-xl border border-neutral-200 bg-white/95 px-3.5 py-2.5 shadow-md">
+            <div className="pointer-events-none absolute left-4 right-16 top-4 z-[400] rounded-2xl border border-[#E5E5E5] bg-white/95 px-4 py-2.5 shadow-md">
               <div className="flex items-center gap-2">
-                {resolving ? <Loader2 className="h-4 w-4 animate-spin text-red-600" /> : <MapPin className="h-4 w-4 shrink-0 text-red-600" />}
-                <p className="line-clamp-2 text-xs font-medium text-neutral-800">{resolved?.shortName || t('Recherche de l’adresse...', 'Resolving address...')}</p>
+                {resolving ? <Loader2 className="h-4 w-4 animate-spin text-[#E52B32]" /> : <MapPin className="h-4 w-4 shrink-0 text-[#E52B32]" />}
+                <p className="line-clamp-2 text-xs font-medium text-[#171717]">{resolved?.shortName || t('Recherche de l’adresse...', 'Resolving address...')}</p>
               </div>
             </div>
           </div>
-          <footer className="shrink-0 border-t border-neutral-200 bg-white px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-8px_24px_rgba(0,0,0,0.06)]">
-            <p className="mb-2 line-clamp-2 text-xs text-neutral-500">{resolved?.displayName || t('Aucune adresse résolue pour le moment', 'No address resolved yet')}</p>
-            <button type="button" onClick={confirmMapLocation} disabled={!resolved || resolving} className="flex w-full items-center justify-center gap-2 rounded-full bg-neutral-950 px-5 py-3.5 text-sm font-semibold text-white transition hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-40">
+          <footer className="shrink-0 border-t border-[#E5E5E5] bg-white px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-8px_24px_rgba(0,0,0,0.06)]">
+            <p className="mb-2 line-clamp-2 text-xs text-[#777777]">{resolved?.displayName || t('Aucune adresse résolue pour le moment', 'No address resolved yet')}</p>
+            <button type="button" onClick={confirmMapLocation} disabled={!resolved || resolving} className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-full bg-[#E52B32] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#CC2229] disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer">
               <Check className="h-4 w-4" />
               {t('Confirmer cet emplacement', 'Confirm this location')}
             </button>

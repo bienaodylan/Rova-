@@ -358,7 +358,7 @@ export function LiveTrackingWindow({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.99 }}
             transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-            className="relative z-10 w-full sm:max-w-2xl h-[94dvh] sm:h-[min(860px,90dvh)] bg-white rounded-t-3xl sm:rounded-2xl shadow-[0_24px_64px_rgba(23,23,23,0.18)] border border-[#E5E5E5] flex flex-col overflow-hidden"
+            className="relative z-10 w-full sm:max-w-2xl h-[94dvh] sm:h-[min(860px,90dvh)] bg-white rounded-t-[32px] sm:rounded-[32px] shadow-[0_24px_64px_rgba(23,23,23,0.18)] border border-[#E5E5E5] flex flex-col overflow-hidden"
           >
             {/* Mobile Drag Handle */}
             <div className="sm:hidden pt-2.5 pb-1 flex justify-center shrink-0">
@@ -389,7 +389,7 @@ export function LiveTrackingWindow({
                   <button
                     type="button"
                     onClick={() => void enableRecipientAlerts()}
-                    className={`min-h-[40px] px-3 rounded-xl text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer ${
+                    className={`min-h-[40px] px-3.5 rounded-full text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer ${
                       recipientAlertsOn
                         ? 'bg-[#171717] text-white'
                         : 'border border-[#E5E5E5] hover:border-[#171717] text-[#171717]'
@@ -450,7 +450,7 @@ export function LiveTrackingWindow({
                   initial={{ opacity: 0, y: -8 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -8 }}
-                  className="mx-5 sm:mx-6 mt-3 rounded-xl bg-[#E52B32] text-white px-4 py-3 flex items-center justify-between gap-3 shrink-0"
+                  className="mx-5 sm:mx-6 mt-3 rounded-2xl bg-[#E52B32] text-white px-4 py-3 flex items-center justify-between gap-3 shrink-0"
                 >
                   <div className="min-w-0">
                     <p className="text-xs font-bold truncate">{liveUpdateBanner.title}</p>
@@ -483,7 +483,7 @@ export function LiveTrackingWindow({
                       e.preventDefault();
                       if (inputCode.trim()) onLookupToken(inputCode.trim());
                     }}
-                    className="flex items-center gap-2 rounded-xl border border-[#E5E5E5] bg-[#F3F3F3]/60 px-3 py-1.5 focus-within:border-[#171717] focus-within:bg-white transition-colors"
+                    className="flex items-center gap-2 rounded-full border border-[#E5E5E5] bg-[#F3F3F3]/60 pl-4 pr-1.5 py-1.5 focus-within:border-[#171717] focus-within:bg-white transition-colors"
                   >
                     <Search className="w-4 h-4 text-[#777777] shrink-0" />
                     <input
@@ -495,7 +495,7 @@ export function LiveTrackingWindow({
                     />
                     <button
                       type="submit"
-                      className="min-h-[34px] px-3.5 rounded-lg bg-[#171717] text-white text-xs font-semibold hover:bg-[#E52B32] transition-colors shrink-0 cursor-pointer"
+                      className="min-h-[34px] px-4 rounded-full bg-[#171717] text-white text-xs font-semibold hover:bg-[#E52B32] transition-colors shrink-0 cursor-pointer"
                     >
                       {t('Suivre', 'Track')}
                     </button>
@@ -511,7 +511,7 @@ export function LiveTrackingWindow({
                   )}
 
                   {!loadingToken && !record && (
-                    <div className="border-y border-[#E5E5E5] py-10 text-center space-y-2.5">
+                    <div className="rounded-3xl border border-[#E5E5E5] bg-white px-6 py-10 text-center space-y-2.5">
                       <MapPin className="w-5 h-5 text-[#777777] mx-auto" />
                       <h2 className="font-display text-base font-bold text-[#171717]">
                         {notFound
@@ -530,13 +530,14 @@ export function LiveTrackingWindow({
                   {!loadingToken && record && (
                     <div className="space-y-5">
                       {/* Map-First View */}
-                      <div className="overflow-hidden rounded-2xl border border-[#E5E5E5]">
+                      <div className="overflow-hidden rounded-3xl border border-[#E5E5E5]">
                         <RovaMap
                           center={[record.destinationLat, record.destinationLng]}
                           zoom={14}
                           markers={recipientMarkers}
                           routeCoordinates={routeCoords}
                           heightClass="h-[250px] sm:h-[290px]"
+                          className="rounded-3xl border-0"
                         />
                       </div>
 
@@ -570,7 +571,7 @@ export function LiveTrackingWindow({
                       </div>
 
                       {!record.showLiveDriver && record.status !== 'delivered' && (
-                        <div className="rounded-xl bg-[#F3F3F3]/75 border border-[#E5E5E5] px-4 py-3 text-xs text-[#777777] leading-relaxed">
+                        <div className="rounded-2xl bg-[#F3F3F3]/75 border border-[#E5E5E5] px-4 py-3 text-xs text-[#777777] leading-relaxed">
                           {t(
                             'La position GPS du livreur s’affichera automatiquement dès que votre arrêt sera le prochain sur la tournée.',
                             'Live courier GPS activates automatically once your stop is next on the route.'
@@ -624,7 +625,7 @@ export function LiveTrackingWindow({
 
                       {/* OTP Handover Code */}
                       {record.otpHint && record.status !== 'delivered' && (
-                        <div className="rounded-2xl bg-[#171717] text-white px-5 py-4 flex items-center justify-between gap-4">
+                        <div className="rounded-3xl bg-[#171717] text-white px-5 py-4 flex items-center justify-between gap-4">
                           <div className="space-y-0.5">
                             <p className="text-xs font-semibold text-white">
                               {t('Code de remise sécurisé (OTP)', 'Secure handover code (OTP)')}

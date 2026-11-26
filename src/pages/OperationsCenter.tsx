@@ -35,6 +35,7 @@ import {
 } from 'lucide-react';
 import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { isSupabaseConfigured, supabaseApiFetch } from '../lib/supabase';
+import { assignScheduledCourierOpsApi } from '../lib/scheduledApi';
 import { useAuth } from '../context/AuthContext';
 import { LanguageSelector, useLanguage } from '../context/LanguageContext';
 import {
@@ -129,6 +130,8 @@ export function OperationsCenter({
   const [busyId, setBusyId] = useState<string | null>(null);
   const [activeCities, setActiveCities] = useState<Array<{ id: string; name: string; countryCode: string; currency: string; maxDeliveryDistanceKm: number }>>([]);
   const [reconciling, setReconciling] = useState(false);
+  const [resFilter, setResFilter] = useState<'all' | 'today' | 'tomorrow' | 'upcoming' | 'unassigned' | 'payment_issues' | 'escalated'>('all');
+  const [resCityFilter, setResCityFilter] = useState<string>('all');
 
   useEffect(() => {
     fetch('/api/v1/cities')
@@ -151,13 +154,19 @@ export function OperationsCenter({
             staleCouriersFlaggedCount: number;
             stuckSearchesEscalatedCount: number;
             notificationsRetriedCount: number;
+            scheduled?: {
+              expiredHoldsCount: number;
+              dispatchStartedCount: number;
+              escalatedUnassignedCount: number;
+            };
           };
         }>('/api/v1/ops/reconcile', { method: 'POST' });
         const r = res.report;
+        const sc = r?.scheduled;
         flash(
           t(
-            `Réconciliation terminée : ${r?.expiredOffersCount ?? 0} offres expirées, ${r?.staleCouriersFlaggedCount ?? 0} GPS obsolètes, ${r?.stuckSearchesEscalatedCount ?? 0} recherches escaladées.`,
-            `Reconciliation complete: ${r?.expiredOffersCount ?? 0} expired offers, ${r?.staleCouriersFlaggedCount ?? 0} stale GPS flagged, ${r?.stuckSearchesEscalatedCount ?? 0} stuck searches escalated.`
+            `Réconciliation terminée : ${r?.expiredOffersCount ?? 0} offres expirées, ${r?.staleCouriersFlaggedCount ?? 0} GPS obsolètes, ${sc?.expiredHoldsCount ?? 0} créneaux expirés, ${sc?.dispatchStartedCount ?? 0} dispatch planifiés ouverts.`,
+            `Reconciliation complete: ${r?.expiredOffersCount ?? 0} expired offers, ${r?.staleCouriersFlaggedCount ?? 0} stale GPS flagged, ${sc?.expiredHoldsCount ?? 0} expired holds, ${sc?.dispatchStartedCount ?? 0} scheduled dispatches opened.`
           )
         );
       } else {
@@ -617,6 +626,14 @@ export function OperationsCenter({
     try {
       const assignedDrvUid = resAssignDriver[res.id] ?? res.driverUid ?? '';
       const assignedVehId = resAssignVehicle[res.id] ?? res.vehicleId ?? '';
+      if (isSupabaseConfigured()) {
+        await supabaseApiFetch(`/api/v1/reservations/${encodeURIComponent(res.id)}/status`, {
+          method: 'PATCH',
+          body: JSON.stringify({ status: nextStatus }),
+        });
+        flash(t('Réservation mise à jour.', 'Reservation updated.'));
+        return;
+      }
       const payload: Record<string, unknown> = {
         status: nextStatus,
         driverUid: assignedDrvUid,
@@ -627,7 +644,48 @@ export function OperationsCenter({
       await logAudit(`reservation_${nextStatus}`, 'reservation', res.id, `Réservation ${res.merchantName} -> ${nextStatus}`);
       flash(t('Réservation mise à jour.', 'Reservation updated.'));
     } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, `reservations/${res.id}`);
+      if (!isSupabaseConfigured()) handleFirestoreError(error, OperationType.UPDATE, `reservations/${res.id}`);
+      else flash(error instanceof Error ? error.message : t('Erreur de mise à jour.', 'Update error.'));
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const handleAssignReservationDriver = async (res: ReservationRecord) => {
+    if (!requireAdminAction()) return;
+    const selectedUid = resAssignDriver[res.id] || res.driverUid;
+    if (!selectedUid) {
+      flash(t('Sélectionnez un chauffeur validé.', 'Select an approved driver.'));
+      return;
+    }
+    const drv = kpis.approvedDrivers.find((d) => d.uid === selectedUid);
+    if (!drv) return;
+    setBusyId(res.id);
+    try {
+      if (isSupabaseConfigured()) {
+        await assignScheduledCourierOpsApi(res.id, {
+          courierUid: drv.uid,
+          courierName: drv.fullName,
+          vehicleCategory: drv.vehicleCategory,
+          cityId: res.cityId,
+        });
+        flash(
+          t(
+            `${drv.fullName} assigné à la réservation (vérification de conflit validée).`,
+            `Assigned ${drv.fullName} to reservation (conflict check passed).`
+          )
+        );
+        return;
+      }
+      await updateDoc(doc(db, 'reservations', res.id), {
+        driverUid: drv.uid,
+        status: res.status === 'pending_approval' ? 'confirmed' : res.status,
+        updatedAt: serverTimestamp(),
+      });
+      await logAudit('assign_reservation_driver', 'reservation', res.id, `Assigné ${drv.fullName} à la réservation ${res.id}`);
+      flash(t(`${drv.fullName} assigné à la réservation.`, `Assigned ${drv.fullName} to reservation.`));
+    } catch (error) {
+      flash(error instanceof Error ? error.message : t('Conflit d’horaire ou erreur d’affectation.', 'Schedule conflict or assignment error.'));
     } finally {
       setBusyId(null);
     }
@@ -1338,56 +1396,192 @@ export function OperationsCenter({
                 </div>
               )}
 
-              {dispatchTab === 'reservations' && (
-                <div className="space-y-3">
-                  {reservations.length === 0 ? (
-                    <div className="rounded-3xl border border-neutral-200 bg-white p-12 text-center space-y-2">
-                      <Calendar className="w-6 h-6 mx-auto text-neutral-400" />
-                      <p className="text-sm font-semibold">
-                        {t('Aucune réservation en attente (0)', 'No reservations yet (0)')}
-                      </p>
-                    </div>
-                  ) : (
-                    reservations.map((res) => (
-                      <div key={res.id} className="rounded-3xl border border-neutral-200 bg-white p-5 space-y-3">
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <div>
-                            <p className="text-sm font-semibold">
-                              {res.merchantName} · {getVehicleLabel(res.vehicleCategory, lang)}
-                            </p>
-                            <p className="text-xs text-neutral-500 font-mono">
-                              {res.reservationDate} ({res.startTime}–{res.endTime}) · {res.pickupAddress}
-                            </p>
-                          </div>
-                          <span className="font-mono text-sm font-bold">
-                            {formatLocalMoney(res.quotedPrice, res.currency)}
-                          </span>
-                        </div>
-                        <div className="flex flex-wrap gap-2 pt-2 border-t border-neutral-100">
-                          {res.status === 'pending_approval' && (
-                            <button
-                              type="button"
-                              onClick={() => handleUpdateReservation(res, 'confirmed')}
-                              className="px-4 py-1.5 rounded-full bg-neutral-950 text-white text-xs font-medium"
-                            >
-                              {t('Confirmer la réservation', 'Approve reservation')}
-                            </button>
-                          )}
-                          {res.status === 'confirmed' && (
-                            <button
-                              type="button"
-                              onClick={() => handleUpdateReservation(res, 'completed')}
-                              className="px-4 py-1.5 rounded-full bg-emerald-700 text-white text-xs font-medium"
-                            >
-                              {t('Marquer terminée', 'Mark completed')}
-                            </button>
-                          )}
-                        </div>
+              {dispatchTab === 'reservations' && (() => {
+                const todayIso = new Date().toISOString().slice(0, 10);
+                const tmrw = new Date();
+                tmrw.setDate(tmrw.getDate() + 1);
+                const tomorrowIso = tmrw.toISOString().slice(0, 10);
+
+                const filteredOpsReservations = reservations.filter((r) => {
+                  if (resCityFilter !== 'all' && (r.cityId || 'abidjan') !== resCityFilter) return false;
+                  if (resFilter === 'today') return r.reservationDate === todayIso;
+                  if (resFilter === 'tomorrow') return r.reservationDate === tomorrowIso;
+                  if (resFilter === 'upcoming') {
+                    return r.reservationDate >= todayIso && r.status !== 'cancelled' && r.status !== 'completed';
+                  }
+                  if (resFilter === 'unassigned') {
+                    return !r.driverUid && r.status !== 'cancelled' && r.status !== 'completed';
+                  }
+                  if (resFilter === 'payment_issues') {
+                    return (
+                      r.paymentStatus === 'failed' ||
+                      r.paymentStatus === 'pending' ||
+                      r.reservationStatus === 'pending_payment'
+                    );
+                  }
+                  if (resFilter === 'escalated') {
+                    return Boolean(r.escalationReason) || r.assignmentStatus === 'failed' || r.assignmentStatus === 'reassignment_required';
+                  }
+                  return true;
+                });
+
+                const filterTabs: Array<{ id: typeof resFilter; label: string }> = [
+                  { id: 'all', label: t('Toutes', 'All') },
+                  { id: 'today', label: t('Aujourd’hui', 'Today') },
+                  { id: 'tomorrow', label: t('Demain', 'Tomorrow') },
+                  { id: 'upcoming', label: t('À venir', 'Upcoming') },
+                  { id: 'unassigned', label: t('Sans chauffeur', 'Unassigned') },
+                  { id: 'payment_issues', label: t('Paiement', 'Payment') },
+                  { id: 'escalated', label: t('Alertes', 'Alerts') },
+                ];
+
+                return (
+                  <div className="space-y-4">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex flex-wrap gap-1.5">
+                        {filterTabs.map((ft) => (
+                          <button
+                            key={ft.id}
+                            type="button"
+                            onClick={() => setResFilter(ft.id)}
+                            className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                              resFilter === ft.id
+                                ? 'bg-neutral-950 text-white border-neutral-950'
+                                : 'bg-white text-neutral-700 border-neutral-200 hover:border-neutral-400'
+                            }`}
+                          >
+                            {ft.label}
+                          </button>
+                        ))}
                       </div>
-                    ))
-                  )}
-                </div>
-              )}
+                      {activeCities.length > 0 && (
+                        <select
+                          value={resCityFilter}
+                          onChange={(e) => setResCityFilter(e.target.value)}
+                          className="rounded-xl border border-neutral-300 px-3 py-1.5 text-xs bg-white"
+                        >
+                          <option value="all">{t('Toutes les villes', 'All cities')}</option>
+                          {activeCities.map((c) => (
+                            <option key={c.id} value={c.id}>
+                              {c.name}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                    </div>
+
+                    {filteredOpsReservations.length === 0 ? (
+                      <div className="rounded-3xl border border-neutral-200 bg-white p-12 text-center space-y-2">
+                        <Calendar className="w-6 h-6 mx-auto text-neutral-400" />
+                        <p className="text-sm font-semibold">
+                          {t('Aucune réservation dans cette vue (0)', 'No reservations in this view (0)')}
+                        </p>
+                      </div>
+                    ) : (
+                      filteredOpsReservations.map((res) => (
+                        <div key={res.id} className="rounded-3xl border border-neutral-200 bg-white p-5 space-y-3">
+                          <div className="flex flex-wrap items-start justify-between gap-2">
+                            <div className="space-y-1">
+                              <div className="flex flex-wrap items-center gap-2 text-xs">
+                                {res.reference && (
+                                  <span className="font-mono font-bold text-neutral-950">{res.reference}</span>
+                                )}
+                                <span className="font-semibold text-neutral-950">
+                                  {res.merchantName} · {getVehicleLabel(res.vehicleCategory, lang)}
+                                </span>
+                                {res.cityName && (
+                                  <span className="text-neutral-500">· {res.cityName}</span>
+                                )}
+                              </div>
+                              <p className="text-xs text-neutral-500 font-mono">
+                                {res.reservationDate} ({res.startTime}–{res.endTime}) · {res.pickupAddress}
+                              </p>
+                              <div className="flex flex-wrap items-center gap-2 text-[11px]">
+                                <span className="px-2 py-0.5 rounded-md bg-neutral-100 text-neutral-800 font-medium">
+                                  {t('Statut :', 'Status:')} {res.reservationStatus || res.status}
+                                </span>
+                                {res.paymentStatus && (
+                                  <span className="px-2 py-0.5 rounded-md bg-neutral-100 text-neutral-700 font-medium">
+                                    {t('Paiement :', 'Payment:')} {res.paymentStatus}
+                                  </span>
+                                )}
+                                <span className="px-2 py-0.5 rounded-md bg-neutral-100 text-neutral-700 font-medium">
+                                  {t('Chauffeur :', 'Driver:')}{' '}
+                                  {res.assignedDriverName || (res.driverUid ? res.driverUid.slice(0, 8) : t('Non assigné', 'Unassigned'))}
+                                </span>
+                                {res.escalationReason && (
+                                  <span className="px-2 py-0.5 rounded-md bg-red-50 text-red-700 font-semibold">
+                                    {res.escalationReason}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <span className="font-mono text-sm font-bold tabular-nums">
+                              {formatLocalMoney(res.quotedPrice, res.currency)}
+                            </span>
+                          </div>
+                          <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-neutral-100">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <select
+                                value={resAssignDriver[res.id] ?? res.driverUid ?? ''}
+                                onChange={(e) => setResAssignDriver((p) => ({ ...p, [res.id]: e.target.value }))}
+                                className="rounded-xl border border-neutral-300 px-3 py-1.5 text-xs bg-white"
+                              >
+                                <option value="">{t('Affecter un chauffeur validé...', 'Assign approved driver...')}</option>
+                                {kpis.approvedDrivers.map((d) => (
+                                  <option key={d.uid} value={d.uid}>
+                                    {d.fullName} ({getVehicleLabel(d.vehicleCategory, lang)})
+                                  </option>
+                                ))}
+                              </select>
+                              <button
+                                type="button"
+                                disabled={busyId === res.id || res.status === 'cancelled' || res.status === 'completed'}
+                                onClick={() => void handleAssignReservationDriver(res)}
+                                className="px-3.5 py-1.5 rounded-full bg-neutral-950 text-white text-xs font-medium disabled:opacity-40"
+                              >
+                                {t('Affecter (anti-conflit)', 'Assign (conflict-safe)')}
+                              </button>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                              {res.status === 'pending_approval' && (
+                                <button
+                                  type="button"
+                                  disabled={busyId === res.id}
+                                  onClick={() => handleUpdateReservation(res, 'confirmed')}
+                                  className="px-4 py-1.5 rounded-full bg-neutral-950 text-white text-xs font-medium"
+                                >
+                                  {t('Confirmer', 'Approve')}
+                                </button>
+                              )}
+                              {res.status === 'confirmed' && (
+                                <button
+                                  type="button"
+                                  disabled={busyId === res.id}
+                                  onClick={() => handleUpdateReservation(res, 'completed')}
+                                  className="px-4 py-1.5 rounded-full bg-emerald-700 text-white text-xs font-medium"
+                                >
+                                  {t('Marquer terminée', 'Mark completed')}
+                                </button>
+                              )}
+                              {res.status !== 'cancelled' && res.status !== 'completed' && (
+                                <button
+                                  type="button"
+                                  disabled={busyId === res.id}
+                                  onClick={() => handleUpdateReservation(res, 'cancelled')}
+                                  className="px-3.5 py-1.5 rounded-full border border-neutral-300 text-xs text-neutral-700 hover:border-red-600 hover:text-red-700"
+                                >
+                                  {t('Annuler', 'Cancel')}
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                );
+              })()}
             </div>
           )}
 

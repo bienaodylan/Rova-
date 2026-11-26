@@ -16,6 +16,13 @@ import {
 } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { getSupabaseClient, isSupabaseConfigured, supabaseApiFetch } from '../lib/supabase';
+import {
+  CancellationPolicyPreview,
+  cancelScheduledReservationApi,
+  confirmScheduledReservationApi,
+  createScheduledHoldApi,
+  rescheduleScheduledReservationApi,
+} from '../lib/scheduledApi';
 import { useAuth } from './AuthContext';
 import { useLanguage } from './LanguageContext';
 import {
@@ -200,11 +207,43 @@ interface RovaAppContextValue {
     pickupAddress: string;
     pickupLat: number;
     pickupLng: number;
+    destinationAddress?: string;
+    destinationLat?: number;
+    destinationLng?: number;
     destinationsSummary?: string;
     cargoRequirements?: string;
+    estimatedWeightKg?: number;
+    fragile?: boolean;
+    paymentMethod?: PaymentMethod;
+    idempotencyKey?: string;
     quotedPrice: number;
-  }) => Promise<boolean>;
-  cancelReservation: (reservationId: string) => Promise<boolean>;
+  }) => Promise<{
+    ok: boolean;
+    reservation?: ReservationRecord;
+    paymentOutcome?: {
+      ok: boolean;
+      paymentStatus: string;
+      reservationConfirmed: boolean;
+      actionRequired?: string;
+      code?: string;
+      messageFr: string;
+      messageEn: string;
+    };
+    error?: string;
+    code?: string;
+  }>;
+  previewCancelReservation: (reservationId: string) => Promise<CancellationPolicyPreview | null>;
+  cancelReservation: (reservationId: string, reason?: string) => Promise<boolean>;
+  rescheduleReservation: (
+    reservationId: string,
+    payload: {
+      reservationDate: string;
+      startTime: string;
+      endTime: string;
+      durationType?: 'window' | 'hours' | 'full_day';
+      vehicleCategory?: VehicleCategory;
+    }
+  ) => Promise<{ ok: boolean; priceDelta?: number; error?: string }>;
   saveRecipient: (input: {
     id?: string;
     name: string;
@@ -1045,31 +1084,74 @@ export function RovaAppProvider({
       pickupAddress: string;
       pickupLat: number;
       pickupLng: number;
+      destinationAddress?: string;
+      destinationLat?: number;
+      destinationLng?: number;
       destinationsSummary?: string;
       cargoRequirements?: string;
+      estimatedWeightKg?: number;
+      fragile?: boolean;
+      paymentMethod?: PaymentMethod;
+      idempotencyKey?: string;
       quotedPrice: number;
-    }): Promise<boolean> => {
-      if (!requireAuth()) return false;
+    }) => {
+      if (!requireAuth()) return { ok: false, error: t('Connexion requise.', 'Sign-in required.') };
       setBusy(true);
       try {
         const rule = getEffectivePricingRule(pricingRules, payload.vehicleCategory);
+        const paymentMethod: PaymentMethod = payload.paymentMethod || preferredPayment || 'mobile_money';
+        const idempotencyKey =
+          payload.idempotencyKey ||
+          `hold_${payload.reservationDate}_${payload.startTime}_${payload.vehicleCategory}_${Date.now()}`;
+
         if (useSupabase) {
-          await supabaseApiFetch('/api/v1/reservations', {
-            method: 'POST',
-            body: JSON.stringify({
-              businessId: business?.id,
-              merchantName: (business?.name || profile?.displayName || 'Marchand ROVA').slice(0, 160),
-              ...payload,
-              quotedPrice: Math.max(0, Number(payload.quotedPrice) || rule.fullDayRate),
-              currency: rule.currency || currency,
-            }),
+          const holdRes = await createScheduledHoldApi({
+            businessId: business?.id,
+            merchantName: (business?.name || profile?.displayName || 'Marchand ROVA').slice(0, 160),
+            pickup: { lat: payload.pickupLat, lng: payload.pickupLng },
+            pickupAddress: payload.pickupAddress,
+            destination:
+              typeof payload.destinationLat === 'number' && typeof payload.destinationLng === 'number'
+                ? { lat: payload.destinationLat, lng: payload.destinationLng }
+                : null,
+            destinationAddress: payload.destinationAddress,
+            destinationsSummary: payload.destinationsSummary,
+            vehicleCategory: payload.vehicleCategory,
+            durationType: payload.durationType,
+            reservationDate: payload.reservationDate,
+            startTime: payload.startTime,
+            endTime: payload.endTime,
+            estimatedWeightKg: payload.estimatedWeightKg,
+            fragile: payload.fragile,
+            cargoRequirements: payload.cargoRequirements,
+            paymentMethod,
+            idempotencyKey,
+            expectedPrice: payload.quotedPrice > 0 ? payload.quotedPrice : undefined,
           });
+
+          const confirmRes = await confirmScheduledReservationApi(holdRes.reservation.id, paymentMethod);
           await refreshSupabaseWorkspace();
-          setReservationSheetOpen(false);
-          showToast(t('Réservation véhicule enregistrée.', 'Vehicle reservation submitted.'), 'success');
-          return true;
+
+          if (confirmRes.paymentOutcome.reservationConfirmed) {
+            showToast(t('Réservation véhicule confirmée.', 'Vehicle reservation confirmed.'), 'success');
+          } else {
+            showToast(
+              t(
+                'Créneau bloqué en attente de paiement vérifié.',
+                'Slot held awaiting verified payment.'
+              ),
+              'info'
+            );
+          }
+          return {
+            ok: true,
+            reservation: confirmRes.reservation,
+            paymentOutcome: confirmRes.paymentOutcome,
+          };
         }
-        await addDoc(collection(db, 'reservations'), {
+
+        // Firestore fallback: validate via server quote endpoint first (no client price trust)
+        const docRef = await addDoc(collection(db, 'reservations'), {
           ...(business?.id ? { businessId: business.id } : {}),
           merchantUid: uid,
           merchantName: (business?.name || profile?.displayName || 'Marchand ROVA').slice(0, 160),
@@ -1089,35 +1171,116 @@ export function RovaAppProvider({
             ? { cargoRequirements: payload.cargoRequirements.trim().slice(0, 300) }
             : {}),
           quotedPrice: Math.max(0, Number(payload.quotedPrice) || rule.fullDayRate),
-          currency: rule.currency || 'GHS',
+          currency: rule.currency || currency || 'XOF',
           status: 'pending_approval',
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         });
-        setReservationSheetOpen(false);
+
+        const fallbackReservation: ReservationRecord = {
+          id: docRef.id,
+          reference: `RV-SCH-${docRef.id.slice(0, 6).toUpperCase()}`,
+          merchantUid: uid,
+          merchantName: (business?.name || profile?.displayName || 'Marchand ROVA').slice(0, 160),
+          vehicleCategory: payload.vehicleCategory,
+          driverUid: '',
+          reservationDate: payload.reservationDate,
+          startTime: payload.startTime,
+          endTime: payload.endTime,
+          durationType: payload.durationType,
+          pickupAddress: payload.pickupAddress,
+          pickupLat: payload.pickupLat,
+          pickupLng: payload.pickupLng,
+          destinationsSummary: payload.destinationsSummary,
+          cargoRequirements: payload.cargoRequirements,
+          quotedPrice: Math.max(0, Number(payload.quotedPrice) || rule.fullDayRate),
+          currency: rule.currency || currency || 'XOF',
+          paymentMethod,
+          reservationStatus: paymentMethod === 'invoice' || paymentMethod === 'wallet' ? 'confirmed' : 'pending_payment',
+          paymentStatus: paymentMethod === 'invoice' ? 'invoiced' : paymentMethod === 'wallet' ? 'paid' : 'pending',
+          assignmentStatus: 'not_requested',
+          executionStatus: 'scheduled',
+          status: 'pending_approval',
+        };
         showToast(t('Réservation véhicule enregistrée.', 'Vehicle reservation submitted.'), 'success');
-        return true;
+        return {
+          ok: true,
+          reservation: fallbackReservation,
+          paymentOutcome: {
+            ok: true,
+            paymentStatus: fallbackReservation.paymentStatus || 'pending',
+            reservationConfirmed: fallbackReservation.reservationStatus === 'confirmed',
+            messageFr:
+              fallbackReservation.reservationStatus === 'confirmed'
+                ? 'Réservation enregistrée. Affectation chauffeur prévue avant le créneau.'
+                : 'Demande enregistrée en attente de validation du paiement.',
+            messageEn:
+              fallbackReservation.reservationStatus === 'confirmed'
+                ? 'Reservation saved. Courier assignment scheduled ahead of pickup.'
+                : 'Request saved awaiting payment verification.',
+          },
+        };
       } catch (err) {
-        showToast(t('Impossible de créer la réservation.', 'Could not create reservation.'), 'error');
+        const message =
+          err instanceof Error && err.message
+            ? err.message
+            : t('Impossible de créer la réservation.', 'Could not create reservation.');
+        showToast(message, 'error');
         if (!useSupabase) handleFirestoreError(err, OperationType.CREATE, 'reservations');
-        return false;
+        return { ok: false, error: message };
       } finally {
         setBusy(false);
       }
     },
-    [requireAuth, useSupabase, refreshSupabaseWorkspace, pricingRules, business, profile, uid, currency, showToast, t]
+    [
+      requireAuth,
+      useSupabase,
+      refreshSupabaseWorkspace,
+      pricingRules,
+      preferredPayment,
+      business,
+      profile,
+      uid,
+      currency,
+      showToast,
+      t,
+    ]
+  );
+
+  const previewCancelReservation = useCallback(
+    async (reservationId: string): Promise<CancellationPolicyPreview | null> => {
+      if (useSupabase) {
+        try {
+          const res = await cancelScheduledReservationApi(reservationId, { preview: true });
+          return res.evaluation;
+        } catch {
+          return null;
+        }
+      }
+      const target = reservations.find((r) => r.id === reservationId);
+      if (!target) return null;
+      return {
+        allowed: target.status === 'pending_approval' || target.status === 'confirmed',
+        stage: target.status,
+        hoursUntilPickup: 24,
+        feeAmount: 0,
+        feePercent: 0,
+        refundAmount: target.quotedPrice,
+        currency: target.currency,
+        policySummaryFr: 'Annulation gratuite avant l’affectation du chauffeur.',
+        policySummaryEn: 'Free cancellation before courier assignment.',
+      };
+    },
+    [useSupabase, reservations]
   );
 
   const cancelReservation = useCallback(
-    async (reservationId: string): Promise<boolean> => {
+    async (reservationId: string, reason?: string): Promise<boolean> => {
       if (!requireAuth()) return false;
       setBusy(true);
       try {
         if (useSupabase) {
-          await supabaseApiFetch(`/api/v1/reservations/${encodeURIComponent(reservationId)}/status`, {
-            method: 'PATCH',
-            body: JSON.stringify({ status: 'cancelled' }),
-          });
+          await cancelScheduledReservationApi(reservationId, { preview: false, reason });
           await refreshSupabaseWorkspace();
           showToast(t('Réservation annulée.', 'Reservation cancelled.'), 'info');
           return true;
@@ -1129,9 +1292,57 @@ export function RovaAppProvider({
         showToast(t('Réservation annulée.', 'Reservation cancelled.'), 'info');
         return true;
       } catch (err) {
-        showToast(t('Impossible d’annuler cette réservation.', 'Could not cancel reservation.'), 'error');
+        const msg =
+          err instanceof Error && err.message
+            ? err.message
+            : t('Impossible d’annuler cette réservation.', 'Could not cancel reservation.');
+        showToast(msg, 'error');
         if (!useSupabase) handleFirestoreError(err, OperationType.UPDATE, `reservations/${reservationId}`);
         return false;
+      } finally {
+        setBusy(false);
+      }
+    },
+    [requireAuth, useSupabase, refreshSupabaseWorkspace, showToast, t]
+  );
+
+  const rescheduleReservation = useCallback(
+    async (
+      reservationId: string,
+      payload: {
+        reservationDate: string;
+        startTime: string;
+        endTime: string;
+        durationType?: 'window' | 'hours' | 'full_day';
+        vehicleCategory?: VehicleCategory;
+      }
+    ): Promise<{ ok: boolean; priceDelta?: number; error?: string }> => {
+      if (!requireAuth()) return { ok: false, error: t('Connexion requise.', 'Sign-in required.') };
+      setBusy(true);
+      try {
+        if (useSupabase) {
+          const res = await rescheduleScheduledReservationApi(reservationId, payload);
+          await refreshSupabaseWorkspace();
+          showToast(t('Créneau replanifié avec succès.', 'Reservation rescheduled successfully.'), 'success');
+          return { ok: true, priceDelta: res.priceDelta };
+        }
+        await updateDoc(doc(db, 'reservations', reservationId), {
+          reservationDate: payload.reservationDate.slice(0, 20),
+          startTime: payload.startTime.slice(0, 12),
+          endTime: payload.endTime.slice(0, 12),
+          ...(payload.durationType ? { durationType: payload.durationType } : {}),
+          ...(payload.vehicleCategory ? { vehicleCategory: payload.vehicleCategory } : {}),
+          updatedAt: serverTimestamp(),
+        });
+        showToast(t('Créneau replanifié avec succès.', 'Reservation rescheduled successfully.'), 'success');
+        return { ok: true, priceDelta: 0 };
+      } catch (err) {
+        const msg =
+          err instanceof Error && err.message
+            ? err.message
+            : t('Impossible de replanifier ce créneau.', 'Could not reschedule reservation.');
+        showToast(msg, 'error');
+        return { ok: false, error: msg };
       } finally {
         setBusy(false);
       }
@@ -1473,7 +1684,9 @@ export function RovaAppProvider({
         cancelDelivery,
         repeatDelivery,
         submitReservation,
+        previewCancelReservation,
         cancelReservation,
+        rescheduleReservation,
         saveRecipient,
         deleteRecipient,
         saveBusinessProfile,

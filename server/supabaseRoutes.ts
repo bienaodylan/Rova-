@@ -14,6 +14,11 @@ import {
   verifyQuoteForOrderConfirmation,
 } from './engines/pricingEngine.ts';
 import {
+  generateScheduledQuote,
+  ScheduledDurationType,
+  validateScheduledLocations,
+} from './engines/scheduledDeliveryEngine.ts';
+import {
   buildDispatchWaveOffers,
   DispatchCourierCandidate,
 } from './engines/dispatchEngine.ts';
@@ -260,23 +265,46 @@ function mapRecipientRow(row: Record<string, unknown>) {
 function mapReservationRow(row: Record<string, unknown>) {
   return {
     id: String(row.id || ''),
+    reference: row.reference ? String(row.reference) : undefined,
     businessId: row.business_id ? String(row.business_id) : undefined,
     merchantUid: String(row.merchant_uid || ''),
     merchantName: String(row.merchant_name || ''),
+    cityId: row.city_id ? String(row.city_id) : undefined,
+    cityName: row.city_name ? String(row.city_name) : undefined,
+    timezone: row.timezone ? String(row.timezone) : undefined,
     vehicleId: row.vehicle_id ? String(row.vehicle_id) : undefined,
     vehicleCategory: String(row.vehicle_category || 'motorcycle'),
     driverUid: String(row.driver_uid || ''),
+    assignedDriverName: row.assigned_driver_name ? String(row.assigned_driver_name) : undefined,
     reservationDate: String(row.reservation_date || ''),
     startTime: String(row.start_time || ''),
     endTime: String(row.end_time || ''),
+    pickupWindowStart: row.pickup_window_start ? String(row.pickup_window_start) : undefined,
+    pickupWindowEnd: row.pickup_window_end ? String(row.pickup_window_end) : undefined,
+    serviceEndAt: row.service_end_at ? String(row.service_end_at) : undefined,
     durationType: String(row.duration_type || 'window'),
     pickupAddress: String(row.pickup_address || ''),
     pickupLat: Number(row.pickup_lat || 0),
     pickupLng: Number(row.pickup_lng || 0),
+    destinationAddress: row.destination_address ? String(row.destination_address) : undefined,
+    destinationLat: typeof row.destination_lat === 'number' ? row.destination_lat : undefined,
+    destinationLng: typeof row.destination_lng === 'number' ? row.destination_lng : undefined,
     destinationsSummary: row.destinations_summary ? String(row.destinations_summary) : undefined,
     cargoRequirements: row.cargo_requirements ? String(row.cargo_requirements) : undefined,
+    estimatedWeightKg: typeof row.estimated_weight_kg === 'number' ? row.estimated_weight_kg : undefined,
+    fragile: Boolean(row.fragile),
     quotedPrice: Number(row.quoted_price || 0),
     currency: String(row.currency || 'XOF'),
+    pricingBreakdown: Array.isArray(row.pricing_breakdown) ? row.pricing_breakdown : undefined,
+    paymentMethod: row.payment_method ? String(row.payment_method) : undefined,
+    reservationStatus: row.reservation_status ? String(row.reservation_status) : undefined,
+    paymentStatus: row.payment_status ? String(row.payment_status) : undefined,
+    assignmentStatus: row.assignment_status ? String(row.assignment_status) : undefined,
+    executionStatus: row.execution_status ? String(row.execution_status) : undefined,
+    holdExpiresAt: row.hold_expires_at ? String(row.hold_expires_at) : undefined,
+    cancellationFee: typeof row.cancellation_fee === 'number' ? row.cancellation_fee : undefined,
+    refundAmount: typeof row.refund_amount === 'number' ? row.refund_amount : undefined,
+    escalationReason: row.escalation_reason ? String(row.escalation_reason) : undefined,
     status: String(row.status || 'pending_approval'),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -1159,7 +1187,7 @@ export function createSupabaseRouter(): express.Router {
     }
   });
 
-  // Reservations
+  // Reservations (Server-Authoritative Validation & Pricing)
   router.post('/reservations', requireSupabaseAuth, async (req: SupabaseAuthRequest, res) => {
     try {
       const admin = getSupabaseAdmin()!;
@@ -1175,6 +1203,29 @@ export function createSupabaseRouter(): express.Router {
       const vehicleCategory = ALLOWED_VEHICLES.has(String(body.vehicleCategory))
         ? String(body.vehicleCategory)
         : 'cargo_van';
+      const rawDur = cleanStr(body.durationType, 20);
+      const durationType: ScheduledDurationType =
+        rawDur === 'window' || rawDur === 'hours' || rawDur === 'full_day' ? rawDur : 'hours';
+
+      const loc = validateScheduledLocations({ pickup: coords, cities: DEFAULT_CITIES });
+      if (!loc.ok) {
+        return res.status(loc.httpStatus).json({ error: loc.messageFr, errorEn: loc.messageEn, code: loc.code });
+      }
+
+      const quoteRes = generateScheduledQuote({
+        city: loc.city,
+        vehicleCategory,
+        durationType,
+        reservationDate: cleanStr(body.reservationDate, 20),
+        startTime: cleanStr(body.startTime, 12),
+        endTime: cleanStr(body.endTime, 12),
+        estimatedDistanceKm: loc.estimatedDistanceKm,
+        estimatedWeightKg: body.estimatedWeightKg !== undefined ? cleanNum(body.estimatedWeightKg, 5) : undefined,
+        fragile: Boolean(body.fragile),
+      });
+      if (!quoteRes.ok) {
+        return res.status(quoteRes.httpStatus).json({ error: quoteRes.messageFr, errorEn: quoteRes.messageEn, code: quoteRes.code });
+      }
 
       const { data, error } = await admin
         .from('reservations')
@@ -1184,24 +1235,24 @@ export function createSupabaseRouter(): express.Router {
           merchant_name: cleanStr(body.merchantName, 160) || 'Marchand ROVA',
           vehicle_category: vehicleCategory,
           driver_uid: '',
-          reservation_date: cleanStr(body.reservationDate, 20),
-          start_time: cleanStr(body.startTime, 12),
-          end_time: cleanStr(body.endTime, 12),
-          duration_type: cleanStr(body.durationType, 20) || 'window',
+          reservation_date: quoteRes.quote.reservationDate,
+          start_time: quoteRes.quote.startTime,
+          end_time: quoteRes.quote.endTime,
+          duration_type: durationType,
           pickup_address: pickupAddress,
           pickup_lat: coords.lat,
           pickup_lng: coords.lng,
           destinations_summary: cleanStr(body.destinationsSummary, 400) || null,
           cargo_requirements: cleanStr(body.cargoRequirements, 300) || null,
-          quoted_price: Math.max(0, cleanNum(body.quotedPrice, 0)),
-          currency: cleanStr(body.currency, 8) || 'XOF',
+          quoted_price: quoteRes.quote.customerTotal,
+          currency: quoteRes.quote.currency,
           status: 'pending_approval',
         })
         .select('*')
         .single();
 
       if (error) return res.status(500).json({ error: 'Unable to create reservation.' });
-      return res.status(201).json({ reservation: mapReservationRow(data) });
+      return res.status(201).json({ reservation: mapReservationRow(data), quote: quoteRes.quote });
     } catch (err) {
       console.error('POST /reservations error:', err);
       return res.status(500).json({ error: 'Unable to create reservation.' });

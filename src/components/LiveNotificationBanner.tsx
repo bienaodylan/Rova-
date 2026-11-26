@@ -173,7 +173,7 @@ export function LiveNotificationBanner({ onOpenDelivery }: LiveNotificationBanne
             transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
             role="status"
             aria-live="assertive"
-            className="pointer-events-auto rounded-2xl bg-neutral-950 text-white border border-white/10 shadow-[0_18px_48px_rgba(0,0,0,0.28)] overflow-hidden"
+            className="pointer-events-auto rounded-3xl bg-neutral-950 text-white border border-white/10 shadow-[0_18px_48px_rgba(0,0,0,0.28)] overflow-hidden"
           >
             <div className="flex items-start gap-3 p-3.5">
               <button

@@ -97,7 +97,7 @@ export function PreferencesSection({ prefs, onUpdatePrefs }: PrefsProps) {
       </div>
 
       {/* Regional & Display Settings */}
-      <div className="divide-y divide-neutral-200/70 border-b border-neutral-200/70">
+      <div className="rounded-3xl border border-[#E5E5E5] bg-white divide-y divide-neutral-200/70 px-5">
         {/* Language */}
         <div className="py-5 flex flex-wrap items-center justify-between gap-4">
           <div className="min-w-0">
@@ -161,7 +161,7 @@ export function PreferencesSection({ prefs, onUpdatePrefs }: PrefsProps) {
                 'info'
               );
             }}
-            className="rounded-xl border border-neutral-300 bg-white px-3.5 py-2 text-xs font-mono font-semibold text-neutral-950 focus:outline-none focus:border-neutral-950 cursor-pointer"
+            className="rounded-2xl border border-neutral-300 bg-white px-3.5 py-2 text-xs font-mono font-semibold text-neutral-950 focus:outline-none focus:border-neutral-950 cursor-pointer"
           >
             {SUPPORTED_DISPLAY_CURRENCIES.map((c) => (
               <option key={c} value={c}>
@@ -226,7 +226,7 @@ export function PreferencesSection({ prefs, onUpdatePrefs }: PrefsProps) {
         <h3 className="text-xs font-mono uppercase tracking-wider text-neutral-500">
           {t('Préférences de communication', 'Communication preferences')}
         </h3>
-        <div className="divide-y divide-neutral-200/70 border-y border-neutral-200/70">
+        <div className="rounded-3xl border border-[#E5E5E5] bg-white divide-y divide-neutral-200/70 px-5">
           <div className="py-4 flex items-center justify-between gap-4">
             <div className="min-w-0">
               <p className="text-sm font-medium text-neutral-950">
@@ -246,7 +246,7 @@ export function PreferencesSection({ prefs, onUpdatePrefs }: PrefsProps) {
           <div className="py-4 flex items-center justify-between gap-4">
             <div className="min-w-0">
               <p className="text-sm font-medium text-neutral-950">
-                {t('Nouveautés et zones couvertes ROVA', 'ROVA product & coverage updates')}
+                {t('Nouveautés et zones couvertes Rovia', 'Rovia product & coverage updates')}
               </p>
               <p className="text-xs text-neutral-500">
                 {t('Annonces de nouvelles villes, flottes et fonctionnalités.', 'Announcements on new cities, vehicle classes, and features.')}
@@ -255,7 +255,7 @@ export function PreferencesSection({ prefs, onUpdatePrefs }: PrefsProps) {
             <EditorialSwitch
               checked={prefs.commProductUpdates}
               onChange={(v) => onUpdatePrefs({ commProductUpdates: v })}
-              label={t('Nouveautés ROVA', 'ROVA updates')}
+              label={t('Nouveautés Rovia', 'Rovia updates')}
             />
           </div>
         </div>
@@ -300,7 +300,7 @@ export function NotificationsSection({ prefs, onUpdatePrefs }: PrefsProps) {
         <h3 className="text-xs font-mono uppercase tracking-wider text-neutral-500">
           {t('Catégories d’alertes', 'Alert categories')}
         </h3>
-        <div className="divide-y divide-neutral-200/70 border-y border-neutral-200/70">
+        <div className="rounded-3xl border border-[#E5E5E5] bg-white divide-y divide-neutral-200/70 px-5">
           <div className="py-4 flex items-center justify-between gap-4">
             <div className="min-w-0">
               <p className="text-sm font-semibold text-neutral-950">
@@ -361,7 +361,7 @@ export function NotificationsSection({ prefs, onUpdatePrefs }: PrefsProps) {
           <div className="py-4 flex items-center justify-between gap-4">
             <div className="min-w-0">
               <p className="text-sm font-semibold text-neutral-950">
-                {t('Communications ROVA', 'ROVA announcements')}
+                {t('Communications Rovia', 'Rovia announcements')}
               </p>
               <p className="text-xs text-neutral-500 mt-0.5">
                 {t('Évolutions du service et informations commerciales.', 'Service updates and news.')}
@@ -370,7 +370,7 @@ export function NotificationsSection({ prefs, onUpdatePrefs }: PrefsProps) {
             <EditorialSwitch
               checked={prefs.notifMarketing}
               onChange={(v) => onUpdatePrefs({ notifMarketing: v })}
-              label={t('Communications ROVA', 'ROVA announcements')}
+              label={t('Communications Rovia', 'Rovia announcements')}
             />
           </div>
         </div>
@@ -381,14 +381,14 @@ export function NotificationsSection({ prefs, onUpdatePrefs }: PrefsProps) {
         <h3 className="text-xs font-mono uppercase tracking-wider text-neutral-500">
           {t('Canaux de diffusion', 'Delivery channels')}
         </h3>
-        <div className="divide-y divide-neutral-200/70 border-y border-neutral-200/70 text-xs">
+        <div className="rounded-3xl border border-[#E5E5E5] bg-white divide-y divide-neutral-200/70 px-5 text-xs">
           <div className="py-4 flex items-center justify-between gap-4">
             <div>
               <p className="text-sm font-medium text-neutral-950">
                 {t('Notifications dans l’application', 'In-app notifications')}
               </p>
               <p className="text-xs text-neutral-500 mt-0.5">
-                {t('Synchronisées en temps réel dans votre centre d’alertes ROVA.', 'Synced live in your ROVA notification feed.')}
+                {t('Synchronisées en temps réel dans votre centre d’alertes Rovia.', 'Synced live in your Rovia notification feed.')}
               </p>
             </div>
             <span className="inline-flex items-center gap-1.5 font-mono text-neutral-950 font-semibold shrink-0">

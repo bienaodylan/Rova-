@@ -591,11 +591,11 @@ function GoogleRovaMap({
 
   return (
     <div
-      className={`relative w-full rounded-2xl border border-neutral-200 bg-neutral-100 overflow-hidden ${className}`}
+      className={`relative w-full rounded-3xl border border-neutral-200 bg-neutral-100 overflow-hidden ${className}`}
     >
       {showSearchBar && (
         <div className="absolute top-3 left-3 right-3 z-[20] flex flex-col gap-1.5">
-          <div className="flex items-center rounded-xl bg-white border border-neutral-200 shadow-sm overflow-hidden">
+          <div className="flex items-center rounded-2xl bg-white border border-neutral-200 shadow-sm overflow-hidden">
             <div className="pl-3.5 text-neutral-500">
               {searching || reversing ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -644,7 +644,7 @@ function GoogleRovaMap({
           </div>
 
           {dropdownOpen && options.length > 0 && (
-            <div className="rounded-xl bg-white border border-neutral-200 shadow-lg max-h-56 overflow-y-auto divide-y divide-neutral-100">
+            <div className="rounded-2xl bg-white border border-neutral-200 shadow-lg max-h-56 overflow-y-auto divide-y divide-neutral-100">
               {options.map((opt) => (
                 <button
                   key={opt.id}
@@ -1084,11 +1084,11 @@ function LeafletRovaMap({
 
   return (
     <div
-      className={`relative w-full rounded-2xl border border-neutral-200 bg-neutral-100 overflow-hidden ${className}`}
+      className={`relative w-full rounded-3xl border border-neutral-200 bg-neutral-100 overflow-hidden ${className}`}
     >
       {showSearchBar && (
         <div className="absolute top-3 left-3 right-3 z-[400] flex flex-col gap-1.5">
-          <div className="flex items-center rounded-xl bg-white border border-neutral-200 shadow-sm overflow-hidden">
+          <div className="flex items-center rounded-2xl bg-white border border-neutral-200 shadow-sm overflow-hidden">
             <div className="pl-3.5 text-neutral-500">
               {searching || reversing ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -1137,7 +1137,7 @@ function LeafletRovaMap({
           </div>
 
           {dropdownOpen && results.length > 0 && (
-            <div className="rounded-xl bg-white border border-neutral-200 shadow-lg max-h-56 overflow-y-auto divide-y divide-neutral-100">
+            <div className="rounded-2xl bg-white border border-neutral-200 shadow-lg max-h-56 overflow-y-auto divide-y divide-neutral-100">
               {results.map((r, i) => (
                 <button
                   key={`${r.lat}-${r.lng}-${i}`}

@@ -8,6 +8,7 @@ import {
 } from './supabaseAdmin.ts';
 import { createSupabaseRouter } from './supabaseRoutes.ts';
 import { createOperationsRouter } from './operationsRoutes.ts';
+import { createScheduledRouter } from './scheduledRoutes.ts';
 
 dotenv.config();
 
@@ -466,6 +467,7 @@ export function createApiApp(): express.Express {
   // SUPABASE AUTHENTICATED & OPERATIONAL BACKEND API (/api/v1/*)
   // ============================================================================
   app.use('/api/v1', createOperationsRouter());
+  app.use('/api/v1', createScheduledRouter());
   app.use('/api/v1', createSupabaseRouter());
 
   // ============================================================================
@@ -947,7 +949,7 @@ export function createApiApp(): express.Express {
         }
       }
 
-      const geoapifyKey = getGeoapifyApiKey();
+      const geoapifyKey = getGeoapifyServerKey();
       if (geoapifyKey) {
         try {
           const waypoints = points.map((p) => `${p.lat},${p.lng}`).join('|');

@@ -77,7 +77,7 @@ export function BottomSheet({
           className={`fixed inset-0 ${elevated ? 'z-[80]' : 'z-[60]'} flex items-end sm:items-center justify-center sm:p-5`}
           role="dialog"
           aria-modal="true"
-          aria-label={title || 'ROVA'}
+          aria-label={title || 'Rovia'}
         >
           {/* Backdrop */}
           <motion.div
@@ -99,7 +99,7 @@ export function BottomSheet({
               scrollable
                 ? 'max-h-[92dvh] sm:max-h-[86dvh]'
                 : 'h-[100dvh] max-h-[100dvh] sm:h-[min(860px,90dvh)] sm:max-h-[90dvh]'
-            } bg-white rounded-t-3xl sm:rounded-2xl shadow-[0_24px_64px_rgba(23,23,23,0.16)] border border-[#E5E5E5] flex flex-col overflow-hidden`}
+            } bg-white rounded-t-[32px] sm:rounded-[32px] shadow-[0_24px_64px_rgba(23,23,23,0.16)] border border-[#E5E5E5] flex flex-col overflow-hidden`}
           >
             {/* Mobile Drag Handle */}
             <div className="sm:hidden pt-2.5 pb-1 flex justify-center shrink-0">
